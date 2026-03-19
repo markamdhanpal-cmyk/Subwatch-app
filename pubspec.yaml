@@ -1,0 +1,27 @@
+name: sub_killer
+description: SubWatch is a careful local-first subscription watch for device SMS.
+version: 0.1.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
+  path_provider: ^2.1.1
+  riverpod: ^2.3.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  isar_generator: ^3.1.0+1
+  build_runner: ^2.4.6
+  mockito: ^5.4.2
+  lints: ^2.1.1
+
+flutter:
+  uses-material-design: true
+
+

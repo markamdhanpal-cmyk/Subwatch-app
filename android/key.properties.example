@@ -1,0 +1,7 @@
+# Copy this file to android/key.properties and fill in your local signing values.
+# Paths are resolved from the android/ directory.
+#
+# storeFile=../keystores/your-upload-keystore.jks
+# storePassword=REPLACE_WITH_LOCAL_VALUE
+# keyAlias=REPLACE_WITH_LOCAL_VALUE
+# keyPassword=REPLACE_WITH_LOCAL_VALUE

@@ -1,0 +1,154 @@
+import '../parsing/indian_amount_parser.dart';
+
+class RecurringBillingHeuristics {
+  const RecurringBillingHeuristics._();
+
+  static final RegExp mandatePattern = RegExp(
+    r'\b(mandate|autopay|auto[\s-]?pay|e[\s-]?mandate)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp upiNoisePattern = RegExp(
+    r'\b(upi|vpa|qr|bharatpe|paytm[\s-]?qr)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp telecomProviderPattern = RegExp(
+    r'\b(jio(?:hotstar)?|airtel|vi)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp telecomBenefitPattern = RegExp(
+    r'\b(subscription|plan|pack|bundle|benefit|complimentary|free|recharge|unlocked)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp subscriptionContextPattern = RegExp(
+    r'\b(subscription|monthly subscription|subscription payment|membership)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp planContextPattern = RegExp(
+    r'\b(plan|monthly plan|pass|membership)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp recurringContextPattern = RegExp(
+    r'\b(recurring|renew(?:ed|al)?|monthly|annual|yearly|next billing|membership|premium)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp billingPattern = RegExp(
+    r'\b(charged|billed|debited|payment|spent|used|processed|deducted)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp successPattern = RegExp(
+    r'\b(successful|successfully|approved|completed|processed)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp cardContextPattern = RegExp(
+    r'\b(card|credit card|debit card|bank card|credit|debit|spent on|used at|ending|xx[0-9]{2,4})\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp directRecurringMerchantPattern = RegExp(
+    r'\b(netflix(?:\.com)?|spotify|youtube\s*premium|youtubepremium|google\s*one|googleone|apple music|adobe(?: systems)?|jiohotstar|hotstar|amazon prime|sony\s*liv|sonyliv|zee5|wynk|gaana)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp appStoreMerchantPattern = RegExp(
+    r'\b(google play|googleplay|apple(?:\.com\/bill| services| bill)|itunes|app store)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp merchantRoutingPattern = RegExp(
+    r'\b(at|for|towards|on)\b',
+    caseSensitive: false,
+  );
+
+  static bool hasProtectedNoise(String body) {
+    return hasMandateContext(body) ||
+        hasUpiNoise(body) ||
+        looksLikeTelecomBundle(body);
+  }
+
+  static bool hasMandateContext(String body) {
+    return mandatePattern.hasMatch(body);
+  }
+
+  static bool hasUpiNoise(String body) {
+    return upiNoisePattern.hasMatch(body);
+  }
+
+  static bool looksLikeTelecomBundle(String body) {
+    return telecomProviderPattern.hasMatch(body) &&
+        telecomBenefitPattern.hasMatch(body);
+  }
+
+  static bool hasSubscriptionContext(String body) {
+    return subscriptionContextPattern.hasMatch(body);
+  }
+
+  static bool hasPlanContext(String body) {
+    return planContextPattern.hasMatch(body);
+  }
+
+  static bool hasRecurringContext(String body) {
+    return recurringContextPattern.hasMatch(body);
+  }
+
+  static bool hasBillingContext(String body) {
+    return billingPattern.hasMatch(body);
+  }
+
+  static bool hasSuccessContext(String body) {
+    return successPattern.hasMatch(body);
+  }
+
+  static bool hasCardContext(String body) {
+    return cardContextPattern.hasMatch(body);
+  }
+
+  static bool hasDirectRecurringMerchant(String body) {
+    return directRecurringMerchantPattern.hasMatch(body);
+  }
+
+  static bool hasAppStoreMerchant(String body) {
+    return appStoreMerchantPattern.hasMatch(body);
+  }
+
+  static bool hasMerchantRoutingContext(String body) {
+    return merchantRoutingPattern.hasMatch(body);
+  }
+
+  static bool isCredibleAmount(double? amount) {
+    return amount != null && amount > 2;
+  }
+
+  static double? extractAmount(String input) {
+    return IndianAmountParser.extract(input);
+  }
+
+  static List<String> capturedTerms(
+    String input,
+    Iterable<RegExp> patterns,
+  ) {
+    final terms = <String>{};
+
+    for (final pattern in patterns) {
+      final match = pattern.firstMatch(input);
+      if (match == null) {
+        continue;
+      }
+
+      final term = match.group(0);
+      if (term != null) {
+        terms.add(term.toLowerCase());
+      }
+    }
+
+    return terms.toList(growable: false);
+  }
+}
