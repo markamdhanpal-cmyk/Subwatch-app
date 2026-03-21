@@ -59,6 +59,17 @@ void main() {
       expect(key.value, 'APPLE_MUSIC');
     });
 
+    test('resolves Apple Music card billing to a stable key', () {
+      final key = resolver.resolve(
+        message: message(
+          'Card XX8821 used for Rs 99 at APPLE MUSIC on 17 Mar.',
+        ),
+        signal: signal(SubscriptionEventType.subscriptionBilled),
+      );
+
+      expect(key.value, 'APPLE_MUSIC');
+    });
+
     test('resolves Spotify card billing to a stable key', () {
       final key = resolver.resolve(
         message:
@@ -89,6 +100,39 @@ void main() {
       );
 
       expect(key.value, 'JIOHOTSTAR');
+    });
+
+    test('resolves Disney Hotstar card billing to JioHotstar', () {
+      final key = resolver.resolve(
+        message: message(
+          'HDFC Card XX4411 used for Rs 299 at DISNEY+ HOTSTAR on 17 Mar.',
+        ),
+        signal: signal(SubscriptionEventType.subscriptionBilled),
+      );
+
+      expect(key.value, 'JIOHOTSTAR');
+    });
+
+    test('resolves Swiggy One card billing to a stable key', () {
+      final key = resolver.resolve(
+        message: message(
+          'HDFC Card XX1212 used for Rs 99 at SWIGGY ONE on 17 Mar.',
+        ),
+        signal: signal(SubscriptionEventType.subscriptionBilled),
+      );
+
+      expect(key.value, 'SWIGGY_ONE');
+    });
+
+    test('resolves SonyLIV card billing to a stable key', () {
+      final key = resolver.resolve(
+        message: message(
+          'ICICI Card XX2121 used for Rs 299 at SONYLIV on 17 Mar.',
+        ),
+        signal: signal(SubscriptionEventType.subscriptionBilled),
+      );
+
+      expect(key.value, 'SONYLIV');
     });
 
     test('keeps weak generic message unresolved', () {

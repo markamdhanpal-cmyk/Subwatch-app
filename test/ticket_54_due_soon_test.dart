@@ -91,7 +91,7 @@ void main() {
     expect(find.text('Nothing due soon'), findsOneWidget);
     expect(
       find.text(
-        'Only clear renewal dates appear here.',
+        'Only confirmed subscriptions or manual entries with a clear renewal date appear here.',
       ),
       findsOneWidget,
     );

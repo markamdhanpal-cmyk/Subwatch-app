@@ -91,6 +91,26 @@ void main() {
       expect(result.amount, 149);
     });
 
+    test('classifies a paid JioHotstar renewal as billed subscription', () {
+      final result = classifier.classify(
+        message('Your JioHotstar subscription has been renewed for Rs 299.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.subscriptionBilled);
+      expect(result.amount, 299);
+    });
+
+    test('classifies direct card debit for Swiggy One membership', () {
+      final result = classifier.classify(
+        message('HDFC Card XX1212 used for Rs 99 at SWIGGY ONE on 17 Mar.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.subscriptionBilled);
+      expect(result.amount, 99);
+    });
+
     test('parses rs-dot amount format', () {
       final result = classifier.classify(
         message('Adobe plan renewed successfully. Rs.299 charged.'),

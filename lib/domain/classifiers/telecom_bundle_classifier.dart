@@ -9,7 +9,12 @@ class TelecomBundleClassifier implements EventClassifier {
   static const String classifierId = 'telecom_bundle';
 
   static final RegExp _providerPattern = RegExp(
-    r'\b(jio(?:hotstar)?|airtel|vi)\b',
+    r'\b(jio|airtel|vi)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp _coBrandedBundlePattern = RegExp(
+    r'\bjiohotstar\b',
     caseSensitive: false,
   );
 
@@ -25,6 +30,15 @@ class TelecomBundleClassifier implements EventClassifier {
     RegExp(r'\bunlocked by recharge\b', caseSensitive: false),
   ];
 
+  static final List<RegExp> _bundleMarkerPatterns = <RegExp>[
+    RegExp(r'\bbundle\b', caseSensitive: false),
+    RegExp(r'\bbenefit\b', caseSensitive: false),
+    RegExp(r'\bcomplimentary\b', caseSensitive: false),
+    RegExp(r'\bfree\b', caseSensitive: false),
+    RegExp(r'\brecharge\b', caseSensitive: false),
+    RegExp(r'\bunlocked\b', caseSensitive: false),
+  ];
+
   @override
   ParsedSignal? classify(MessageRecord message) {
     final body = message.body.trim();
@@ -32,11 +46,12 @@ class TelecomBundleClassifier implements EventClassifier {
       return null;
     }
 
-    if (!_providerPattern.hasMatch(body)) {
-      return null;
-    }
+    final hasProviderBundleContext = _providerPattern.hasMatch(body) &&
+        _benefitPatterns.any((pattern) => pattern.hasMatch(body));
+    final hasCoBrandedBundleContext = _coBrandedBundlePattern.hasMatch(body) &&
+        _bundleMarkerPatterns.any((pattern) => pattern.hasMatch(body));
 
-    if (!_benefitPatterns.any((pattern) => pattern.hasMatch(body))) {
+    if (!hasProviderBundleContext && !hasCoBrandedBundleContext) {
       return null;
     }
 
@@ -52,7 +67,8 @@ class TelecomBundleClassifier implements EventClassifier {
   List<String> _capturedTerms(String input) {
     final terms = <String>{};
 
-    final providerMatch = _providerPattern.firstMatch(input);
+    final providerMatch = _providerPattern.firstMatch(input) ??
+        _coBrandedBundlePattern.firstMatch(input);
     if (providerMatch != null) {
       final provider = providerMatch.group(0);
       if (provider != null) {

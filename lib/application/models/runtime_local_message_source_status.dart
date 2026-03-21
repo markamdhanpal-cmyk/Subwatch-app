@@ -21,23 +21,28 @@ class RuntimeLocalMessageSourceStatus {
     required this.title,
     required this.description,
     required this.provenanceTitle,
+    required this.hasLocalModifications,
     required this.provenanceDescription,
     required this.freshnessLabel,
     required this.freshnessDescription,
     required this.actionLabel,
     required this.isActionEnabled,
     required this.permissionRationaleVariant,
+    this.localModificationsLabel,
   });
 
   factory RuntimeLocalMessageSourceStatus.fromSelection(
     LocalMessageSourceSelection selection, {
     required RuntimeSnapshotProvenance provenance,
     DateTime Function()? clock,
+    bool hasLocalModifications = false,
   }) {
     final freshness = _freshnessCopy(
       provenance: provenance,
       now: (clock ?? DateTime.now)(),
     );
+    final localModificationsLabel =
+        _localModificationsLabel(hasLocalModifications);
     final keepsRestoredSnapshot =
         provenance.kind == RuntimeSnapshotProvenanceKind.restoredLocalSnapshot;
 
@@ -46,8 +51,11 @@ class RuntimeLocalMessageSourceStatus {
         return RuntimeLocalMessageSourceStatus(
           tone: RuntimeLocalMessageSourceTone.demo,
           title: 'Sample view',
-          description: 'Scan your messages to replace the sample view.',
+          description:
+              'This is a sample layout until you scan messages on this device.',
           provenanceTitle: _provenanceTitle(provenance),
+          hasLocalModifications: hasLocalModifications,
+          localModificationsLabel: localModificationsLabel,
           provenanceDescription: _provenanceDescription(provenance),
           freshnessLabel: freshness.label,
           freshnessDescription: freshness.description,
@@ -68,9 +76,11 @@ class RuntimeLocalMessageSourceStatus {
               : 'From your messages',
           description: provenance.kind ==
                   RuntimeSnapshotProvenanceKind.restoredLocalSnapshot
-              ? 'Showing the last saved view on this device.'
+              ? 'Showing the last saved view on this device. It is not a new SMS check.'
               : 'Showing what SubWatch found from messages on this device.',
           provenanceTitle: _provenanceTitle(provenance),
+          hasLocalModifications: hasLocalModifications,
+          localModificationsLabel: localModificationsLabel,
           provenanceDescription: _provenanceDescription(provenance),
           freshnessLabel: freshness.label,
           freshnessDescription: freshness.description,
@@ -85,9 +95,11 @@ class RuntimeLocalMessageSourceStatus {
               : RuntimeLocalMessageSourceTone.caution,
           title: keepsRestoredSnapshot ? 'Saved view' : 'SMS access is off',
           description: keepsRestoredSnapshot
-              ? 'Showing the last saved view on this device.'
-              : 'Showing safe local results.',
+              ? 'Showing the last saved view on this device. It is not a new SMS check.'
+              : 'Without SMS access, SubWatch can only show a saved or limited local view.',
           provenanceTitle: _provenanceTitle(provenance),
+          hasLocalModifications: hasLocalModifications,
+          localModificationsLabel: localModificationsLabel,
           provenanceDescription: _provenanceDescription(provenance),
           freshnessLabel: freshness.label,
           freshnessDescription: freshness.description,
@@ -105,9 +117,11 @@ class RuntimeLocalMessageSourceStatus {
               ? 'Saved view'
               : 'SMS refresh unavailable',
           description: keepsRestoredSnapshot
-              ? 'Showing the last saved view on this device.'
-              : 'Safe local results stay active.',
+              ? 'Showing the last saved view on this device. It is not a new SMS check.'
+              : 'This device cannot provide a fresh SMS check, so the current local view stays in place.',
           provenanceTitle: _provenanceTitle(provenance),
+          hasLocalModifications: hasLocalModifications,
+          localModificationsLabel: localModificationsLabel,
           provenanceDescription: _provenanceDescription(provenance),
           freshnessLabel: freshness.label,
           freshnessDescription: freshness.description,
@@ -122,6 +136,8 @@ class RuntimeLocalMessageSourceStatus {
   final String title;
   final String description;
   final String provenanceTitle;
+  final bool hasLocalModifications;
+  final String? localModificationsLabel;
   final String provenanceDescription;
   final String freshnessLabel;
   final String freshnessDescription;
@@ -157,7 +173,7 @@ class RuntimeLocalMessageSourceStatus {
           RuntimeSnapshotSourceKind.deviceSms =>
             'Checked your messages on ${_formatTimestamp(provenance.recordedAt)}.',
           RuntimeSnapshotSourceKind.safeLocalFallback =>
-            'Showing a safe local view prepared on ${_formatTimestamp(provenance.recordedAt)}.',
+            'Showing a local view prepared on ${_formatTimestamp(provenance.recordedAt)}.',
           RuntimeSnapshotSourceKind.unknown =>
             'Showing a local snapshot from ${_formatTimestamp(provenance.recordedAt)}.',
         };
@@ -181,15 +197,16 @@ class RuntimeLocalMessageSourceStatus {
         return switch (provenance.sourceKind) {
           RuntimeSnapshotSourceKind.sampleDemo => (
               label: 'Sample view',
-              description: 'The sample view stays fixed until you scan your messages.',
+              description:
+                  'This sample stays fixed until you scan messages on this device.',
             ),
           RuntimeSnapshotSourceKind.deviceSms => (
               label: 'Checked recently',
               description: 'Based on a recent message check on this device.',
             ),
           RuntimeSnapshotSourceKind.safeLocalFallback => (
-              label: 'Safe local view',
-              description: 'Not from a recent message check.',
+              label: 'Local view',
+              description: 'This view did not come from a recent SMS check.',
             ),
           RuntimeSnapshotSourceKind.unknown => (
               label: 'Timing unavailable',
@@ -227,6 +244,13 @@ class RuntimeLocalMessageSourceStatus {
     }
   }
 
+  static String? _localModificationsLabel(bool hasLocalModifications) {
+    if (!hasLocalModifications) {
+      return null;
+    }
+    return 'Adjusted on this device';
+  }
+
   static String _sourceLabel(RuntimeSnapshotSourceKind sourceKind) {
     switch (sourceKind) {
       case RuntimeSnapshotSourceKind.sampleDemo:
@@ -234,7 +258,7 @@ class RuntimeLocalMessageSourceStatus {
       case RuntimeSnapshotSourceKind.deviceSms:
         return 'your messages';
       case RuntimeSnapshotSourceKind.safeLocalFallback:
-        return 'a safe local view';
+        return 'a local view on this device';
       case RuntimeSnapshotSourceKind.unknown:
         return 'this device';
     }

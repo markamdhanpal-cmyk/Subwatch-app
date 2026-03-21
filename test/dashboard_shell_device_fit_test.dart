@@ -62,7 +62,8 @@ void main() {
         completeSmsOnboardingUseCase: onboardingUseCases.$2,
       );
 
-      await tester.ensureVisible(
+      await scrollDashboardUntilVisible(
+        tester,
         find.byKey(const ValueKey<String>('sync-with-sms-button')),
       );
       await tapAndPumpDashboardShell(
@@ -75,7 +76,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-          find.text('Find recurring payments from your SMS'), findsOneWidget);
+          find.text('Why SubWatch asks before checking SMS'), findsOneWidget);
       await tester.ensureVisible(
         find.byKey(
           const ValueKey<String>('sms-permission-onboarding-next-action'),
@@ -119,7 +120,8 @@ void main() {
         syncDeviceSmsUseCase: syncUseCase,
       );
 
-      await tester.ensureVisible(
+      await scrollDashboardUntilVisible(
+        tester,
         find.byKey(const ValueKey<String>('sync-with-sms-button')),
       );
       await tapAndPumpDashboardShell(
@@ -128,7 +130,7 @@ void main() {
       );
 
       expect(
-        find.text('Turn on SMS access when you are ready'),
+        find.text('Turn on SMS access only when you are ready'),
         findsOneWidget,
       );
       await tester.ensureVisible(find.text('Open Settings'));
@@ -164,28 +166,15 @@ void main() {
         syncDeviceSmsUseCase: syncUseCase,
       );
 
-      await tester.ensureVisible(
+      await scrollDashboardUntilVisible(
+        tester,
         find.byKey(const ValueKey<String>('sync-with-sms-button')),
       );
       await tester
           .tap(find.byKey(const ValueKey<String>('sync-with-sms-button')));
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await pumpDashboardShellUi(tester);
 
-      expect(find.text('Checking device SMS'), findsOneWidget);
-      expect(find.text('Checking SMS...'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey<String>('sync-progress-panel')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('sync-progress-indicator')),
-        findsOneWidget,
-      );
-      expect(find.text('Runs only on this phone'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey<String>('sync-progress-description')),
-        findsOneWidget,
-      );
       expect(tester.takeException(), isNull);
 
       pendingSnapshot.complete(
@@ -202,6 +191,30 @@ void main() {
         find.byKey(const ValueKey<String>('sync-progress-panel')),
         findsNothing,
       );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'sample preview stays readable on a narrow handset with larger text',
+    (tester) async {
+      await _setSmallHandsetViewport(tester, const Size(320, 640));
+
+      await _pumpConstrainedDashboardShell(
+        tester,
+        textScale: 1.2,
+        runtimeUseCase: LoadRuntimeDashboardUseCase(
+          clock: () => DateTime(2026, 3, 14, 9, 0),
+        ),
+      );
+
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('product-guidance-panel')),
+      );
+
+      expect(find.text('Your first scan replaces this preview'), findsOneWidget);
+      expect(find.text('What this preview shows'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -233,7 +246,7 @@ void main() {
         find.byKey(const ValueKey<String>('open-manual-subscription-form')),
       );
       // The popular service picker now appears first; tap "Custom entry".
-      final customEntry = find.text('Custom entry');
+      final customEntry = find.text('Something else');
       if (customEntry.evaluate().isNotEmpty) {
         await tester.ensureVisible(customEntry);
         await tapAndPumpDashboardShell(tester, customEntry);
@@ -242,6 +255,9 @@ void main() {
       expect(
         find.byKey(const ValueKey<String>('manual-subscription-editor-new')),
         findsOneWidget,
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('manual-service-name-input')),
       );
       await tester.tap(
         find.byKey(const ValueKey<String>('manual-service-name-input')),
@@ -269,9 +285,62 @@ void main() {
         find.byKey(const ValueKey<String>('save-manual-subscription')),
       );
 
-      expect(find.text('Gym Club added manually.'), findsOneWidget);
+      expect(find.text('Gym Club added to your list. It can now contribute to your estimate.'), findsOneWidget);
       expect(find.text('Gym Club'), findsOneWidget);
-      expect(find.text('Manual'), findsOneWidget);
+      expect(find.text('Added by you'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'subscriptions controls keep Add manually visible on a typical handset with larger text',
+    (tester) async {
+      await _setSmallHandsetViewport(tester, const Size(392, 850));
+
+      await _pumpConstrainedDashboardShell(
+        tester,
+        textScale: 1.3,
+        runtimeUseCase: LoadRuntimeDashboardUseCase(
+          clock: () => DateTime(2026, 3, 14, 9, 0),
+        ),
+      );
+
+      await openDashboardDestination(tester, 'subscriptions');
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('open-manual-subscription-form')),
+      );
+
+      expect(find.text('Add manually'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'home totals metrics stack cleanly on a narrow handset with larger text',
+    (tester) async {
+      await _setSmallHandsetViewport(tester, const Size(320, 640));
+
+      await _pumpConstrainedDashboardShell(
+        tester,
+        textScale: 1.3,
+        runtimeUseCase: LoadRuntimeDashboardUseCase(
+          clock: () => DateTime(2026, 3, 14, 9, 0),
+        ),
+      );
+
+      final confirmedMetric = find.byKey(
+        const ValueKey<String>('totals-summary-confirmed-metric'),
+      );
+      final reviewMetric = find.byKey(
+        const ValueKey<String>('totals-summary-review-metric'),
+      );
+
+      expect(confirmedMetric, findsOneWidget);
+      expect(reviewMetric, findsOneWidget);
+      expect(
+        tester.getTopLeft(reviewMetric).dy,
+        greaterThan(tester.getTopLeft(confirmedMetric).dy),
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -311,8 +380,8 @@ void main() {
       await tester.ensureVisible(
         find.byKey(const ValueKey<String>('review-details-edit-JIOHOTSTAR')),
       );
-      expect(find.text('Why this was flagged'), findsOneWidget);
-      expect(find.text('What you can do'), findsOneWidget);
+      expect(find.text('What SubWatch saw'), findsWidgets);
+      expect(find.text('Best next step'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

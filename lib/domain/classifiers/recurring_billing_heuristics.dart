@@ -14,12 +14,22 @@ class RecurringBillingHeuristics {
   );
 
   static final RegExp telecomProviderPattern = RegExp(
-    r'\b(jio(?:hotstar)?|airtel|vi)\b',
+    r'\b(jio|airtel|vi)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp telecomCoBrandedBundlePattern = RegExp(
+    r'\bjiohotstar\b',
     caseSensitive: false,
   );
 
   static final RegExp telecomBenefitPattern = RegExp(
     r'\b(subscription|plan|pack|bundle|benefit|complimentary|free|recharge|unlocked)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp telecomBundleMarkerPattern = RegExp(
+    r'\b(bundle|benefit|complimentary|free|recharge|unlocked)\b',
     caseSensitive: false,
   );
 
@@ -54,7 +64,7 @@ class RecurringBillingHeuristics {
   );
 
   static final RegExp directRecurringMerchantPattern = RegExp(
-    r'\b(netflix(?:\.com)?|spotify|youtube\s*premium|youtubepremium|google\s*one|googleone|apple music|adobe(?: systems)?|jiohotstar|hotstar|amazon prime|sony\s*liv|sonyliv|zee5|wynk|gaana)\b',
+    r'\b(netflix(?:\.com)?|spotify|youtube\s*premium|youtubepremium|google\s*one|googleone|apple music|adobe(?: systems)?|jiohotstar|hotstar|disney\+?\s*hotstar|amazon prime|crunchyroll|swiggy\s*one|zomato\s*gold|sony\s*liv|sonyliv|zee5|wynk|gaana)\b',
     caseSensitive: false,
   );
 
@@ -83,8 +93,13 @@ class RecurringBillingHeuristics {
   }
 
   static bool looksLikeTelecomBundle(String body) {
-    return telecomProviderPattern.hasMatch(body) &&
-        telecomBenefitPattern.hasMatch(body);
+    if (telecomProviderPattern.hasMatch(body) &&
+        telecomBenefitPattern.hasMatch(body)) {
+      return true;
+    }
+
+    return telecomCoBrandedBundlePattern.hasMatch(body) &&
+        telecomBundleMarkerPattern.hasMatch(body);
   }
 
   static bool hasSubscriptionContext(String body) {

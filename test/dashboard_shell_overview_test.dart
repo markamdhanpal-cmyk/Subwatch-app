@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
+import 'package:sub_killer/application/models/local_message_source_access_state.dart';
+import 'package:sub_killer/application/models/raw_device_sms.dart';
+import 'package:sub_killer/application/providers/stub_local_message_source_capability_provider.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 
 import 'support/dashboard_shell_test_harness.dart';
@@ -29,9 +33,9 @@ void main() {
     expect(find.text('SubWatch'), findsOneWidget);
     expect(find.text('Scan messages'), findsOneWidget);
     final sourceLabel = tester.widget<Text>(
-      find.byKey(const ValueKey<String>('runtime-source-label')),
+      find.byKey(const ValueKey<String>('runtime-provenance-title')),
     );
-    expect(sourceLabel.data, 'Sample');
+    expect(sourceLabel.data, 'Sample view');
     expect(
       find.text('Showing the sample view prepared on 13 Mar 2026, 09:00.'),
       findsWidgets,
@@ -45,7 +49,7 @@ void main() {
       findsNothing,
     );
     expect(
-      find.text('Scan your messages to replace the sample view.'),
+      find.text('This is a sample layout until you scan messages on this device.'),
       findsOneWidget,
     );
 
@@ -57,20 +61,21 @@ void main() {
       find.byKey(const ValueKey<String>('product-guidance-panel')),
       findsOneWidget,
     );
-    expect(find.text('Sample preview'), findsOneWidget);
+    expect(find.text('Before your first scan'), findsOneWidget);
     expect(
-      find.text('See what SubWatch can surface before your first scan'),
+      find.text('See how SubWatch stays careful before your first scan'),
       findsOneWidget,
     );
-    expect(find.text('Estimated monthly total'), findsOneWidget);
+    expect(find.text('Your first scan replaces this preview'), findsOneWidget);
+    expect(find.text('Monthly spend estimate'), findsOneWidget);
     expect(find.text('Rs 648'), findsWidgets);
     expect(find.text('Confirmed'), findsOneWidget);
     expect(find.text('2'), findsWidgets);
     expect(find.text('Needs review'), findsWidgets);
-    expect(find.text('Trial or benefit'), findsOneWidget);
-    expect(find.text('What this sample is showing'), findsOneWidget);
+    expect(find.text('Trials & benefits'), findsWidgets);
+    expect(find.text('What this preview shows'), findsOneWidget);
     expect(
-      find.text('Netflix and Spotify show up as paid subscriptions.'),
+      find.text('Netflix and Spotify appear as paid subscriptions here.'),
       findsOneWidget,
     );
     expect(find.text('Due soon'), findsOneWidget);
@@ -82,11 +87,11 @@ void main() {
     );
     expect(
       find.text(
-          'Jiohotstar stay separate until you review them.'),
+          'Jiohotstar stay separate until you decide.'),
       findsOneWidget,
     );
     expect(
-      find.text('Google Gemini Pro stays separate from paid subscriptions.'),
+      find.text('Google Gemini Pro stays visible as separate access.'),
       findsOneWidget,
     );
     expect(
@@ -117,22 +122,22 @@ void main() {
     expect(
       find.descendant(
         of: reviewQueueSection,
-        matching: find.text('Needs review'),
+        matching: find.text('Needs your review'),
       ),
       findsWidgets,
     );
     expect(
       find.text(
-        'This looks recurring enough to keep visible, but not safe enough to auto-confirm.',
+        'This may be recurring, but SubWatch is waiting for stronger proof before it counts it as paid.',
       ),
       findsOneWidget,
     );
-    expect(find.text('Short reason'), findsWidgets);
+    expect(find.text('What SubWatch saw'), findsWidgets);
     expect(
       find.textContaining('Setup intent seen'),
       findsOneWidget,
     );
-    expect(find.text('Review details'), findsWidgets);
+    expect(find.text('See why'), findsWidgets);
     expect(find.text('Not a subscription'), findsWidgets);
     expect(find.text('Confirm as paid'), findsOneWidget);
     expect(
@@ -188,9 +193,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('How SubWatch works'), findsWidgets);
-    expect(find.text('Trust-first by default'), findsOneWidget);
-    expect(find.text('What refresh does'), findsOneWidget);
-    expect(find.text('What to expect'), findsOneWidget);
+    expect(find.text('What SubWatch confirms'), findsOneWidget);
+    expect(find.text('What stays separate'), findsOneWidget);
+    expect(find.text('What refresh means'), findsOneWidget);
   });
 
   testWidgets(
@@ -207,7 +212,7 @@ void main() {
     await openDashboardDestination(tester, 'settings');
 
     expect(
-      find.byKey(const ValueKey<String>('settings-overview-panel')),
+      find.byKey(const ValueKey<String>('settings-quick-actions-panel')),
       findsOneWidget,
     );
     expect(find.text('Settings'), findsWidgets);
@@ -215,9 +220,10 @@ void main() {
       find.byKey(const ValueKey<String>('settings-support-panel')),
       findsWidgets,
     );
-    expect(find.text('Help & privacy'), findsWidgets);
-    expect(find.text('Help'), findsOneWidget);
-    expect(find.text('Privacy & data'), findsOneWidget);
+    expect(find.text('Help, privacy & about'), findsWidgets);
+    expect(find.text('Actions'), findsOneWidget);
+    expect(find.text('Using SubWatch'), findsOneWidget);
+    expect(find.text('Privacy & local data'), findsOneWidget);
     expect(find.text('Report a problem'), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('settings-app-info-panel')),
         findsNothing);
@@ -228,8 +234,61 @@ void main() {
     );
     await pumpDashboardShellUi(tester);
 
-    expect(find.text('Recovery'), findsWidgets);
-    expect(find.text('Reminders'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey<String>('section-settings-recovery')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('section-renewalReminders')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('settings quick actions open scan onboarding and manual add', (
+    tester,
+  ) async {
+    final onboardingUseCases = buildMemorySmsOnboardingUseCases();
+
+    await pumpDashboardShellApp(
+      tester,
+      runtimeUseCase: LoadRuntimeDashboardUseCase(
+        clock: () => DateTime(2026, 3, 14, 9, 0),
+      ),
+      loadSmsOnboardingProgressUseCase: onboardingUseCases.$1,
+      completeSmsOnboardingUseCase: onboardingUseCases.$2,
+    );
+
+    await openDashboardDestination(tester, 'settings');
+
+    expect(find.byKey(const ValueKey<String>('settings-quick-actions-panel')), findsWidgets);
+    expect(find.text('Scan messages'), findsOneWidget);
+    expect(find.text('Review 1 item'), findsOneWidget);
+    expect(find.text('Add manually'), findsWidgets);
+
+    await tapAndPumpDashboardShell(
+      tester,
+      find.byKey(const ValueKey<String>('settings-source-action')),
+    );
+    expect(
+      find.byKey(const ValueKey<String>('sms-permission-onboarding-sheet')),
+      findsOneWidget,
+    );
+
+    Navigator.of(
+      tester.element(
+        find.byKey(const ValueKey<String>('sms-permission-onboarding-sheet')),
+      ),
+    ).pop();
+    await pumpDashboardShellUi(tester);
+
+    await tapAndPumpDashboardShell(
+      tester,
+      find.byKey(const ValueKey<String>('settings-add-manual-action')),
+    );
+    expect(
+      find.byKey(const ValueKey<String>('popular-service-picker')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('settings destination opens help and privacy sheets', (
@@ -250,15 +309,19 @@ void main() {
     );
 
     expect(find.byKey(const ValueKey<String>('help-sheet')), findsOneWidget);
-    expect(find.text('Refresh'), findsOneWidget);
+    expect(find.text('Refresh & source'), findsOneWidget);
     expect(find.text('Review'), findsWidgets);
-    expect(find.text('Confirmed vs observed'), findsOneWidget);
+    expect(find.text('Confirmed, Review, separate access'), findsOneWidget);
 
     Navigator.of(
       tester.element(find.byKey(const ValueKey<String>('help-sheet'))),
     ).pop();
     await pumpDashboardShellUi(tester);
 
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('settings-open-privacy')),
+    );
     await tapAndPumpDashboardShell(
       tester,
       find.byKey(const ValueKey<String>('settings-open-privacy')),
@@ -270,7 +333,7 @@ void main() {
     );
     expect(find.text('What stays local'), findsOneWidget);
     expect(find.text('When SMS is read'), findsOneWidget);
-    expect(find.text('What you control'), findsOneWidget);
+    expect(find.text('What SubWatch does not do'), findsOneWidget);
   });
 
   testWidgets('settings destination opens about and feedback sheets', (
@@ -302,7 +365,7 @@ void main() {
     expect(find.text('How to share it'), findsOneWidget);
     expect(
       find.text(
-        'You do not need to copy raw SMS unless someone specifically asks for it.',
+        'Screenshots are usually enough. Share message text only if someone specifically asks for it.',
       ),
       findsOneWidget,
     );
@@ -354,7 +417,7 @@ void main() {
     expect(find.text('Why SubWatch shows this'), findsOneWidget);
     expect(
       find.text(
-        'Fresh and restored local snapshots are labeled separately so the current state stays honest.',
+        'Fresh and saved views stay labeled separately so the current state stays honest.',
       ),
       findsOneWidget,
     );
@@ -393,7 +456,7 @@ void main() {
     expect(find.text('Why this item is in review'), findsOneWidget);
     expect(
       find.text(
-        'This item is not counted as active paid until you make an explicit decision.',
+        'Any decision you make stays local to this device and can be undone later.',
       ),
       findsOneWidget,
     );
@@ -462,7 +525,7 @@ void main() {
     );
 
     expect(
-      find.text('Why this is separate'),
+      find.text('Why this stays separate'),
       findsOneWidget,
     );
     expect(
@@ -531,4 +594,114 @@ void main() {
 
     expect(find.text('Family streaming'), findsOneWidget);
   });
+
+
+  testWidgets('startup load keeps a saved local view when refresh loading fails', (
+    tester,
+  ) async {
+    final store = MemoryLedgerSnapshotStore();
+
+    await LoadRuntimeDashboardUseCase(
+      capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+        accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+      ),
+      deviceSmsGateway: FakeDeviceSmsGateway(
+        <RawDeviceSms>[
+          RawDeviceSms(
+            id: 'seed-netflix',
+            address: 'BANK',
+            body: 'Your Netflix subscription has been renewed for Rs 499.',
+            receivedAt: DateTime(2026, 3, 12, 13, 0),
+          ),
+        ],
+      ),
+      ledgerSnapshotStore: store,
+      loadMode: RuntimeLedgerLoadMode.refreshFromSource,
+      clock: () => DateTime(2026, 3, 14, 8, 30),
+    ).execute();
+
+    await pumpDashboardShellApp(
+      tester,
+      runtimeUseCase: LoadRuntimeDashboardUseCase(
+        capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+          accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+        ),
+        deviceSmsGateway: _AlwaysThrowingGateway(),
+        ledgerSnapshotStore: store,
+        loadMode: RuntimeLedgerLoadMode.refreshFromSource,
+        clock: () => DateTime(2026, 3, 14, 9, 0),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey<String>('snapshot-certificate-card')), findsOneWidget);
+    expect(find.text('This local view is not ready yet.'), findsNothing);
+    expect(find.text('Saved view'), findsWidgets);
+  });
+  testWidgets('load error offers a retry path back into the dashboard', (
+    tester,
+  ) async {
+    final gateway = _FlakyGateway();
+
+    await pumpDashboardShellApp(
+      tester,
+      runtimeUseCase: LoadRuntimeDashboardUseCase(
+        capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+          accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+        ),
+        deviceSmsGateway: gateway,
+        loadMode: RuntimeLedgerLoadMode.refreshFromSource,
+        clock: () => DateTime(2026, 3, 14, 9, 0),
+      ),
+    );
+
+    expect(find.text('This local view is not ready yet.'), findsOneWidget);
+    expect(find.textContaining('could not open the current local view just yet'), findsOneWidget);
+    expect(find.text('Exception: boom'), findsNothing);
+    expect(find.text('boom'), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('retry-load-dashboard')),
+      findsOneWidget,
+    );
+
+    await tapAndPumpDashboardShell(
+      tester,
+      find.byKey(const ValueKey<String>('retry-load-dashboard')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('This local view is not ready yet.'), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('retry-load-dashboard')),
+      findsNothing,
+    );
+  });
+}
+
+class _AlwaysThrowingGateway implements DeviceSmsGateway {
+  @override
+  Future<List<RawDeviceSms>> readMessages() async {
+    throw Exception('still broken');
+  }
+}
+
+class _FlakyGateway implements DeviceSmsGateway {
+  int _calls = 0;
+
+  @override
+  Future<List<RawDeviceSms>> readMessages() async {
+    _calls += 1;
+    if (_calls == 1) {
+      throw Exception('boom');
+    }
+
+    return <RawDeviceSms>[
+      RawDeviceSms(
+        id: 'retry-netflix',
+        address: 'BANK',
+        body: 'Your Netflix subscription has been renewed for Rs 499.',
+        receivedAt: DateTime(2026, 3, 12, 13, 0),
+      ),
+    ];
+  }
 }

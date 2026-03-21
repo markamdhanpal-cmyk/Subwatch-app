@@ -34,7 +34,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text('Manual entries stay clearly marked as added by you.'),
+        find.text('Added by you on this device. Use this when a scan is limited or you want something tracked right away without changing detected results.'),
         findsOneWidget,
       );
 
@@ -50,14 +50,12 @@ void main() {
         find.byKey(const ValueKey<String>('section-manualSubscriptions')),
         findsWidgets,
       );
-      expect(find.text('Added by you'), findsOneWidget);
+      expect(find.text('Added by you'), findsWidgets);
       expect(find.text('Gym Club'), findsOneWidget);
-      expect(find.text('Manual'), findsOneWidget);
       expect(
-        find.text('Manual entries stay clearly separate from detected subscriptions.'),
+        find.text('Added by you on this device. Use this when a scan is limited or you want something tracked right away without changing detected results.'),
         findsOneWidget,
       );
-      expect(find.text('Netflix'), findsOneWidget);
 
       await _openManualEditor(tester);
       await _fillManualEditor(
@@ -71,16 +69,23 @@ void main() {
       expect(find.text('Disney+ Hotstar'), findsOneWidget);
       expect(find.text('Yearly'), findsWidgets);
 
-      await tapAndPumpDashboardShell(tester, find.text('Gym Club').first);
-      expect(find.text('Added by you on this device.'), findsOneWidget);
-      expect(find.text('Manual entry'), findsOneWidget);
+      final gymClubCard = find.ancestor(
+        of: find.text('Gym Club').first,
+        matching: find.byType(InkWell),
+      ).first;
+      final gymClubRow = tester.widget<InkWell>(gymClubCard);
+      expect(gymClubRow.onTap, isNotNull);
+      gymClubRow.onTap!.call();
+      await pumpDashboardShellUi(tester);
+      expect(find.text('Added by you on this device. It stays separate from detected subscriptions and gives you a fallback when a scan is limited.'), findsOneWidget);
+      expect(find.text('Added by you'), findsWidgets);
       expect(find.text('Billing'), findsOneWidget);
       expect(find.text('Plan label'), findsOneWidget);
       expect(find.text('Family plan'), findsOneWidget);
 
       await tapAndPumpDashboardShell(
         tester,
-        find.widgetWithText(FilledButton, 'Edit'),
+        find.widgetWithText(FilledButton, 'Edit details'),
       );
       expect(
         find.byKey(const ValueKey<String>('manual-service-name-input')),
@@ -98,23 +103,26 @@ void main() {
       expect(find.text('Gym Club Plus'), findsOneWidget);
       expect(find.text('Gym Club'), findsNothing);
 
+      final disneyCard = find.ancestor(
+        of: find.text('Disney+ Hotstar').first,
+        matching: find.byType(InkWell),
+      ).first;
+      final disneyRow = tester.widget<InkWell>(disneyCard);
+      expect(disneyRow.onTap, isNotNull);
+      disneyRow.onTap!.call();
+      await pumpDashboardShellUi(tester);
       await tapAndPumpDashboardShell(
         tester,
-        find.text('Disney+ Hotstar').first,
+        find.widgetWithText(TextButton, 'Remove from list'),
       );
+      expect(find.text('Remove manual subscription?'), findsOneWidget);
       await tapAndPumpDashboardShell(
         tester,
-        find.widgetWithText(TextButton, 'Delete'),
-      );
-      expect(find.text('Delete manual subscription?'), findsOneWidget);
-      await tapAndPumpDashboardShell(
-        tester,
-        find.widgetWithText(FilledButton, 'Delete'),
+        find.widgetWithText(FilledButton, 'Remove'),
       );
 
       expect(find.text('Disney+ Hotstar'), findsNothing);
       expect(find.text('Gym Club Plus'), findsOneWidget);
-      expect(find.text('Netflix'), findsOneWidget);
     },
   );
 }
@@ -126,7 +134,7 @@ Future<void> _openManualEditor(WidgetTester tester) async {
   );
   // The popular service picker now appears first; tap "Custom entry" to
   // proceed to the blank manual editor form.
-  final customEntry = find.text('Custom entry');
+  final customEntry = find.text('Something else');
   if (customEntry.evaluate().isNotEmpty) {
     await tester.ensureVisible(customEntry);
     await tapAndPumpDashboardShell(tester, customEntry);

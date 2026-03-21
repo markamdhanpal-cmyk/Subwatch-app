@@ -45,15 +45,16 @@ class DashboardTotalsSummaryPresentation {
 
   String get reviewValueLabel => '$reviewCount';
 
-  String get reviewCaption => reviewCount == 1 ? 'Needs review' : 'Need review';
+  String get reviewCaption =>
+      reviewCount == 1 ? 'Review item' : 'Review items';
 
   String get monthlyTotalValueLabel => !hasEstimatedSpend
-      ? 'Estimate unavailable'
+      ? 'Amount not available yet'
       : 'Rs ${monthlyTotalAmount.toStringAsFixed(0)}';
 
   String get estimateBadgeLabel {
     if (!hasEstimatedSpend) {
-      return 'No amount data';
+      return 'Amount pending';
     }
     if (isPartialEstimate) {
       return 'Partial estimate';
@@ -63,7 +64,7 @@ class DashboardTotalsSummaryPresentation {
 
   String get monthlyTotalCaption {
     if (!hasEstimatedSpend) {
-      return 'Waiting for billed or manual amounts';
+      return 'Shown when a billed or manual amount is available';
     }
     if (isPartialEstimate) {
       return 'Some subscriptions do not show an amount yet';
@@ -76,7 +77,7 @@ class DashboardTotalsSummaryPresentation {
 
   String get summaryCopy {
     if (!hasEstimatedSpend) {
-      return 'Monthly spend appears only when a visible billed amount or manual amount is available.';
+      return 'Monthly spend appears here after SubWatch finds a visible billed amount or you add one manually.';
     }
     if (isPartialEstimate && hasCadenceConversions) {
       return 'Estimate excludes subscriptions without an amount and converts annual or quarterly plans to monthly equivalents.';

@@ -83,7 +83,7 @@ void main() {
     expect(result.hasItems, isFalse);
     expect(
       result.summaryCopy,
-      'No renewals yet.',
+      'No renewal dates yet.',
     );
   });
 
@@ -112,10 +112,10 @@ void main() {
     expect(semantics.flagsCollection.isHeader, isTrue);
     handle.dispose();
 
-    expect(find.text('Nothing coming up'), findsOneWidget);
+    expect(find.text('No renewal dates yet'), findsOneWidget);
     expect(
       find.text(
-        'Renewals appear here when a clear date is available.',
+        'Renewals appear here when a confirmed subscription or manual entry has a clear date.',
       ),
       findsOneWidget,
     );

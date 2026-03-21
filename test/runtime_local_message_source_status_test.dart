@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/message_sources/sample_local_message_source.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
 import 'package:sub_killer/application/models/runtime_local_message_source_status.dart';
@@ -25,7 +25,7 @@ void main() {
       expect(status.title, 'Sample view');
       expect(
         status.description,
-        'Scan your messages to replace the sample view.',
+        'This is a sample layout until you scan messages on this device.',
       );
       expect(status.provenanceTitle, 'Sample view');
       expect(
@@ -35,7 +35,7 @@ void main() {
       expect(status.freshnessLabel, 'Sample view');
       expect(
         status.freshnessDescription,
-        'The sample view stays fixed until you scan your messages.',
+        'This sample stays fixed until you scan messages on this device.',
       );
       expect(status.actionLabel, 'Scan messages');
       expect(
@@ -177,7 +177,7 @@ void main() {
       expect(status.title, 'Saved view');
       expect(
         status.description,
-        'Showing the last saved view on this device.',
+        'Showing the last saved view on this device. It is not a new SMS check.',
       );
       expect(status.provenanceTitle, 'Saved view');
       expect(status.actionLabel, 'Turn on SMS access');
@@ -185,6 +185,27 @@ void main() {
         status.permissionRationaleVariant,
         RuntimeLocalMessageSourcePermissionRationaleVariant.retry,
       );
+    });
+
+    test('flags on-device changes without hiding the saved provenance state', () {
+      final status = RuntimeLocalMessageSourceStatus.fromSelection(
+        LocalMessageSourceSelection(
+          accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+          resolution: LocalMessageSourceResolution.deviceLocal,
+          messageSource: const SampleLocalMessageSource(),
+        ),
+        provenance: RuntimeSnapshotProvenance(
+          kind: RuntimeSnapshotProvenanceKind.restoredLocalSnapshot,
+          sourceKind: RuntimeSnapshotSourceKind.deviceSms,
+          recordedAt: DateTime(2026, 3, 13, 10, 0),
+          refreshedAt: DateTime(2026, 3, 13, 9, 30),
+        ),
+        hasLocalModifications: true,
+      );
+
+      expect(status.provenanceTitle, 'Saved view');
+      expect(status.hasLocalModifications, isTrue);
+      expect(status.localModificationsLabel, 'Adjusted on this device');
     });
   });
 }

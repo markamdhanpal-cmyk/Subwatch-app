@@ -365,28 +365,39 @@ class LoadRuntimeDashboardUseCase {
       );
     }
 
-    await _ledgerRepository.replaceAll(const <ServiceLedgerEntry>[]);
-    final messages = await messageSourceSelection.messageSource.loadMessages();
-    final ingestionResult = await _ingestionUseCase.execute(messages);
-    await snapshotStore?.saveRecord(
-      LedgerSnapshotRecord(
-        entries: ingestionResult.ledgerEntries,
-        metadata: LedgerSnapshotMetadata(
+    try {
+      await _ledgerRepository.replaceAll(const <ServiceLedgerEntry>[]);
+      final messages = await messageSourceSelection.messageSource.loadMessages();
+      final ingestionResult = await _ingestionUseCase.execute(messages);
+      await snapshotStore?.saveRecord(
+        LedgerSnapshotRecord(
+          entries: ingestionResult.ledgerEntries,
+          metadata: LedgerSnapshotMetadata(
+            sourceKind: _sourceKindForSelection(messageSourceSelection),
+            refreshedAt: now,
+          ),
+        ),
+      );
+
+      return _projectSnapshot(
+        messageSourceSelection,
+        provenance: RuntimeSnapshotProvenance(
+          kind: RuntimeSnapshotProvenanceKind.freshLoad,
           sourceKind: _sourceKindForSelection(messageSourceSelection),
+          recordedAt: now,
           refreshedAt: now,
         ),
-      ),
-    );
-
-    return _projectSnapshot(
-      messageSourceSelection,
-      provenance: RuntimeSnapshotProvenance(
-        kind: RuntimeSnapshotProvenanceKind.freshLoad,
-        sourceKind: _sourceKindForSelection(messageSourceSelection),
-        recordedAt: now,
-        refreshedAt: now,
-      ),
-    );
+      );
+    } catch (_) {
+      if (persistedRecord != null) {
+        return _restorePersistedSnapshot(
+          messageSourceSelection,
+          persistedRecord: persistedRecord,
+          recordedAt: now,
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<RuntimeDashboardSnapshot> _restorePersistedSnapshot(

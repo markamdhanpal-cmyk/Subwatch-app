@@ -28,6 +28,7 @@ class BuildDashboardTotalsSummaryUseCase {
     required List<DashboardCard> cards,
     List<ManualSubscriptionEntry> manualSubscriptions =
         const <ManualSubscriptionEntry>[],
+    int? reviewCount,
   }) {
     final confirmedPaidCards = cards
         .where(
@@ -36,9 +37,9 @@ class BuildDashboardTotalsSummaryUseCase {
               card.state == ResolverState.activePaid,
         )
         .toList(growable: false);
-    final reviewCount = cards
-        .where((card) => card.bucket == DashboardBucket.needsReview)
-        .length;
+    final surfacedReviewCount =
+        reviewCount ??
+        cards.where((card) => card.bucket == DashboardBucket.needsReview).length;
 
     var includedInMonthlyTotalCount = 0;
     var excludedWithoutTrustedAmountCount = 0;
@@ -86,7 +87,7 @@ class BuildDashboardTotalsSummaryUseCase {
 
     return DashboardTotalsSummaryPresentation(
       activePaidCount: confirmedPaidCards.length,
-      reviewCount: reviewCount,
+      reviewCount: surfacedReviewCount,
       includedInMonthlyTotalCount: includedInMonthlyTotalCount,
       excludedWithoutTrustedAmountCount: excludedWithoutTrustedAmountCount,
       manualEntriesIncludedCount: manualEntriesIncludedCount,

@@ -85,6 +85,39 @@ void main() {
       expect(result.ledgerEntries.single.state, ResolverState.activeBundled);
     });
 
+    test('paid JioHotstar renewal becomes activePaid end to end', () async {
+      final result = await useCase.execute(<MessageRecord>[
+        message(
+          id: 'jiohotstar-bill-1',
+          body: 'Your JioHotstar subscription has been renewed for Rs 299.',
+        ),
+      ]);
+
+      expect(result.events, hasLength(1));
+      expect(
+          result.events.single.type, SubscriptionEventType.subscriptionBilled);
+      expect(result.events.single.serviceKey.value, 'JIOHOTSTAR');
+      expect(result.ledgerEntries.single.state, ResolverState.activePaid);
+      expect(result.ledgerEntries.single.totalBilled, 299);
+    });
+
+    test('direct Swiggy One card billing becomes activePaid end to end',
+        () async {
+      final result = await useCase.execute(<MessageRecord>[
+        message(
+          id: 'swiggy-one-bill-1',
+          body: 'HDFC Card XX1212 used for Rs 99 at SWIGGY ONE on 17 Mar.',
+        ),
+      ]);
+
+      expect(result.events, hasLength(1));
+      expect(
+          result.events.single.type, SubscriptionEventType.subscriptionBilled);
+      expect(result.events.single.serviceKey.value, 'SWIGGY_ONE');
+      expect(result.ledgerEntries.single.state, ResolverState.activePaid);
+      expect(result.ledgerEntries.single.totalBilled, 99);
+    });
+
     test('one-time payment noise does not become activePaid', () async {
       final result = await useCase.execute(<MessageRecord>[
         message(

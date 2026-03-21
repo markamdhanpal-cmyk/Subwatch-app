@@ -181,7 +181,7 @@ void main() {
       find.byKey(const ValueKey<String>('service-view-empty-state')),
       findsOneWidget,
     );
-    expect(find.text('No matches'), findsOneWidget);
+    expect(find.text('Nothing matches this view'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('section-confirmedSubscriptions')),
       findsNothing,
@@ -269,5 +269,3 @@ DashboardCard _card({
     state: ResolverState.activePaid,
   );
 }
-
-

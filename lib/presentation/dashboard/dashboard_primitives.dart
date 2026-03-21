@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'service_icon_registry.dart';
 
+const Duration _dashboardMotionDuration = Duration(milliseconds: 180);
+const Duration _dashboardEntranceDuration = Duration(milliseconds: 220);
+
 class DashboardShellPalette {
   static const Color canvas = Color(0xFF120E0C);
   static const Color paper = Color(0xFF191311);
@@ -9,7 +12,7 @@ class DashboardShellPalette {
   static const Color nestedPaper = Color(0xFF2A211D);
   static const Color registerPaper = Color(0xFF1C1512);
   static const Color ink = Color(0xFFF7ECDD);
-  static const Color mutedInk = Color(0xFFB9AA9A);
+  static const Color mutedInk = Color(0xFFC9BBAE);
   static const Color accent = Color(0xFFE1A55A);
   static const Color accentSoft = Color(0xFF3A281B);
   static const Color success = Color(0xFF7AB49D);
@@ -99,7 +102,10 @@ class DashboardPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final reduceMotion = _shouldReduceMotion(context);
+    return AnimatedContainer(
+      duration: reduceMotion ? Duration.zero : _dashboardMotionDuration,
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         color: gradient == null
             ? backgroundColor ?? DashboardShellPalette.paper
@@ -210,56 +216,58 @@ class DashboardServiceAvatar extends StatelessWidget {
           )
         : borderColor;
 
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[
-            effectiveBackground,
-            Color.alphaBlend(
-              Colors.black.withValues(alpha: 0.16),
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[
               effectiveBackground,
+              Color.alphaBlend(
+                Colors.black.withValues(alpha: 0.16),
+                effectiveBackground,
+              ),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: effectiveBorder),
+        ),
+        child: Stack(
+          children: <Widget>[
+            if (sealColor != null)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: sealColor,
+                    shape: BoxShape.circle,
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: sealColor!.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            Center(
+              child: Text(
+                effectiveMonogram,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: effectiveForeground,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.35,
+                    ),
+              ),
             ),
           ],
         ),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: effectiveBorder),
-      ),
-      child: Stack(
-        children: <Widget>[
-          if (sealColor != null)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: sealColor,
-                  shape: BoxShape.circle,
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: sealColor!.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          Center(
-            child: Text(
-              effectiveMonogram,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: effectiveForeground,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.35,
-                  ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -283,59 +291,89 @@ class DashboardSectionFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = _shouldReduceMotion(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (eyebrow != null) ...<Widget>[
-                    Text(
-                      eyebrow!,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            letterSpacing: 0.8,
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: reduceMotion ? Duration.zero : _dashboardEntranceDuration,
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, (1 - value) * 6),
+                child: child,
+              ),
+            );
+          },
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (eyebrow != null) ...<Widget>[
+                      Text(
+                        eyebrow!,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              letterSpacing: 0.8,
+                              color: DashboardShellPalette.mutedInk,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 1),
+                    ],
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: DashboardShellPalette.ink,
+                            ),
+                      ),
+                    ),
+                    if (caption != null) ...<Widget>[
+                      const SizedBox(height: 2),
+                      Text(
+                        caption!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DashboardShellPalette.mutedInk,
+                              height: 1.24,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (countLabel != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: AnimatedSwitcher(
+                    duration: reduceMotion
+                        ? Duration.zero
+                        : _dashboardMotionDuration,
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeOutCubic,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    ),
+                    child: Text(
+                      countLabel!,
+                      key: ValueKey<String>(countLabel!),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: DashboardShellPalette.mutedInk,
                             fontWeight: FontWeight.w700,
                           ),
                     ),
-                    const SizedBox(height: 1),
-                  ],
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: DashboardShellPalette.ink,
-                        ),
                   ),
-                  if (caption != null) ...<Widget>[
-                    const SizedBox(height: 2),
-                    Text(
-                      caption!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DashboardShellPalette.mutedInk,
-                            height: 1.24,
-                          ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (countLabel != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  countLabel!,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: DashboardShellPalette.mutedInk,
-                        fontWeight: FontWeight.w700,
-                      ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 8),
         ...children,
@@ -362,6 +400,7 @@ class DashboardRegisterEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = _shouldReduceMotion(context);
     return SizedBox(
       width: 122,
       child: DashboardPanel(
@@ -398,13 +437,33 @@ class DashboardRegisterEntry extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: DashboardShellPalette.ink,
-                    fontWeight: FontWeight.w800,
-                    height: 1,
+            AnimatedSwitcher(
+              duration:
+                  reduceMotion ? Duration.zero : _dashboardMotionDuration,
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeOutCubic,
+              transitionBuilder: (child, animation) {
+                final offsetAnimation = Tween<Offset>(
+                  begin: const Offset(0, 0.18),
+                  end: Offset.zero,
+                ).animate(animation);
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: offsetAnimation,
+                    child: child,
                   ),
+                );
+              },
+              child: Text(
+                value,
+                key: ValueKey<String>('register-value-$label-$value'),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: DashboardShellPalette.ink,
+                      fontWeight: FontWeight.w800,
+                      height: 1,
+                    ),
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -435,47 +494,70 @@ class DashboardEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              color: DashboardShellPalette.paper.withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: Icon(icon, color: DashboardShellPalette.accent, size: 12),
+    final reduceMotion = _shouldReduceMotion(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: reduceMotion ? Duration.zero : _dashboardEntranceDuration,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 4),
+            child: child,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: DashboardShellPalette.ink,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  message,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DashboardShellPalette.mutedInk,
-                        height: 1.16,
-                      ),
-                ),
-              ],
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: DashboardShellPalette.paper.withValues(alpha: 0.75),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Icon(icon, color: DashboardShellPalette.accent, size: 12),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: DashboardShellPalette.ink,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    message,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DashboardShellPalette.mutedInk,
+                          height: 1.16,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+bool _shouldReduceMotion(BuildContext context) {
+  final mediaQuery = MediaQuery.maybeOf(context);
+  if (mediaQuery == null) {
+    return false;
+  }
+  return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
 }
 
 class SubWatchBrandMark extends StatelessWidget {

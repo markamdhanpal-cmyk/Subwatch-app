@@ -98,7 +98,9 @@ class _DashboardShellState extends State<DashboardShell> {
     milliseconds: 600,
   );
   static const Duration _syncProgressTick = Duration(seconds: 1);
+  static const Duration _polishMotionDuration = Duration(milliseconds: 180);
   late Future<RuntimeDashboardSnapshot> _snapshotFuture;
+  RuntimeDashboardSnapshot? _lastSuccessfulSnapshot;
   bool _isSyncing = false;
   final ValueNotifier<Duration> _syncElapsedNotifier =
       ValueNotifier(Duration.zero);
@@ -152,6 +154,12 @@ class _DashboardShellState extends State<DashboardShell> {
 
   Future<RuntimeDashboardSnapshot> _loadInitialSnapshot() {
     return (widget._runtimeUseCase ?? LoadRuntimeDashboardUseCase()).execute();
+  }
+
+  void _reloadSnapshot() {
+    setState(() {
+      _snapshotFuture = _loadInitialSnapshot();
+    });
   }
 
   void _handleServiceSearchChanged() {
@@ -349,7 +357,12 @@ class _DashboardShellState extends State<DashboardShell> {
       return _finishManualSubscriptionMutation(
         targetKey: targetKey,
         result: result,
-        successMessage: '${value.serviceName.trim()} added manually.',
+        successMessage: _manualMutationSuccessMessage(
+          serviceName: value.serviceName.trim(),
+          verb: 'added to your list',
+          amountInput: value.amountInput,
+          nextRenewalDate: value.nextRenewalDate,
+        ),
       );
     } catch (_) {
       if (!mounted) {
@@ -360,7 +373,7 @@ class _DashboardShellState extends State<DashboardShell> {
         _manualSubscriptionTargetsInFlight.remove(targetKey);
       });
       _showFeedbackSnackBar(
-        'Manual subscription could not be saved. Visible state was kept.',
+        'Added item could not be saved. Visible state was kept.',
       );
       return false;
     }
@@ -389,7 +402,12 @@ class _DashboardShellState extends State<DashboardShell> {
       return _finishManualSubscriptionMutation(
         targetKey: targetKey,
         result: result,
-        successMessage: '${value.serviceName.trim()} updated.',
+        successMessage: _manualMutationSuccessMessage(
+          serviceName: value.serviceName.trim(),
+          verb: 'updated in your list',
+          amountInput: value.amountInput,
+          nextRenewalDate: value.nextRenewalDate,
+        ),
       );
     } catch (_) {
       if (!mounted) {
@@ -400,7 +418,7 @@ class _DashboardShellState extends State<DashboardShell> {
         _manualSubscriptionTargetsInFlight.remove(targetKey);
       });
       _showFeedbackSnackBar(
-        'Manual subscription could not be updated. Visible state was kept.',
+        'Added item could not be updated. Visible state was kept.',
       );
       return false;
     }
@@ -421,8 +439,7 @@ class _DashboardShellState extends State<DashboardShell> {
       return _finishManualSubscriptionMutation(
         targetKey: targetKey,
         result: result,
-        successMessage:
-            '${entry.serviceName} removed from manual subscriptions.',
+        successMessage: '${entry.serviceName} removed from your list.',
       );
     } catch (_) {
       if (!mounted) {
@@ -433,7 +450,7 @@ class _DashboardShellState extends State<DashboardShell> {
         _manualSubscriptionTargetsInFlight.remove(targetKey);
       });
       _showFeedbackSnackBar(
-        'Manual subscription could not be removed. Visible state was kept.',
+        'Added item could not be removed. Visible state was kept.',
       );
       return false;
     }
@@ -464,15 +481,35 @@ class _DashboardShellState extends State<DashboardShell> {
         return true;
       case HandleManualSubscriptionOutcome.invalid:
         _showFeedbackSnackBar(
-          result.errorMessage ?? 'Please check the manual entry and try again.',
+          result.errorMessage ?? 'Please check the added item and try again.',
         );
         return false;
       case HandleManualSubscriptionOutcome.notFound:
         _showFeedbackSnackBar(
-          'Nothing changed. The manual subscription was not available.',
+          'Nothing changed. The manual entry was not available.',
         );
         return false;
     }
+  }
+
+  String _manualMutationSuccessMessage({
+    required String serviceName,
+    required String verb,
+    required String amountInput,
+    required DateTime? nextRenewalDate,
+  }) {
+    final hasAmount = amountInput.trim().isNotEmpty;
+    final hasRenewalDate = nextRenewalDate != null;
+    if (hasAmount && hasRenewalDate) {
+      return '$serviceName $verb. It can now contribute to your estimate and renewals.';
+    }
+    if (hasAmount) {
+      return '$serviceName $verb. It can now contribute to your estimate.';
+    }
+    if (hasRenewalDate) {
+      return '$serviceName $verb. It can now appear in renewals and reminders.';
+    }
+    return '$serviceName $verb.';
   }
 
   Future<void> _handleReviewItemAction(
@@ -675,14 +712,14 @@ class _DashboardShellState extends State<DashboardShell> {
         }
       });
       _showFeedbackSnackBar(
-        '${item.title} ignored locally.',
+        '${item.title} hidden on this device.',
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
             _handleUndoLocalControlOverlay(
               targetKey: targetKey,
               title: item.title,
-              restoredLabel: 'returned to review',
+              restoredLabel: 'returned to review on this device',
             );
           },
         ),
@@ -1021,10 +1058,7 @@ class _DashboardShellState extends State<DashboardShell> {
   void _showRenewalReminderControls(
     DashboardRenewalReminderItemPresentation item,
   ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _RenewalReminderControlsSheet(
         item: item,
         isBusy: _localRenewalReminderTargetsInFlight.contains(
@@ -1054,10 +1088,7 @@ class _DashboardShellState extends State<DashboardShell> {
     DashboardCard card,
     LocalServicePresentationState servicePresentationState,
   ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _LocalServiceControlsSheet(
         card: card,
         servicePresentationState: servicePresentationState,
@@ -1104,11 +1135,8 @@ class _DashboardShellState extends State<DashboardShell> {
     DashboardUpcomingRenewalItemPresentation? renewal,
     List<DashboardRenewalReminderItemPresentation> renewalReminderItems,
   ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-       builder: (context) => _SubscriptionDetailsSheet(
+    _showDashboardBottomSheet<void>(
+      builder: (context) => _SubscriptionDetailsSheet(
         card: card,
         bucket: bucket,
         servicePresentationState: servicePresentationState,
@@ -1156,7 +1184,7 @@ class _DashboardShellState extends State<DashboardShell> {
         snapshot.reviewQueue.isNotEmpty && confirmedCount == 0
             ? 'Finished checking SMS. Some items are still in Review.'
             : confirmedCount == 0
-                ? 'Finished checking SMS. Nothing was confirmed yet.'
+                ? 'Finished checking SMS. No paid subscriptions were confirmed yet.'
                 : 'Finished checking SMS. Results updated.',
       LocalMessageSourceAccessRequestResult.denied => keptRestoredSnapshot
           ? 'SMS access was not granted. Keeping the last saved results on this device.'
@@ -1174,12 +1202,13 @@ class _DashboardShellState extends State<DashboardShell> {
   }) {
     final message = switch (outcome) {
       ReviewItemActionOutcome.confirmed =>
-        '$title moved to confirmed subscriptions.',
+        '$title added to confirmed subscriptions.',
       ReviewItemActionOutcome.markedAsBenefit =>
-        '$title kept separate in trials and benefits.',
-      ReviewItemActionOutcome.dismissed => '$title hidden from review.',
+        '$title kept separate as a benefit.',
+      ReviewItemActionOutcome.dismissed =>
+        '$title marked as not a subscription.',
       ReviewItemActionOutcome.notAllowed =>
-        'This item still needs a manual check before it can be confirmed.',
+        'SubWatch still needs clearer service details before this can be confirmed.',
     };
 
     _showFeedbackSnackBar(
@@ -1207,7 +1236,7 @@ class _DashboardShellState extends State<DashboardShell> {
     String title,
   ) {
     final message = switch (outcome) {
-      ReviewItemUndoOutcome.restored => '$title returned to the review queue.',
+      ReviewItemUndoOutcome.restored => '$title returned to review.',
       ReviewItemUndoOutcome.notFound =>
         'Nothing changed. No review item was restored.',
     };
@@ -1219,6 +1248,7 @@ class _DashboardShellState extends State<DashboardShell> {
     String message, {
     SnackBarAction? action,
   }) {
+    final reduceMotion = _shouldReduceMotion(context);
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
@@ -1228,16 +1258,41 @@ class _DashboardShellState extends State<DashboardShell> {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
       ),
+      snackBarAnimationStyle: reduceMotion
+          ? AnimationStyle.noAnimation
+          : const AnimationStyle(
+              duration: Duration(milliseconds: 190),
+              reverseDuration: Duration(milliseconds: 150),
+            ),
+    );
+  }
+
+  AnimationStyle _dashboardSheetAnimationStyle() {
+    return _shouldReduceMotion(context)
+        ? AnimationStyle.noAnimation
+        : const AnimationStyle(
+            duration: Duration(milliseconds: 240),
+            reverseDuration: Duration(milliseconds: 190),
+          );
+  }
+
+  Future<T?> _showDashboardBottomSheet<T>({
+    required WidgetBuilder builder,
+  }) {
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.56),
+      sheetAnimationStyle: _dashboardSheetAnimationStyle(),
+      builder: builder,
     );
   }
 
   void _showContextualExplanation(
     ContextualExplanationPresentation presentation,
   ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (context) =>
           _ContextualExplanationSheet(presentation: presentation),
     );
@@ -1249,10 +1304,7 @@ class _DashboardShellState extends State<DashboardShell> {
     ReviewQueueItemPresentation presentation,
     ContextualExplanationPresentation explanation,
   ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _ReviewItemDetailsSheet(
         item: item,
         descriptor: descriptor,
@@ -1304,10 +1356,7 @@ class _DashboardShellState extends State<DashboardShell> {
   void _showTotalsExplanation(
     DashboardTotalsSummaryPresentation presentation,
   ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (context) => _TotalsExplanationSheet(
         presentation: presentation,
       ),
@@ -1327,10 +1376,7 @@ class _DashboardShellState extends State<DashboardShell> {
   }
 
   void _showSmsPermissionOnboarding() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _SmsPermissionOnboardingSheet(
         onBrowseFirst: () async {
           await _markSmsOnboardingCompleted();
@@ -1352,10 +1398,7 @@ class _DashboardShellState extends State<DashboardShell> {
   void _showSmsPermissionRationale(
     RuntimeLocalMessageSourcePermissionRationaleVariant variant,
   ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _SmsPermissionRationaleSheet(
         variant: variant,
         onContinue: () {
@@ -1374,46 +1417,31 @@ class _DashboardShellState extends State<DashboardShell> {
   }
 
   void _showTrustHowItWorksSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (context) => const _TrustHowItWorksSheet(),
     );
   }
 
   void _showPrivacyLocalDataSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (context) => const _PrivacyLocalDataSheet(),
     );
   }
 
   void _showHelpSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (context) => const _HelpSheet(),
     );
   }
 
   void _showAboutSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (context) => const _AboutSubWatchSheet(),
     );
   }
 
   void _showFeedbackSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    _showDashboardBottomSheet<void>(
       builder: (context) => const _FeedbackSheet(),
     );
   }
@@ -1422,115 +1450,83 @@ class _DashboardShellState extends State<DashboardShell> {
   Widget build(BuildContext context) {
     final destinationTitle = _destinationTitle(_selectedDestination);
     final destinationSubtitle = _destinationSubtitle(_selectedDestination);
+    final reduceMotion = _shouldReduceMotion(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Semantics(
-              header: true,
-              child: Text(
-                destinationTitle,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+        title: AnimatedSwitcher(
+          duration: reduceMotion ? Duration.zero : _polishMotionDuration,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeOutCubic,
+          transitionBuilder: (child, animation) {
+            final position = Tween<Offset>(
+              begin: const Offset(0, 0.06),
+              end: Offset.zero,
+            ).animate(animation);
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: position,
+                child: child,
               ),
+            );
+          },
+          child: Column(
+            key: ValueKey<String>(
+              'destination-title-$destinationTitle-${destinationSubtitle ?? ''}',
             ),
-            Text(
-              destinationSubtitle,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DashboardShellPalette.mutedInk,
-                  ),
-            ),
-          ],
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Semantics(
+                header: true,
+                child: Text(
+                  destinationTitle,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              if (destinationSubtitle != null)
+                Text(
+                  destinationSubtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DashboardShellPalette.mutedInk,
+                      ),
+                ),
+            ],
+          ),
         ),
       ),
       body: DashboardBackdrop(
         child: FutureBuilder<RuntimeDashboardSnapshot>(
           future: _snapshotFuture,
           builder: (context, snapshot) {
+            final preservedSnapshot = snapshot.data ?? _lastSuccessfulSnapshot;
+
             if (snapshot.connectionState != ConnectionState.done) {
+              if (preservedSnapshot != null) {
+                return _buildDashboardContent(
+                  preservedSnapshot,
+                  loadRecoveryState: const _LoadRecoveryState.reloading(),
+                );
+              }
               return const _DashboardLoadingState();
             }
 
             if (snapshot.hasError) {
-              return _DashboardErrorState(error: snapshot.error.toString());
+              if (preservedSnapshot != null) {
+                return _buildDashboardContent(
+                  preservedSnapshot,
+                  loadRecoveryState: const _LoadRecoveryState.failed(),
+                );
+              }
+              return _DashboardErrorState(
+                onRetry: _reloadSnapshot,
+              );
             }
 
-            final data = snapshot.data!;
-            final sourceStatus = RuntimeLocalMessageSourceStatus.fromSelection(
-              data.messageSourceSelection,
-              provenance: data.provenance,
-            );
-            final completion = DashboardCompletionPresentation.fromSnapshot(
-              data,
-            );
-            final totalsSummary = _buildDashboardTotalsSummaryUseCase.execute(
-              cards: data.cards,
-              manualSubscriptions: data.manualSubscriptions,
-            );
-             final upcomingRenewals =
-                _buildDashboardUpcomingRenewalsUseCase.execute(
-              cards: data.cards,
-              manualSubscriptions: data.manualSubscriptions,
-              now: data.provenance.recordedAt,
-            );
-            final dueSoon = _buildDashboardDueSoonUseCase.execute(
-              upcomingRenewals: upcomingRenewals,
-            );
-            final renewalReminderItems =
-                _buildDashboardRenewalReminderItemsUseCase.execute(
-              upcomingRenewals: upcomingRenewals,
-              preferencesByServiceKey: data.localRenewalReminderPreferences,
-              now: data.provenance.recordedAt,
-            );
-            final subscriptionBrowseCards = data.cards
-                .where(
-                  (card) =>
-                      card.bucket == DashboardBucket.confirmedSubscriptions ||
-                      card.bucket == DashboardBucket.trialsAndBenefits,
-                )
-                .toList(growable: false);
-            final serviceView = _buildDashboardServiceViewUseCase.execute(
-              cards: subscriptionBrowseCards,
-              localServicePresentationStates:
-                  data.localServicePresentationStates,
-              controls: _serviceViewControls,
-            );
-            final visibleServiceSections = serviceView.controls.restrictsResults
-                ? serviceView.sections
-                    .where((section) => section.cards.isNotEmpty)
-                    .toList(growable: false)
-                : serviceView.sections;
-
-            return IndexedStack(
-              index: _selectedDestination.index,
-              children: <Widget>[
-                _buildHomeDestination(
-                  data: data,
-                  sourceStatus: sourceStatus,
-                  completion: completion,
-                  totalsSummary: totalsSummary,
-                  dueSoon: dueSoon,
-                  upcomingRenewals: upcomingRenewals,
-                  renewalReminderItems: renewalReminderItems,
-                ),
-                _buildSubscriptionsDestination(
-                  data: data,
-                  serviceView: serviceView,
-                  visibleServiceSections: visibleServiceSections,
-                  upcomingRenewals: upcomingRenewals,
-                  renewalReminderItems: renewalReminderItems,
-                ),
-                _buildReviewDestination(data: data),
-                _buildSettingsDestination(
-                  data: data,
-                  reminderItems: renewalReminderItems,
-                ),
-              ],
-            );
+            return _buildDashboardContent(snapshot.data!);
           },
         ),
       ),
@@ -1549,14 +1545,14 @@ class _DashboardShellState extends State<DashboardShell> {
           ),
           NavigationDestination(
             key: ValueKey<String>('destination-subscriptions'),
-            icon: Icon(Icons.view_agenda_outlined),
-            selectedIcon: Icon(Icons.view_agenda_rounded),
+            icon: Icon(Icons.subscriptions_outlined),
+            selectedIcon: Icon(Icons.subscriptions_rounded),
             label: 'Subscriptions',
           ),
           NavigationDestination(
             key: ValueKey<String>('destination-review'),
-            icon: Icon(Icons.rule_folder_outlined),
-            selectedIcon: Icon(Icons.rule_folder_rounded),
+            icon: Icon(Icons.fact_check_outlined),
+            selectedIcon: Icon(Icons.fact_check_rounded),
             label: 'Review',
           ),
           NavigationDestination(
@@ -1583,10 +1579,10 @@ class _DashboardShellState extends State<DashboardShell> {
     }
   }
 
-  String _destinationSubtitle(_DashboardDestination destination) {
+  String? _destinationSubtitle(_DashboardDestination destination) {
     switch (destination) {
       case _DashboardDestination.home:
-        return 'Overview';
+        return null;
       case _DashboardDestination.subscriptions:
         return 'Your list';
       case _DashboardDestination.review:
@@ -1606,30 +1602,19 @@ class _DashboardShellState extends State<DashboardShell> {
     required List<DashboardRenewalReminderItemPresentation>
         renewalReminderItems,
   }) {
-    return ListView(
-      key: const PageStorageKey<String>('destination-home-surface'),
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
-      children: <Widget>[
-        _SourceStatusCard(
-          status: sourceStatus,
-          isSyncing: _isSyncing,
-          syncElapsed: _syncElapsedNotifier,
-          onSync: () => _handleSyncEntry(sourceStatus),
-          onExplain: () => _showContextualExplanation(
-            ContextualExplanationPresentation.forRuntimeStatus(
-              sourceStatus,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _TotalsSummaryCard(
-          presentation: totalsSummary,
-          sourceStatus: sourceStatus,
-          onExplain: () => _showTotalsExplanation(totalsSummary),
-        ),
-        const SizedBox(height: 12),
-        if (completion.showPanel) ...<Widget>[
-          switch (completion.kind) {
+    final isZeroConfirmedRescue =
+        completion.kind == DashboardCompletionKind.zeroConfirmedRescue;
+    final showHomeFocus = !isZeroConfirmedRescue &&
+        sourceStatus.tone != RuntimeLocalMessageSourceTone.demo;
+    final showDueSoon =
+        sourceStatus.tone != RuntimeLocalMessageSourceTone.demo &&
+            (!isZeroConfirmedRescue || dueSoon.hasItems);
+    final showUpcomingRenewals =
+        !isZeroConfirmedRescue || upcomingRenewals.hasItems;
+    final showStatusFirst =
+        _isSyncing || sourceStatus.tone != RuntimeLocalMessageSourceTone.fresh;
+    final completionPanel = completion.showPanel
+        ? switch (completion.kind) {
             DashboardCompletionKind.zeroConfirmedRescue =>
               _ZeroConfirmedRescuePanel(
                 completion: completion,
@@ -1637,12 +1622,8 @@ class _DashboardShellState extends State<DashboardShell> {
                   data,
                   sourceStatus: sourceStatus,
                 ),
-                onReviewFoundItems: () async {
-                  if (data.reviewQueue.isNotEmpty) {
-                    return _openReviewDestination();
-                  }
-                  return _openSubscriptionsDestination();
-                },
+                onOpenReview: _openReviewDestination,
+                onOpenSubscriptions: _openSubscriptionsDestination,
                 onAddManually: _showCreateManualSubscriptionForm,
                 onOpenTrustSheet: _showTrustHowItWorksSheet,
               ),
@@ -1671,25 +1652,60 @@ class _DashboardShellState extends State<DashboardShell> {
                     ? _showTrustHowItWorksSheet
                     : null,
               ),
-          },
-          const SizedBox(height: 12),
-        ],
-        if (data.reviewQueue.isNotEmpty &&
-            sourceStatus.tone != RuntimeLocalMessageSourceTone.demo &&
-            completion.kind != DashboardCompletionKind.zeroConfirmedRescue &&
-            completion.primaryAction !=
-                DashboardCompletionPrimaryAction.review) ...<Widget>[
-          _HomeReviewSummaryCard(
-            reviewCount: data.reviewQueue.length,
-            onOpenReview: _openReviewDestination,
-          ),
-        ],
-        if (sourceStatus.tone != RuntimeLocalMessageSourceTone.demo) ...<Widget>[
-          _DueSoonCard(
-            presentation: dueSoon,
-          ),
-          const SizedBox(height: 16),
-        ],
+          }
+        : null;
+    final sourceStatusCard = _SourceStatusCard(
+      status: sourceStatus,
+      isSyncing: _isSyncing,
+      syncElapsed: _syncElapsedNotifier,
+      onSync: () => _handleSyncEntry(sourceStatus),
+      onExplain: () => _showContextualExplanation(
+        ContextualExplanationPresentation.forRuntimeStatus(
+          sourceStatus,
+        ),
+      ),
+    );
+    final homeChildren = <Widget>[
+      if (showStatusFirst) ...<Widget>[
+        sourceStatusCard,
+        const SizedBox(height: 12),
+      ],
+      if (showHomeFocus) ...<Widget>[
+        _HomeFocusCard(
+          sourceStatus: sourceStatus,
+          reviewCount: data.reviewQueue.length,
+          dueSoon: dueSoon,
+          upcomingRenewals: upcomingRenewals,
+          onReview: _openReviewDestination,
+          onSync: () => _handleSyncEntry(sourceStatus),
+        ),
+        const SizedBox(height: 12),
+      ],
+      if (isZeroConfirmedRescue && completionPanel != null) ...<Widget>[
+        completionPanel,
+        const SizedBox(height: 12),
+      ],
+      _TotalsSummaryCard(
+        presentation: totalsSummary,
+        sourceStatus: sourceStatus,
+        onExplain: () => _showTotalsExplanation(totalsSummary),
+      ),
+      if (!showStatusFirst) ...<Widget>[
+        const SizedBox(height: 12),
+        sourceStatusCard,
+      ],
+      if (!isZeroConfirmedRescue && completionPanel != null) ...<Widget>[
+        const SizedBox(height: 12),
+        completionPanel,
+      ],
+      if (showDueSoon) ...<Widget>[
+        const SizedBox(height: 12),
+        _DueSoonCard(
+          presentation: dueSoon,
+        ),
+      ],
+      if (showUpcomingRenewals) ...<Widget>[
+        const SizedBox(height: 16),
         _UpcomingRenewalsCard(
           presentation: upcomingRenewals,
           reminderItems: renewalReminderItems,
@@ -1697,6 +1713,117 @@ class _DashboardShellState extends State<DashboardShell> {
           onOpenReminderControls: _showRenewalReminderControls,
           reminderTargetsInFlight: _localRenewalReminderTargetsInFlight,
         ),
+      ],
+    ];
+
+    return ListView(
+      key: const PageStorageKey<String>('destination-home-surface'),
+      cacheExtent: 2000,
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+      children: homeChildren,
+    );
+  }
+
+  bool _snapshotHasLocalModifications(RuntimeDashboardSnapshot data) {
+    if (data.confirmedReviewItems.isNotEmpty ||
+        data.benefitReviewItems.isNotEmpty ||
+        data.dismissedReviewItems.isNotEmpty ||
+        data.ignoredLocalItems.isNotEmpty ||
+        data.hiddenLocalItems.isNotEmpty) {
+      return true;
+    }
+
+    return data.localServicePresentationStates.values.any(
+      (state) => state.hasLocalLabel || state.isPinned,
+    );
+  }
+
+  Widget _buildDashboardContent(
+    RuntimeDashboardSnapshot data, {
+    _LoadRecoveryState? loadRecoveryState,
+  }) {
+    _lastSuccessfulSnapshot = data;
+
+    final sourceStatus = RuntimeLocalMessageSourceStatus.fromSelection(
+      data.messageSourceSelection,
+      provenance: data.provenance,
+      hasLocalModifications: _snapshotHasLocalModifications(data),
+    );
+    final completion = DashboardCompletionPresentation.fromSnapshot(data);
+    final totalsSummary = _buildDashboardTotalsSummaryUseCase.execute(
+      cards: data.cards,
+      manualSubscriptions: data.manualSubscriptions,
+      reviewCount: data.reviewQueue.length,
+    );
+    final upcomingRenewals = _buildDashboardUpcomingRenewalsUseCase.execute(
+      cards: data.cards,
+      manualSubscriptions: data.manualSubscriptions,
+      now: data.provenance.recordedAt,
+    );
+    final dueSoon = _buildDashboardDueSoonUseCase.execute(
+      upcomingRenewals: upcomingRenewals,
+    );
+    final renewalReminderItems =
+        _buildDashboardRenewalReminderItemsUseCase.execute(
+      upcomingRenewals: upcomingRenewals,
+      preferencesByServiceKey: data.localRenewalReminderPreferences,
+      now: data.provenance.recordedAt,
+    );
+    final subscriptionBrowseCards = data.cards
+        .where(
+          (card) =>
+              card.bucket == DashboardBucket.confirmedSubscriptions ||
+              card.bucket == DashboardBucket.trialsAndBenefits,
+        )
+        .toList(growable: false);
+    final serviceView = _buildDashboardServiceViewUseCase.execute(
+      cards: subscriptionBrowseCards,
+      localServicePresentationStates: data.localServicePresentationStates,
+      controls: _serviceViewControls,
+    );
+    final visibleServiceSections = serviceView.sections
+        .where((section) => section.cards.isNotEmpty)
+        .toList(growable: false);
+
+    final content = IndexedStack(
+      index: _selectedDestination.index,
+      children: <Widget>[
+        _buildHomeDestination(
+          data: data,
+          sourceStatus: sourceStatus,
+          completion: completion,
+          totalsSummary: totalsSummary,
+          dueSoon: dueSoon,
+          upcomingRenewals: upcomingRenewals,
+          renewalReminderItems: renewalReminderItems,
+        ),
+        _buildSubscriptionsDestination(
+          data: data,
+          serviceView: serviceView,
+          visibleServiceSections: visibleServiceSections,
+          upcomingRenewals: upcomingRenewals,
+          renewalReminderItems: renewalReminderItems,
+        ),
+        _buildReviewDestination(data: data),
+        _buildSettingsDestination(
+          data: data,
+          sourceStatus: sourceStatus,
+          reminderItems: renewalReminderItems,
+        ),
+      ],
+    );
+
+    if (loadRecoveryState == null) {
+      return content;
+    }
+
+    return Column(
+      children: <Widget>[
+        _DashboardLoadRecoveryNotice(
+          state: loadRecoveryState,
+          onRetry: loadRecoveryState.showRetryAction ? _reloadSnapshot : null,
+        ),
+        Expanded(child: content),
       ],
     );
   }
@@ -1716,6 +1843,11 @@ class _DashboardShellState extends State<DashboardShell> {
     final showManualSection =
         _shouldShowManualSubscriptions(_serviceViewControls.filterMode) &&
             visibleManualSubscriptions.isNotEmpty;
+    final showSingleEmptySection =
+        visibleServiceSections.isEmpty && !showManualSection;
+    final emptyBucket = _emptyStateBucketForFilter(
+      serviceView.controls.filterMode,
+    );
 
     return ListView(
       key: const PageStorageKey<String>('destination-subscriptions-surface'),
@@ -1751,7 +1883,7 @@ class _DashboardShellState extends State<DashboardShell> {
                   visibleManualSubscriptions.length,
                 ),
                 caption:
-                    'Manual entries stay clearly separate from detected subscriptions.',
+                    'Added by you on this device. Use this when a scan is limited or you want something tracked right away without changing detected results.',
                 children: _buildManualSubscriptionRows(
                   visibleManualSubscriptions,
                   upcomingRenewals,
@@ -1766,6 +1898,7 @@ class _DashboardShellState extends State<DashboardShell> {
                 key: ValueKey<String>('section-${section.bucket.name}'),
                 title: _serviceSectionTitle(section.bucket),
                 countLabel: _bucketCountLabel(section.bucket, section.count),
+                caption: _serviceSectionCaption(section.bucket),
                 children: _buildSubscriptionSectionChildren(
                   section.cards,
                   data.localServicePresentationStates,
@@ -1778,6 +1911,20 @@ class _DashboardShellState extends State<DashboardShell> {
               ),
             ),
           ),
+          if (showSingleEmptySection)
+            _DashboardSection(
+              key: ValueKey<String>('section-${emptyBucket.name}'),
+              title: _serviceSectionTitle(emptyBucket),
+              countLabel: _bucketCountLabel(emptyBucket, 0),
+              caption: _serviceSectionCaption(emptyBucket),
+              children: <Widget>[
+                _EmptySectionText(
+                  title: _serviceSectionEmptyTitle(emptyBucket),
+                  message: _serviceSectionEmptyMessage(emptyBucket),
+                  icon: _emptyStateIcon(emptyBucket),
+                ),
+              ],
+            ),
         ],
       ],
     );
@@ -1788,6 +1935,20 @@ class _DashboardShellState extends State<DashboardShell> {
   ) {
     return filterMode == DashboardServiceFilterMode.allVisible ||
         filterMode == DashboardServiceFilterMode.confirmedOnly;
+  }
+
+  DashboardBucket _emptyStateBucketForFilter(
+    DashboardServiceFilterMode filterMode,
+  ) {
+    switch (filterMode) {
+      case DashboardServiceFilterMode.allVisible:
+      case DashboardServiceFilterMode.confirmedOnly:
+        return DashboardBucket.confirmedSubscriptions;
+      case DashboardServiceFilterMode.observedOnly:
+        return DashboardBucket.needsReview;
+      case DashboardServiceFilterMode.separateAccessOnly:
+        return DashboardBucket.trialsAndBenefits;
+    }
   }
 
   List<ManualSubscriptionEntry> _visibleManualSubscriptions(
@@ -1833,15 +1994,22 @@ class _DashboardShellState extends State<DashboardShell> {
       key: const PageStorageKey<String>('destination-review-surface'),
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
       children: <Widget>[
+        _ReviewQueueSummaryCard(
+          reviewCount: data.reviewQueue.length,
+        ),
+        const SizedBox(height: 12),
         _DashboardSection(
           key: const ValueKey<String>('section-reviewQueue'),
-          title: 'Needs review',
+          title: 'Items for your review',
           countLabel: _reviewItemCountLabel(data.reviewQueue.length),
-          caption: 'Only uncertain items show here.',
+          caption: data.reviewQueue.isEmpty
+              ? 'Nothing is waiting for your decision right now.'
+              : 'These items stay separate by design until you decide. Every choice stays local to this device and can be undone later.',
           children: _buildReviewRows(
             data.reviewQueue,
-            emptyTitle: 'Nothing to review',
-            emptyMessage: 'A quiet list is a good sign.',
+            emptyTitle: 'Nothing to review right now',
+            emptyMessage:
+                'SubWatch only uses Review for items that still look uncertain. If later evidence still needs your decision, it will appear here again.',
           ),
         ),
       ],
@@ -1850,6 +2018,7 @@ class _DashboardShellState extends State<DashboardShell> {
 
   Widget _buildSettingsDestination({
     required RuntimeDashboardSnapshot data,
+    required RuntimeLocalMessageSourceStatus sourceStatus,
     required List<DashboardRenewalReminderItemPresentation> reminderItems,
   }) {
     final hasRecovery = data.confirmedReviewItems.isNotEmpty ||
@@ -1862,110 +2031,172 @@ class _DashboardShellState extends State<DashboardShell> {
         data.dismissedReviewItems.length +
         data.ignoredLocalItems.length +
         data.hiddenLocalItems.length;
+    final quickActions = <Widget>[
+      _SettingsNavRow(
+        tileKey: const ValueKey<String>('settings-source-action'),
+        icon: _settingsSourceActionIcon(sourceStatus),
+        title: _isSyncing
+            ? 'Checking messages'
+            : _settingsSourceActionTitle(sourceStatus),
+        subtitle: _isSyncing
+            ? 'A message check is already running on this device.'
+            : _settingsSourceActionSubtitle(sourceStatus),
+        onTap: _isSyncing
+            ? null
+            : () {
+                if (sourceStatus.isActionEnabled) {
+                  _handleSyncEntry(sourceStatus);
+                  return;
+                }
+                _showContextualExplanation(
+                  ContextualExplanationPresentation.forRuntimeStatus(
+                    sourceStatus,
+                  ),
+                );
+              },
+        trailing: _isSyncing
+            ? Text(
+                'Working...',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: DashboardShellPalette.mutedInk,
+                      fontWeight: FontWeight.w700,
+                    ),
+              )
+            : null,
+      ),
+    ];
+    if (data.reviewQueue.isNotEmpty) {
+      quickActions.add(const _SettingsGroupDivider());
+      quickActions.add(
+        _SettingsNavRow(
+          tileKey: const ValueKey<String>('settings-open-review-action'),
+          icon: Icons.rule_folder_outlined,
+          title: data.reviewQueue.length == 1
+              ? 'Review 1 item'
+              : 'Review ${data.reviewQueue.length} items',
+          subtitle: 'Confirm, keep separate, or dismiss uncertain items.',
+          onTap: () {
+            _openReviewDestination();
+          },
+        ),
+      );
+    }
+    quickActions.add(const _SettingsGroupDivider());
+    quickActions.add(
+      _SettingsNavRow(
+        tileKey: const ValueKey<String>('settings-add-manual-action'),
+        icon: Icons.add_circle_outline_rounded,
+        title: 'Add manually',
+        subtitle:
+            'Track one yourself when a scan is limited or something you pay for is missing.',
+        onTap: () {
+          _showCreateManualSubscriptionForm();
+        },
+      ),
+    );
+    final settingsPanels = <Widget>[
+      _SettingsGroupPanel(
+        key: const ValueKey<String>('settings-quick-actions-panel'),
+        title: 'Actions',
+        subtitle:
+            'Refresh this view, open Review when something needs a decision, or add one yourself.',
+        children: quickActions,
+      ),
+    ];
+    if (reminderItems.isNotEmpty) {
+      settingsPanels.add(const SizedBox(height: 12));
+      settingsPanels.add(
+        _SettingsGroupPanel(
+          key: const ValueKey<String>('section-renewalReminders'),
+          title: 'Renewal reminders',
+          subtitle:
+              'Stored on this device and shown only when a renewal date is clear enough to trust.',
+          children: reminderItems
+              .map(
+                (item) => _SettingsReminderRow(
+                  key: ValueKey<String>(
+                    'settings-renewal-reminder-${item.renewal.serviceKey}',
+                  ),
+                  item: item,
+                  isBusy: _localRenewalReminderTargetsInFlight.contains(
+                    item.renewal.serviceKey,
+                  ),
+                  onOpenReminderControls: item.canConfigureReminder
+                      ? () => _showRenewalReminderControls(item)
+                      : null,
+                ),
+              )
+              .toList(growable: false),
+        ),
+      );
+    }
+    if (hasRecovery) {
+      settingsPanels.add(const SizedBox(height: 12));
+      settingsPanels.add(
+        _SettingsGroupPanel(
+          key: const ValueKey<String>('section-settings-recovery'),
+          title: 'Recent changes (${_countLabel(recoveryCount)})',
+          subtitle:
+              'Undo recent review and local view changes on this device.',
+          children: _buildSettingsRecoveryChildren(data),
+        ),
+      );
+    }
+    settingsPanels.add(const SizedBox(height: 12));
+    settingsPanels.add(
+      _SettingsGroupPanel(
+        key: const ValueKey<String>('settings-support-panel'),
+        title: 'Help, privacy & about',
+        subtitle:
+            'Plain-language guidance, on-device privacy details, and app information.',
+        children: <Widget>[
+          _SettingsNavRow(
+            tileKey: const ValueKey<String>('settings-open-trust-sheet'),
+            icon: Icons.shield_outlined,
+            title: 'How SubWatch works',
+            subtitle: 'Why SubWatch stays careful',
+            onTap: _showTrustHowItWorksSheet,
+          ),
+          const _SettingsGroupDivider(),
+          _SettingsNavRow(
+            tileKey: const ValueKey<String>('settings-open-help'),
+            icon: Icons.menu_book_outlined,
+            title: 'Using SubWatch',
+            subtitle: 'Scans, review, and saved views',
+            onTap: _showHelpSheet,
+          ),
+          const _SettingsGroupDivider(),
+          _SettingsNavRow(
+            tileKey: const ValueKey<String>('settings-open-privacy'),
+            icon: Icons.lock_outline_rounded,
+            title: 'Privacy & local data',
+            subtitle: 'What stays on this device and when SMS is read',
+            onTap: _showPrivacyLocalDataSheet,
+          ),
+          const _SettingsGroupDivider(),
+          _SettingsNavRow(
+            tileKey: const ValueKey<String>('settings-open-about'),
+            icon: Icons.info_outline_rounded,
+            title: 'About SubWatch',
+            subtitle: 'What it is designed to do',
+            onTap: _showAboutSheet,
+          ),
+          const _SettingsGroupDivider(),
+          _SettingsNavRow(
+            tileKey: const ValueKey<String>('settings-open-feedback'),
+            icon: Icons.bug_report_outlined,
+            title: 'Report a problem',
+            subtitle: 'What to include if something looks wrong',
+            onTap: _showFeedbackSheet,
+          ),
+        ],
+      ),
+    );
 
     return ListView(
       key: const PageStorageKey<String>('destination-settings-surface'),
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-      children: <Widget>[
-        const _SettingsOverviewPanel(),
-        const SizedBox(height: 12),
-        _SettingsGroupPanel(
-          key: const ValueKey<String>('settings-support-panel'),
-          title: 'Help & privacy',
-          subtitle: 'Short guides for using SubWatch on this device.',
-          children: <Widget>[
-            _SettingsNavRow(
-              tileKey: const ValueKey<String>('settings-open-help'),
-              icon: Icons.help_outline_rounded,
-              title: 'Help',
-              subtitle: 'What to expect from a scan',
-              onTap: _showHelpSheet,
-            ),
-            const _SettingsGroupDivider(),
-            _SettingsNavRow(
-              tileKey: const ValueKey<String>('settings-open-privacy'),
-              icon: Icons.lock_outline_rounded,
-              title: 'Privacy & data',
-              subtitle: 'What stays on this device',
-              onTap: _showPrivacyLocalDataSheet,
-            ),
-            const _SettingsGroupDivider(),
-            _SettingsNavRow(
-              tileKey: const ValueKey<String>('settings-open-feedback'),
-              icon: Icons.report_problem_outlined,
-              title: 'Report a problem',
-              subtitle: 'How to share an issue clearly',
-              onTap: _showFeedbackSheet,
-            ),
-            const _SettingsGroupDivider(),
-            _SettingsNavRow(
-              tileKey: const ValueKey<String>('settings-open-trust-sheet'),
-              icon: Icons.shield_outlined,
-              title: 'How SubWatch works',
-              subtitle: 'Why SubWatch stays careful',
-              onTap: _showTrustHowItWorksSheet,
-            ),
-            const _SettingsGroupDivider(),
-            _SettingsNavRow(
-              tileKey: const ValueKey<String>('settings-open-about'),
-              icon: Icons.info_outline_rounded,
-              title: 'About SubWatch',
-              subtitle: 'What it is and what it is not',
-              onTap: _showAboutSheet,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _SettingsGroupPanel(
-          key: const ValueKey<String>('section-settings-recovery'),
-          title: recoveryCount > 0
-              ? 'Recovery (${_countLabel(recoveryCount)})'
-              : 'Recovery',
-          subtitle: 'Undo recent changes on this device.',
-          children: hasRecovery
-              ? _buildSettingsRecoveryChildren(data)
-              : const <Widget>[
-                  _EmptySectionText(
-                    title: 'Nothing to restore',
-                    message: 'Undo options appear here when you need them.',
-                    icon: Icons.restore_page_outlined,
-                  ),
-                ],
-        ),
-        const SizedBox(height: 12),
-        _SettingsGroupPanel(
-          key: const ValueKey<String>('section-renewalReminders'),
-          title: 'Reminders',
-          subtitle: reminderItems.isEmpty
-              ? 'Local reminders appear when a renewal date is clear.'
-              : 'Stored on this device.',
-          children: reminderItems.isEmpty
-              ? const <Widget>[
-                  _EmptySectionText(
-                    title: 'No reminders yet',
-                    message:
-                        'Reminders appear here when a renewal date is clear.',
-                    icon: Icons.notifications_off_outlined,
-                  ),
-                ]
-              : reminderItems
-                  .map(
-                    (item) => _SettingsReminderRow(
-                      key: ValueKey<String>(
-                        'settings-renewal-reminder-${item.renewal.serviceKey}',
-                      ),
-                      item: item,
-                      isBusy: _localRenewalReminderTargetsInFlight.contains(
-                        item.renewal.serviceKey,
-                      ),
-                      onOpenReminderControls: item.canConfigureReminder
-                          ? () => _showRenewalReminderControls(item)
-                          : null,
-                    ),
-                  )
-                  .toList(growable: false),
-        ),
-      ],
+      children: settingsPanels,
     );
   }
 
@@ -1990,8 +2221,8 @@ class _DashboardShellState extends State<DashboardShell> {
       children.add(
         _SettingsSubsection(
           key: const ValueKey<String>('section-hiddenFromReview'),
-          title: 'Dismissed',
-          caption: 'Review items you chose not to keep.',
+          title: 'Not subscriptions',
+          caption: 'Items you chose not to keep as subscriptions.',
           children: _buildDismissedReviewRows(data.dismissedReviewItems),
         ),
       );
@@ -2004,8 +2235,8 @@ class _DashboardShellState extends State<DashboardShell> {
       children.add(
         _SettingsSubsection(
           key: const ValueKey<String>('section-benefitsByYou'),
-          title: 'Benefits',
-          caption: 'Items you chose to keep separate as benefits.',
+          title: 'Separate access',
+          caption: 'Items you chose to keep separate from paid subscriptions.',
           children: _buildBenefitReviewRows(data.benefitReviewItems),
         ),
       );
@@ -2045,7 +2276,7 @@ class _DashboardShellState extends State<DashboardShell> {
       case DashboardBucket.needsReview:
         return _reviewItemCountLabel(count);
       case DashboardBucket.trialsAndBenefits:
-        return count == 1 ? '1 benefit' : '$count benefits';
+        return count == 1 ? '1 trial or benefit' : '$count trials or benefits';
       case DashboardBucket.hidden:
         return count == 1 ? '1 hidden item' : '$count hidden items';
     }
@@ -2063,6 +2294,48 @@ class _DashboardShellState extends State<DashboardShell> {
     return count == 1 ? '1 item in this list' : '$count items in this list';
   }
 
+  String _settingsSourceActionTitle(RuntimeLocalMessageSourceStatus status) {
+    switch (status.tone) {
+      case RuntimeLocalMessageSourceTone.demo:
+        return 'Scan messages';
+      case RuntimeLocalMessageSourceTone.fresh:
+      case RuntimeLocalMessageSourceTone.restored:
+        return 'Check messages again';
+      case RuntimeLocalMessageSourceTone.caution:
+        return 'Turn on SMS access';
+      case RuntimeLocalMessageSourceTone.unavailable:
+        return 'About this view';
+    }
+  }
+
+  String _settingsSourceActionSubtitle(RuntimeLocalMessageSourceStatus status) {
+    switch (status.tone) {
+      case RuntimeLocalMessageSourceTone.demo:
+        return 'Replace the sample view with results from this device.';
+      case RuntimeLocalMessageSourceTone.fresh:
+      case RuntimeLocalMessageSourceTone.restored:
+        return 'Refresh this view from SMS on this device.';
+      case RuntimeLocalMessageSourceTone.caution:
+        return 'Grant access when you want a fresh SMS check.';
+      case RuntimeLocalMessageSourceTone.unavailable:
+        return 'This device cannot refresh from SMS. Review what the current state means.';
+    }
+  }
+
+  IconData _settingsSourceActionIcon(RuntimeLocalMessageSourceStatus status) {
+    switch (status.tone) {
+      case RuntimeLocalMessageSourceTone.demo:
+        return Icons.sms_outlined;
+      case RuntimeLocalMessageSourceTone.fresh:
+      case RuntimeLocalMessageSourceTone.restored:
+        return Icons.sync_rounded;
+      case RuntimeLocalMessageSourceTone.caution:
+        return Icons.lock_open_rounded;
+      case RuntimeLocalMessageSourceTone.unavailable:
+        return Icons.info_outline_rounded;
+    }
+  }
+
   String _serviceSectionTitle(DashboardBucket bucket) {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
@@ -2076,10 +2349,23 @@ class _DashboardShellState extends State<DashboardShell> {
     }
   }
 
+  String? _serviceSectionCaption(DashboardBucket bucket) {
+    switch (bucket) {
+      case DashboardBucket.confirmedSubscriptions:
+        return 'Paid subscriptions with strong enough billing proof.';
+      case DashboardBucket.needsReview:
+        return 'Items that still need your decision before they can move into confirmed subscriptions.';
+      case DashboardBucket.trialsAndBenefits:
+        return 'Separate access such as trials, bundled benefits, and recharge-linked perks.';
+      case DashboardBucket.hidden:
+        return null;
+    }
+  }
+
   String _serviceSectionEmptyTitle(DashboardBucket bucket) {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
-        return 'Nothing confirmed yet';
+        return 'No confirmed subscriptions yet';
       case DashboardBucket.needsReview:
         return 'Nothing to review';
       case DashboardBucket.trialsAndBenefits:
@@ -2092,7 +2378,7 @@ class _DashboardShellState extends State<DashboardShell> {
   String _serviceSectionEmptyMessage(DashboardBucket bucket) {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
-        return 'No confirmed subscriptions yet.';
+        return 'Confirmed subscriptions appear here when the evidence is strong enough. If something you pay for is missing, you can still add it manually.';
       case DashboardBucket.needsReview:
         return 'Nothing needs review right now.';
       case DashboardBucket.trialsAndBenefits:
@@ -2195,7 +2481,7 @@ class _DashboardShellState extends State<DashboardShell> {
         _EmptySectionText(
           title: 'No manual subscriptions yet',
           message:
-              'Use Add manually if you want to keep track of one yourself.',
+              'Add one you already know so it stays visible without changing the current scan result.',
           icon: Icons.edit_note_rounded,
         ),
       ];
@@ -2207,8 +2493,7 @@ class _DashboardShellState extends State<DashboardShell> {
             key: ValueKey<String>('manual-subscription-${entry.id}'),
             entry: entry,
             isBusy: _manualSubscriptionTargetsInFlight.contains(entry.id),
-            onTap: () =>
-                _showManualSubscriptionDetails(entry, reminderItems),
+            onTap: () => _showManualSubscriptionDetails(entry, reminderItems),
             onEdit: () => _showEditManualSubscriptionForm(entry),
             onDelete: () => _confirmDeleteManualSubscription(entry),
             onOpenReminderControls: (reminderItems
@@ -2235,10 +2520,7 @@ class _DashboardShellState extends State<DashboardShell> {
     ManualSubscriptionBillingCycle? initialBillingCycle,
   }) async {
     if (initialServiceName != null) {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
+      await _showDashboardBottomSheet<void>(
         builder: (sheetContext) => _ManualSubscriptionEditorSheet(
           initialServiceName: initialServiceName,
           initialPlanLabel: initialPlanLabel,
@@ -2250,10 +2532,7 @@ class _DashboardShellState extends State<DashboardShell> {
       return;
     }
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    await _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _ManualAddFlowSheet(
         onSubmit: _handleCreateManualSubscription,
       ),
@@ -2263,10 +2542,7 @@ class _DashboardShellState extends State<DashboardShell> {
   Future<void> _showEditManualSubscriptionForm(
     ManualSubscriptionEntry entry,
   ) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    await _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _ManualSubscriptionEditorSheet(
         existingEntry: entry,
         onSubmit: (value) => _handleUpdateManualSubscription(entry.id, value),
@@ -2279,14 +2555,13 @@ class _DashboardShellState extends State<DashboardShell> {
     ManualSubscriptionEntry entry,
     List<DashboardRenewalReminderItemPresentation> reminderItems,
   ) async {
-    final reminderItem = reminderItems.any((item) => item.renewal.serviceKey == entry.id)
-        ? reminderItems.firstWhere((item) => item.renewal.serviceKey == entry.id)
-        : null;
+    final reminderItem =
+        reminderItems.any((item) => item.renewal.serviceKey == entry.id)
+            ? reminderItems
+                .firstWhere((item) => item.renewal.serviceKey == entry.id)
+            : null;
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    await _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _ManualSubscriptionDetailsSheet(
         entry: entry,
         onEdit: () {
@@ -2315,7 +2590,7 @@ class _DashboardShellState extends State<DashboardShell> {
     return await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('Delete manual subscription?'),
+            title: const Text('Remove manual subscription?'),
             content: Text(
               'Remove ${entry.serviceName} from your manual subscriptions on this device?',
             ),
@@ -2331,7 +2606,7 @@ class _DashboardShellState extends State<DashboardShell> {
                     Navigator.of(dialogContext).pop(deleted);
                   }
                 },
-                child: const Text('Delete'),
+                child: const Text('Remove'),
               ),
             ],
           ),
@@ -2371,7 +2646,7 @@ class _DashboardShellState extends State<DashboardShell> {
                 'passport-card-hiddenFromReview-${item.targetKey}'),
             title: item.title,
             subtitle: item.subtitle,
-            statusLabel: 'Hidden by your review',
+            statusLabel: 'Marked as not a subscription',
             isBusy: _reviewActionTargetsInFlight.contains(item.targetKey),
             actionKey: ValueKey<String>('undo-review-action-${item.targetKey}'),
             onUndo: () => _handleUndoReviewItemAction(
@@ -2393,7 +2668,7 @@ class _DashboardShellState extends State<DashboardShell> {
                 'passport-card-benefitsByYou-${item.targetKey}'),
             title: item.title,
             subtitle: item.subtitle,
-            statusLabel: 'Marked as benefit by your review',
+            statusLabel: 'Kept separate as a benefit',
             isBusy: _reviewActionTargetsInFlight.contains(item.targetKey),
             actionKey: ValueKey<String>('undo-review-action-${item.targetKey}'),
             onUndo: () => _handleUndoReviewItemAction(
@@ -2415,13 +2690,13 @@ class _DashboardShellState extends State<DashboardShell> {
                 'passport-card-ignoredLocal-${item.targetKey}'),
             title: item.title,
             subtitle: item.subtitle,
-            statusLabel: 'Ignored locally',
+            statusLabel: 'Hidden on this device',
             isBusy: _localControlTargetsInFlight.contains(item.targetKey),
             actionKey: ValueKey<String>('undo-review-action-${item.targetKey}'),
             onUndo: () => _handleUndoLocalControlOverlay(
               targetKey: item.targetKey,
               title: item.title,
-              restoredLabel: 'returned to the local view',
+              restoredLabel: 'returned to this device view',
             ),
           ),
         )
@@ -2438,13 +2713,13 @@ class _DashboardShellState extends State<DashboardShell> {
                 ValueKey<String>('passport-card-hiddenLocal-${item.targetKey}'),
             title: item.title,
             subtitle: item.subtitle,
-            statusLabel: 'Hidden locally',
+            statusLabel: 'Hidden on this device',
             isBusy: _localControlTargetsInFlight.contains(item.targetKey),
             actionKey: ValueKey<String>('undo-review-action-${item.targetKey}'),
             onUndo: () => _handleUndoLocalControlOverlay(
               targetKey: item.targetKey,
               title: item.title,
-              restoredLabel: 'returned to the local view',
+              restoredLabel: 'returned to this device view',
             ),
           ),
         )
@@ -2461,7 +2736,7 @@ class _DashboardShellState extends State<DashboardShell> {
         _EmptySectionText(
           title: emptyTitle,
           message: emptyMessage,
-          icon: Icons.rule_folder_outlined,
+          icon: Icons.shield_moon_outlined,
         ),
       ];
     }
@@ -2527,7 +2802,7 @@ class _DashboardShellState extends State<DashboardShell> {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
         return const _BucketStyle(
-          badgeLabel: 'Subscription',
+          badgeLabel: 'Confirmed',
           background: DashboardShellPalette.successSoft,
           border: Color(0xFF355344),
           badgeBackground: DashboardShellPalette.registerPaper,
@@ -2535,7 +2810,7 @@ class _DashboardShellState extends State<DashboardShell> {
         );
       case DashboardBucket.needsReview:
         return const _BucketStyle(
-          badgeLabel: 'Check',
+          badgeLabel: 'Needs review',
           background: DashboardShellPalette.elevatedPaper,
           border: DashboardShellPalette.outlineStrong,
           badgeBackground: DashboardShellPalette.registerPaper,
@@ -2543,7 +2818,7 @@ class _DashboardShellState extends State<DashboardShell> {
         );
       case DashboardBucket.trialsAndBenefits:
         return const _BucketStyle(
-          badgeLabel: 'Trial or benefit',
+          badgeLabel: 'Separate access',
           background: Color(0xFF18211C),
           border: Color(0xFF314339),
           badgeBackground: DashboardShellPalette.registerPaper,
@@ -2566,12 +2841,15 @@ class _DashboardLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = _shouldReduceMotion(context);
     return Center(
       child: DashboardPanel(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
         child: TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0.94, end: 1),
-          duration: const Duration(milliseconds: 360),
+          duration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 360),
           curve: Curves.easeOutCubic,
           builder: (context, value, child) {
             return Opacity(
@@ -2595,12 +2873,12 @@ class _DashboardLoadingState extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Loading your local results...',
+                'Preparing your local view...',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 6),
               Text(
-                'Your subscriptions, review items, and recent checks are being prepared on this device.',
+                'Subscriptions, review items, and recent checks are being prepared from local data on this device.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DashboardShellPalette.mutedInk,
@@ -2618,10 +2896,10 @@ class _DashboardLoadingState extends StatelessWidget {
 
 class _DashboardErrorState extends StatelessWidget {
   const _DashboardErrorState({
-    required this.error,
+    required this.onRetry,
   });
 
-  final String error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -2629,19 +2907,19 @@ class _DashboardErrorState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: DashboardPanel(
-          backgroundColor: DashboardShellPalette.cautionSoft,
-          borderColor: const Color(0xFF65472C),
+          backgroundColor: DashboardShellPalette.recoverySoft,
+          borderColor: const Color(0xFF435062),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               const Icon(
-                Icons.warning_amber_rounded,
-                color: DashboardShellPalette.caution,
+                Icons.refresh_rounded,
+                color: DashboardShellPalette.recovery,
                 size: 28,
               ),
               const SizedBox(height: 14),
               Text(
-                'Failed to load local dashboard snapshot.',
+                'This local view is not ready yet.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
@@ -2649,9 +2927,21 @@ class _DashboardErrorState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                error,
+                'SubWatch could not open the current local view just yet. No fresh scan is being claimed. Try again to reload what is already on this device.',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DashboardShellPalette.mutedInk,
+                    ),
+              ),
+              const SizedBox(height: 14),
+              _ContextualActionSemantics(
+                label: 'Try again to open the current local view',
+                child: FilledButton.icon(
+                  key: const ValueKey<String>('retry-load-dashboard'),
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try again'),
+                ),
               ),
             ],
           ),
@@ -2659,6 +2949,101 @@ class _DashboardErrorState extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DashboardLoadRecoveryNotice extends StatelessWidget {
+  const _DashboardLoadRecoveryNotice({
+    required this.state,
+    required this.onRetry,
+  });
+
+  final _LoadRecoveryState state;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: DashboardPanel(
+        key: const ValueKey<String>('dashboard-load-recovery-notice'),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        backgroundColor: DashboardShellPalette.recoverySoft,
+        borderColor: const Color(0xFF435062),
+        radius: 20,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Icon(
+              state.icon,
+              color: DashboardShellPalette.recovery,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    state.title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    state.description,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DashboardShellPalette.mutedInk,
+                          height: 1.28,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            if (state.showRetryAction && onRetry != null) ...<Widget>[
+              const SizedBox(width: 12),
+              _ContextualActionSemantics(
+                label: 'Try again to reload the current local view',
+                child: TextButton(
+                  key: const ValueKey<String>('retry-load-dashboard'),
+                  onPressed: onRetry,
+                  child: const Text('Try again'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadRecoveryState {
+  const _LoadRecoveryState({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.showRetryAction,
+  });
+
+  const _LoadRecoveryState.reloading()
+      : title = 'Trying again...',
+        description =
+            'SubWatch is reloading this local view. The last trusted view on this device stays visible in the meantime.',
+        icon = Icons.hourglass_top_rounded,
+        showRetryAction = false;
+
+  const _LoadRecoveryState.failed()
+      : title = 'Current view stayed in place.',
+        description =
+            'SubWatch could not reload this local view just yet, so the last trusted view on this device is still showing. No fresh scan is being claimed.',
+        icon = Icons.history_toggle_off_rounded,
+        showRetryAction = true;
+
+  final String title;
+  final String description;
+  final IconData icon;
+  final bool showRetryAction;
 }
 
 class _TotalsSummaryCard extends StatelessWidget {
@@ -2674,6 +3059,12 @@ class _TotalsSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final stackedHeader =
+        MediaQuery.sizeOf(context).width < 340 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.1;
+    final stackedMetrics =
+        MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.18;
     return DashboardPanel(
       key: const ValueKey<String>('totals-summary-card'),
       gradient: const LinearGradient(
@@ -2690,94 +3081,162 @@ class _TotalsSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        DashboardBadge(
-                          label: presentation.estimateBadgeLabel,
-                          icon: Icons.pie_chart_outline_rounded,
-                          backgroundColor: DashboardShellPalette.registerPaper,
-                          foregroundColor: DashboardShellPalette.accent,
+          Text(
+            'What SubWatch found',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: DashboardShellPalette.mutedInk,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          if (stackedHeader)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Monthly spend estimate',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: DashboardShellPalette.mutedInk,
+                          fontWeight: FontWeight.w700,
                         ),
-                        DashboardBadge(
-                          label: sourceStatus.freshnessLabel,
-                          icon: Icons.schedule_rounded,
-                          backgroundColor: DashboardShellPalette.elevatedPaper,
-                          foregroundColor: DashboardShellPalette.mutedInk,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  presentation.monthlyTotalValueLabel,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  presentation.monthlyTotalCaption,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DashboardShellPalette.mutedInk,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Semantics(
+                  label: 'Open spend estimate explanation',
+                  container: true,
+                  button: true,
+                  child: TextButton(
+                    key: const ValueKey<String>('open-totals-explanation-button'),
+                    onPressed: onExplain,
+                    child: const Text('How totals work'),
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          'Monthly spend estimate',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(
+                                color: DashboardShellPalette.mutedInk,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        'Estimated monthly spend',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        presentation.monthlyTotalValueLabel,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        presentation.monthlyTotalCaption,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DashboardShellPalette.mutedInk,
-                              fontWeight: FontWeight.w700,
                             ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      presentation.monthlyTotalValueLabel,
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      presentation.monthlyTotalCaption,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DashboardShellPalette.mutedInk,
-                          ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Semantics(
-                label: 'Open spend estimate explanation',
-                container: true,
-                button: true,
-                child: TextButton(
-                  key: const ValueKey<String>('open-totals-explanation-button'),
-                  onPressed: onExplain,
-                  child: const Text('Included'),
+                Semantics(
+                  label: 'Open spend estimate explanation',
+                  container: true,
+                  button: true,
+                  child: TextButton(
+                    key: const ValueKey<String>('open-totals-explanation-button'),
+                    onPressed: onExplain,
+                    child: const Text('How totals work'),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(height: 14),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _CompactMetricTile(
+          if (stackedMetrics)
+            Column(
+              children: <Widget>[
+                _CompactMetricTile(
+                  key: const ValueKey<String>('totals-summary-confirmed-metric'),
                   label: 'Confirmed',
                   value: presentation.activePaidValueLabel,
+                  valueKey: const ValueKey<String>(
+                    'totals-summary-confirmed-value',
+                  ),
                   caption: presentation.activePaidCaption,
                   accent: DashboardShellPalette.success,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _CompactMetricTile(
+                const SizedBox(height: 8),
+                _CompactMetricTile(
+                  key: const ValueKey<String>('totals-summary-review-metric'),
                   label: 'Needs review',
                   value: presentation.reviewValueLabel,
+                  valueKey:
+                      const ValueKey<String>('totals-summary-review-value'),
                   caption: presentation.reviewCaption,
                   accent: DashboardShellPalette.caution,
                 ),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: _CompactMetricTile(
+                    key:
+                        const ValueKey<String>('totals-summary-confirmed-metric'),
+                    label: 'Confirmed',
+                    value: presentation.activePaidValueLabel,
+                    valueKey: const ValueKey<String>(
+                      'totals-summary-confirmed-value',
+                    ),
+                    caption: presentation.activePaidCaption,
+                    accent: DashboardShellPalette.success,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _CompactMetricTile(
+                    key: const ValueKey<String>('totals-summary-review-metric'),
+                    label: 'Needs review',
+                    value: presentation.reviewValueLabel,
+                    valueKey:
+                        const ValueKey<String>('totals-summary-review-value'),
+                    caption: presentation.reviewCaption,
+                    accent: DashboardShellPalette.caution,
+                  ),
+                ),
+              ],
+            ),
           const SizedBox(height: 10),
           DashboardPanel(
             backgroundColor: DashboardShellPalette.elevatedPaper,
@@ -2788,7 +3247,7 @@ class _TotalsSummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'Last updated',
+                  'Current view',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: DashboardShellPalette.mutedInk,
                         fontWeight: FontWeight.w700,
@@ -2821,53 +3280,64 @@ class _TotalsSummaryCard extends StatelessWidget {
 
 class _CompactMetricTile extends StatelessWidget {
   const _CompactMetricTile({
+    super.key,
     required this.label,
     required this.value,
     required this.caption,
     required this.accent,
+    this.valueKey,
   });
 
   final String label;
   final String value;
   final String caption;
   final Color accent;
+  final Key? valueKey;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
-      decoration: BoxDecoration(
-        color: DashboardShellPalette.elevatedPaper.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: DashboardShellPalette.outline.withValues(alpha: 0.7),
+    return Semantics(
+      container: true,
+      label: '$label. $value. $caption.',
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+          decoration: BoxDecoration(
+            color: DashboardShellPalette.elevatedPaper.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: DashboardShellPalette.outline.withValues(alpha: 0.7),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                key: valueKey,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                caption,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DashboardShellPalette.mutedInk,
+                      height: 1.24,
+                    ),
+              ),
+            ],
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: accent,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            caption,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DashboardShellPalette.mutedInk,
-                ),
-          ),
-        ],
       ),
     );
   }
@@ -2910,6 +3380,333 @@ class _InsetListGroup extends StatelessWidget {
   }
 }
 
+class _HomeFocusCard extends StatelessWidget {
+  const _HomeFocusCard({
+    required this.sourceStatus,
+    required this.reviewCount,
+    required this.dueSoon,
+    required this.upcomingRenewals,
+    required this.onReview,
+    required this.onSync,
+  });
+
+  final RuntimeLocalMessageSourceStatus sourceStatus;
+  final int reviewCount;
+  final DashboardDueSoonPresentation dueSoon;
+  final DashboardUpcomingRenewalsPresentation upcomingRenewals;
+  final Future<void> Function() onReview;
+  final Future<void> Function() onSync;
+
+  @override
+  Widget build(BuildContext context) {
+    final nextRenewal =
+        upcomingRenewals.hasItems ? upcomingRenewals.items.first : null;
+    final copy = _HomeFocusCopy.fromState(
+      sourceStatus: sourceStatus,
+      reviewCount: reviewCount,
+      dueSoon: dueSoon,
+      nextRenewal: nextRenewal,
+    );
+    final primaryActionLabel = switch (copy.primaryActionKind) {
+      _HomeFocusPrimaryActionKind.sync => sourceStatus.actionLabel,
+      _HomeFocusPrimaryActionKind.review => _reviewActionLabel(reviewCount),
+      _HomeFocusPrimaryActionKind.none => null,
+    };
+    final showSecondaryReviewAction = reviewCount > 0 &&
+        copy.primaryActionKind != _HomeFocusPrimaryActionKind.review;
+
+    return DashboardPanel(
+      key: const ValueKey<String>('home-focus-card'),
+      backgroundColor: DashboardShellPalette.paper,
+      borderColor: DashboardShellPalette.outlineStrong,
+      radius: 24,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              DashboardBadge(
+                label: copy.eyebrowLabel,
+                icon: copy.eyebrowIcon,
+                backgroundColor: copy.eyebrowBackgroundColor,
+                foregroundColor: copy.eyebrowForegroundColor,
+              ),
+              if (dueSoon.hasItems)
+                DashboardBadge(
+                  label: _dueSoonBadgeLabel(dueSoon.items.length),
+                  icon: Icons.schedule_outlined,
+                  backgroundColor: DashboardShellPalette.elevatedPaper,
+                  foregroundColor: DashboardShellPalette.caution,
+                )
+              else if (nextRenewal != null)
+                DashboardBadge(
+                  label: 'Next: ${nextRenewal.serviceTitle}',
+                  icon: Icons.event_repeat_outlined,
+                  backgroundColor: DashboardShellPalette.elevatedPaper,
+                  foregroundColor: DashboardShellPalette.accent,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'What to do next',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            copy.summary,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DashboardShellPalette.ink,
+                  height: 1.28,
+                ),
+          ),
+          if (copy.supportingCopy != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              copy.supportingCopy!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DashboardShellPalette.mutedInk,
+                    height: 1.28,
+                  ),
+            ),
+          ],
+          if (primaryActionLabel != null ||
+              showSecondaryReviewAction) ...<Widget>[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: <Widget>[
+                if (primaryActionLabel != null)
+                  FilledButton.icon(
+                    key: const ValueKey<String>('home-focus-primary-action'),
+                    onPressed: switch (copy.primaryActionKind) {
+                      _HomeFocusPrimaryActionKind.sync =>
+                        sourceStatus.isActionEnabled ? onSync : null,
+                      _HomeFocusPrimaryActionKind.review => onReview,
+                      _HomeFocusPrimaryActionKind.none => null,
+                    },
+                    icon: Icon(
+                      switch (copy.primaryActionKind) {
+                        _HomeFocusPrimaryActionKind.sync => Icons.sync_rounded,
+                        _HomeFocusPrimaryActionKind.review =>
+                          Icons.rule_folder_outlined,
+                        _HomeFocusPrimaryActionKind.none =>
+                          Icons.arrow_forward_rounded,
+                      },
+                    ),
+                    label: Text(primaryActionLabel),
+                  ),
+                if (showSecondaryReviewAction)
+                  TextButton.icon(
+                    key: const ValueKey<String>('home-focus-review-action'),
+                    onPressed: onReview,
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: Text(_reviewActionLabel(reviewCount)),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _dueSoonBadgeLabel(int count) {
+    final renewalLabel = count == 1 ? 'due soon' : 'due soon';
+    return '$count $renewalLabel';
+  }
+
+  String _reviewActionLabel(int count) {
+    final itemLabel = count == 1 ? 'item' : 'items';
+    return 'Review $count $itemLabel';
+  }
+}
+
+enum _HomeFocusPrimaryActionKind {
+  none,
+  review,
+  sync,
+}
+
+class _HomeFocusCopy {
+  const _HomeFocusCopy({
+    required this.eyebrowLabel,
+    required this.eyebrowIcon,
+    required this.eyebrowBackgroundColor,
+    required this.eyebrowForegroundColor,
+    required this.summary,
+    required this.supportingCopy,
+    required this.primaryActionKind,
+  });
+
+  factory _HomeFocusCopy.fromState({
+    required RuntimeLocalMessageSourceStatus sourceStatus,
+    required int reviewCount,
+    required DashboardDueSoonPresentation dueSoon,
+    required DashboardUpcomingRenewalItemPresentation? nextRenewal,
+  }) {
+    final followUp = _followUpCopy(
+      reviewCount: reviewCount,
+      dueSoon: dueSoon,
+      nextRenewal: nextRenewal,
+    );
+
+    switch (sourceStatus.tone) {
+      case RuntimeLocalMessageSourceTone.caution:
+        return _HomeFocusCopy(
+          eyebrowLabel: 'Needs refresh',
+          eyebrowIcon: Icons.sms_failed_outlined,
+          eyebrowBackgroundColor: DashboardShellPalette.cautionSoft,
+          eyebrowForegroundColor: DashboardShellPalette.caution,
+          summary:
+              'SMS access is off, so SubWatch cannot run a fresh check until you turn it back on.',
+          supportingCopy: followUp ??
+              'Saved local results stay visible until you are ready to check again.',
+          primaryActionKind: sourceStatus.isActionEnabled
+              ? _HomeFocusPrimaryActionKind.sync
+              : _HomeFocusPrimaryActionKind.none,
+        );
+      case RuntimeLocalMessageSourceTone.unavailable:
+        return _HomeFocusCopy(
+          eyebrowLabel: 'Saved view',
+          eyebrowIcon: Icons.inventory_2_outlined,
+          eyebrowBackgroundColor: DashboardShellPalette.recoverySoft,
+          eyebrowForegroundColor: DashboardShellPalette.recovery,
+          summary:
+              'This device cannot provide a fresh SMS check, so SubWatch is holding on to the safest local view available.',
+          supportingCopy: followUp ??
+              'Confirmed subscriptions and manual entries stay visible, but new detections require a device that can read SMS locally.',
+          primaryActionKind: _HomeFocusPrimaryActionKind.none,
+        );
+      case RuntimeLocalMessageSourceTone.restored:
+        return _HomeFocusCopy(
+          eyebrowLabel: 'Saved view',
+          eyebrowIcon: Icons.history_toggle_off_rounded,
+          eyebrowBackgroundColor: DashboardShellPalette.recoverySoft,
+          eyebrowForegroundColor: DashboardShellPalette.recovery,
+          summary:
+              'SubWatch is showing the last saved view on this device. A fresh check is the fastest way to surface new subscriptions or updated review items.',
+          supportingCopy: followUp ??
+              'Until then, this dashboard stays anchored to the last saved local result.',
+          primaryActionKind: sourceStatus.isActionEnabled
+              ? _HomeFocusPrimaryActionKind.sync
+              : _HomeFocusPrimaryActionKind.none,
+        );
+      case RuntimeLocalMessageSourceTone.demo:
+        return const _HomeFocusCopy(
+          eyebrowLabel: 'Sample',
+          eyebrowIcon: Icons.auto_awesome_outlined,
+          eyebrowBackgroundColor: DashboardShellPalette.accentSoft,
+          eyebrowForegroundColor: DashboardShellPalette.accent,
+          summary: 'Sample view',
+          supportingCopy: null,
+          primaryActionKind: _HomeFocusPrimaryActionKind.none,
+        );
+      case RuntimeLocalMessageSourceTone.fresh:
+        if (dueSoon.hasItems && reviewCount > 0) {
+          final countLabel = reviewCount == 1
+              ? '1 item still needs'
+              : '$reviewCount items still need';
+          return _HomeFocusCopy(
+            eyebrowLabel: 'Needs attention',
+            eyebrowIcon: Icons.notifications_active_outlined,
+            eyebrowBackgroundColor: DashboardShellPalette.cautionSoft,
+            eyebrowForegroundColor: DashboardShellPalette.caution,
+            summary: dueSoon.summaryCopy,
+            supportingCopy:
+                '$countLabel your decision before it can move into confirmed subscriptions.',
+            primaryActionKind: _HomeFocusPrimaryActionKind.none,
+          );
+        }
+        if (dueSoon.hasItems) {
+          return _HomeFocusCopy(
+            eyebrowLabel: 'Due soon',
+            eyebrowIcon: Icons.schedule_outlined,
+            eyebrowBackgroundColor: DashboardShellPalette.cautionSoft,
+            eyebrowForegroundColor: DashboardShellPalette.caution,
+            summary: dueSoon.summaryCopy,
+            supportingCopy: nextRenewal == null
+                ? null
+                : 'Next renewal: ${nextRenewal.serviceTitle} on ${nextRenewal.renewalDateLabel}.',
+            primaryActionKind: _HomeFocusPrimaryActionKind.none,
+          );
+        }
+        if (reviewCount > 0) {
+          final itemLabel =
+              reviewCount == 1 ? 'item still needs' : 'items still need';
+          return _HomeFocusCopy(
+            eyebrowLabel: 'Needs review',
+            eyebrowIcon: Icons.rule_folder_outlined,
+            eyebrowBackgroundColor: DashboardShellPalette.cautionSoft,
+            eyebrowForegroundColor: DashboardShellPalette.caution,
+            summary:
+                '$reviewCount $itemLabel your decision before it can move into confirmed subscriptions.',
+            supportingCopy:
+                'SubWatch keeps weak or unclear evidence out of confirmed subscriptions on purpose.',
+            primaryActionKind: _HomeFocusPrimaryActionKind.review,
+          );
+        }
+        if (nextRenewal != null) {
+          return _HomeFocusCopy(
+            eyebrowLabel: 'Next renewal',
+            eyebrowIcon: Icons.event_repeat_outlined,
+            eyebrowBackgroundColor: DashboardShellPalette.accentSoft,
+            eyebrowForegroundColor: DashboardShellPalette.accent,
+            summary:
+                'Next renewal: ${nextRenewal.serviceTitle} on ${nextRenewal.renewalDateLabel}.',
+            supportingCopy:
+                'Renewal dates stay visible here so the dashboard remains useful between scans.',
+            primaryActionKind: _HomeFocusPrimaryActionKind.none,
+          );
+        }
+        return const _HomeFocusCopy(
+          eyebrowLabel: 'Quiet for now',
+          eyebrowIcon: Icons.verified_outlined,
+          eyebrowBackgroundColor: DashboardShellPalette.successSoft,
+          eyebrowForegroundColor: DashboardShellPalette.success,
+          summary:
+              'Nothing urgent stands out today. New review items, confirmed subscriptions, and renewal dates will show up here after a fresh check.',
+          supportingCopy:
+              'SubWatch stays useful by keeping the next decision or renewal visible without turning into a finance dashboard.',
+          primaryActionKind: _HomeFocusPrimaryActionKind.none,
+        );
+    }
+  }
+
+  final String eyebrowLabel;
+  final IconData eyebrowIcon;
+  final Color eyebrowBackgroundColor;
+  final Color eyebrowForegroundColor;
+  final String summary;
+  final String? supportingCopy;
+  final _HomeFocusPrimaryActionKind primaryActionKind;
+
+  static String? _followUpCopy({
+    required int reviewCount,
+    required DashboardDueSoonPresentation dueSoon,
+    required DashboardUpcomingRenewalItemPresentation? nextRenewal,
+  }) {
+    if (reviewCount > 0) {
+      final itemLabel =
+          reviewCount == 1 ? 'item still needs' : 'items still need';
+      return '$reviewCount $itemLabel your decision before it can move into confirmed subscriptions.';
+    }
+    if (dueSoon.hasItems) {
+      return dueSoon.summaryCopy;
+    }
+    if (nextRenewal != null) {
+      return 'Next renewal: ${nextRenewal.serviceTitle} on ${nextRenewal.renewalDateLabel}.';
+    }
+    return null;
+  }
+}
+
 class _UpcomingRenewalsCard extends StatelessWidget {
   const _UpcomingRenewalsCard({
     required this.presentation,
@@ -2928,47 +3725,50 @@ class _UpcomingRenewalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final countLabel = presentation.hasItems
+        ? presentation.items.length == 1
+            ? '1 date'
+            : '${presentation.items.length} dates'
+        : null;
+
     return Column(
       key: const ValueKey<String>('upcoming-renewals-card'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Semantics(
-          header: true,
-          child: Text(
-            'Upcoming renewals',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
+        DashboardSectionFrame(
+          title: 'Upcoming renewals',
+          caption: presentation.summaryCopy,
+          countLabel: countLabel,
+          children: <Widget>[
+            if (!presentation.hasItems)
+              _EmptySectionText(
+                title: presentation.emptyTitle,
+                message: presentation.emptyMessage,
+                icon: Icons.event_repeat_outlined,
+              )
+            else
+              _InsetListGroup(
+                children: reminderItems
+                    .map(
+                      (item) => _ReminderRenewalItemTile(
+                        key: ValueKey<String>(
+                          'upcoming-renewal-item-${item.renewal.serviceTitle}',
+                        ),
+                        item: item,
+                        isBusy: reminderTargetsInFlight.contains(
+                          item.renewal.serviceKey,
+                        ),
+                        showReminderControls: showReminderControls,
+                        onOpenReminderControls:
+                            showReminderControls && item.canConfigureReminder
+                                ? () => onOpenReminderControls(item)
+                                : null,
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+          ],
         ),
-        const SizedBox(height: 8),
-        if (!presentation.hasItems)
-          _EmptySectionText(
-            title: presentation.emptyTitle,
-            message: presentation.emptyMessage,
-            icon: Icons.event_repeat_outlined,
-          )
-        else
-          _InsetListGroup(
-            children: reminderItems
-                .map(
-                  (item) => _ReminderRenewalItemTile(
-                    key: ValueKey<String>(
-                      'upcoming-renewal-item-${item.renewal.serviceTitle}',
-                    ),
-                    item: item,
-                    isBusy: reminderTargetsInFlight.contains(
-                      item.renewal.serviceKey,
-                    ),
-                    showReminderControls: showReminderControls,
-                    onOpenReminderControls:
-                        showReminderControls && item.canConfigureReminder
-                            ? () => onOpenReminderControls(item)
-                            : null,
-                  ),
-                )
-                .toList(growable: false),
-          ),
       ],
     );
   }
@@ -2983,37 +3783,42 @@ class _DueSoonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final countLabel = presentation.hasItems
+        ? presentation.items.length == 1
+            ? '1 renewal'
+            : '${presentation.items.length} renewals'
+        : null;
+
     return Column(
       key: const ValueKey<String>('due-soon-card'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Semantics(
-          header: true,
-          child: Text(
-            'Due soon',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
+        DashboardSectionFrame(
+          title: 'Due soon',
+          caption: presentation.summaryCopy,
+          countLabel: countLabel,
+          children: <Widget>[
+            if (!presentation.hasItems)
+              _EmptySectionText(
+                title: presentation.emptyTitle,
+                message: presentation.emptyMessage,
+                icon: Icons.schedule_outlined,
+              )
+            else
+              _InsetListGroup(
+                children: presentation.items
+                    .map(
+                      (item) => _RenewalItemTile(
+                        key: ValueKey<String>(
+                          'due-soon-item-${item.serviceTitle}',
+                        ),
+                        item: item,
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+          ],
         ),
-        const SizedBox(height: 8),
-        if (!presentation.hasItems)
-          _EmptySectionText(
-            title: presentation.emptyTitle,
-            message: presentation.emptyMessage,
-            icon: Icons.schedule_outlined,
-          )
-        else
-          _InsetListGroup(
-            children: presentation.items
-                .map(
-                  (item) => _RenewalItemTile(
-                    key: ValueKey<String>('due-soon-item-${item.serviceTitle}'),
-                    item: item,
-                  ),
-                )
-                .toList(growable: false),
-          ),
       ],
     );
   }
@@ -3182,22 +3987,155 @@ class _SubscriptionInfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-        decoration: BoxDecoration(
-          color: DashboardShellPalette.nestedPaper.withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: DashboardShellPalette.outline,
+    return Semantics(
+      label: '$title: $value',
+      child: ExcludeSemantics(
+        child: SizedBox(
+          width: width,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+            decoration: BoxDecoration(
+              color: DashboardShellPalette.nestedPaper.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: DashboardShellPalette.outline,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: DashboardShellPalette.mutedInk,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.18,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  key: valueKey,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DashboardShellPalette.ink,
+                        fontWeight: FontWeight.w700,
+                        height: 1.15,
+                      ),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SubscriptionMetaPanel extends StatelessWidget {
+  const _SubscriptionMetaPanel({
+    required this.amountValueKey,
+    required this.amountLabel,
+    required this.renewalValueKey,
+    required this.renewalLabel,
+    required this.frequencyValueKey,
+    required this.frequencyLabel,
+  });
+
+  final Key amountValueKey;
+  final String amountLabel;
+  final Key renewalValueKey;
+  final String renewalLabel;
+  final Key frequencyValueKey;
+  final String frequencyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: DashboardShellPalette.nestedPaper.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: DashboardShellPalette.outline),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final useStackedLayout = constraints.maxWidth < 240;
+          final amountBlock = _SubscriptionMetaBlock(
+            label: 'Amount',
+            value: amountLabel,
+            valueKey: amountValueKey,
+            emphasize: true,
+          );
+          final renewalBlock = _SubscriptionMetaBlock(
+            label: 'Next renewal',
+            value: renewalLabel,
+            valueKey: renewalValueKey,
+          );
+          final frequencyBlock = _SubscriptionMetaBlock(
+            label: 'Frequency',
+            value: frequencyLabel,
+            valueKey: frequencyValueKey,
+          );
+
+          if (useStackedLayout) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                amountBlock,
+                const SizedBox(height: 10),
+                renewalBlock,
+                const SizedBox(height: 10),
+                frequencyBlock,
+              ],
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(child: amountBlock),
+                  const SizedBox(width: 12),
+                  Expanded(child: renewalBlock),
+                ],
+              ),
+              const SizedBox(height: 10),
+              frequencyBlock,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SubscriptionMetaBlock extends StatelessWidget {
+  const _SubscriptionMetaBlock({
+    required this.label,
+    required this.value,
+    required this.valueKey,
+    this.emphasize = false,
+  });
+
+  final String label;
+  final String value;
+  final Key valueKey;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '$label: $value',
+      child: ExcludeSemantics(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              title,
+              label,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: DashboardShellPalette.mutedInk,
                     fontWeight: FontWeight.w700,
@@ -3208,17 +4146,50 @@ class _SubscriptionInfoChip extends StatelessWidget {
             Text(
               value,
               key: valueKey,
-              maxLines: 2,
+              maxLines: emphasize ? 1 : 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: (emphasize
+                      ? Theme.of(context).textTheme.titleSmall
+                      : Theme.of(context).textTheme.bodySmall)
+                  ?.copyWith(
                     color: DashboardShellPalette.ink,
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
+                    fontWeight: FontWeight.w800,
+                    height: 1.18,
                   ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InlineCardStatus extends StatelessWidget {
+  const _InlineCardStatus({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ],
     );
   }
 }
@@ -3243,117 +4214,161 @@ class _SubscriptionListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayTitle = servicePresentationState.displayTitle;
     final identity = _identityStyle(
-      card.title,
+      displayTitle,
       accentColor: style.badgeForeground,
+    );
+    final summary = _subscriptionRowSemantics(
+      card,
+      metadata: metadata,
+      style: style,
+      servicePresentationState: servicePresentationState,
     );
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        splashColor: style.badgeForeground.withValues(alpha: 0.08),
-        highlightColor: style.badgeForeground.withValues(alpha: 0.04),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 11, 8, 11),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              DashboardServiceAvatar(
-                key: ValueKey<String>('passport-avatar-${card.title}'),
-                monogram: identity.monogram,
-                foregroundColor: identity.foreground,
-                backgroundColor: identity.background,
-                borderColor: identity.border,
-                serviceKey: card.serviceKey.value,
-                sealColor: style.badgeForeground,
-                size: 34,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Semantics(
+              key: ValueKey<String>(
+                'subscription-row-semantics-${card.serviceKey.value}',
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      card.title,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      card.subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DashboardShellPalette.mutedInk,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final itemWidth = constraints.maxWidth < 260
-                            ? constraints.maxWidth
-                            : (constraints.maxWidth - 8) / 2;
-                        return Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: <Widget>[
-                            _SubscriptionInfoChip(
-                              valueKey: ValueKey<String>(
-                                'subscription-meta-amount-${card.serviceKey.value}',
-                              ),
-                              title: 'Amount',
-                              value: metadata.amountLabel,
-                              width: itemWidth,
-                            ),
-                            _SubscriptionInfoChip(
-                              valueKey: ValueKey<String>(
-                                'subscription-meta-renewal-${card.serviceKey.value}',
-                              ),
-                              title: 'Next renewal',
-                              value: metadata.renewalLabel,
-                              width: itemWidth,
-                            ),
-                            _SubscriptionInfoChip(
-                              valueKey: ValueKey<String>(
-                                'subscription-meta-frequency-${card.serviceKey.value}',
-                              ),
-                              title: 'Frequency',
-                              value: metadata.frequencyLabel,
-                              width: itemWidth,
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
+              button: true,
+              label: summary,
+              hint: 'Opens service details',
+              child: ExcludeSemantics(
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(18),
+                  splashColor: style.badgeForeground.withValues(alpha: 0.08),
+                  highlightColor: style.badgeForeground.withValues(alpha: 0.04),
+                  hoverColor: style.badgeForeground.withValues(alpha: 0.03),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 11, 0, 11),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        DashboardBadge(
-                          label: style.badgeLabel,
-                          backgroundColor: style.badgeBackground,
-                          foregroundColor: style.badgeForeground,
+                        DashboardServiceAvatar(
+                          key:
+                              ValueKey<String>('passport-avatar-${card.title}'),
+                          monogram: identity.monogram,
+                          foregroundColor: identity.foreground,
+                          backgroundColor: identity.background,
+                          borderColor: identity.border,
+                          serviceKey: card.serviceKey.value,
+                          sealColor: style.badgeForeground,
+                          size: 34,
                         ),
-                        if (servicePresentationState.isPinned)
-                          const DashboardBadge(
-                            label: 'Pinned',
-                            backgroundColor: DashboardShellPalette.paper,
-                            foregroundColor: DashboardShellPalette.accent,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                             children: <Widget>[
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Text(
+                                      displayTitle,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  DashboardBadge(
+                                    label: style.badgeLabel,
+                                    backgroundColor: style.badgeBackground,
+                                    foregroundColor: style.badgeForeground,
+                                  ),
+                                ],
+                              ),
+                              if (servicePresentationState.hasLocalLabel) ...<Widget>[
+                                const SizedBox(height: 2),
+                                Text(
+                                  servicePresentationState.originalTitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall
+                                      ?.copyWith(
+                                        color: DashboardShellPalette.mutedInk,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              ],
+                              const SizedBox(height: 4),
+                              Text(
+                                card.subtitle,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DashboardShellPalette.mutedInk,
+                                    ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (servicePresentationState.isPinned ||
+                                  servicePresentationState.hasLocalLabel) ...<Widget>[
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 6,
+                                  children: <Widget>[
+                                    if (servicePresentationState.isPinned)
+                                      const _InlineCardStatus(
+                                        icon: Icons.push_pin_rounded,
+                                        label: 'Pinned on this device',
+                                        color: DashboardShellPalette.accent,
+                                      ),
+                                    if (servicePresentationState.hasLocalLabel)
+                                      const _InlineCardStatus(
+                                        icon: Icons.edit_note_rounded,
+                                        label: 'Custom label',
+                                        color: DashboardShellPalette.mutedInk,
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                              ],
+                              _SubscriptionMetaPanel(
+                                amountValueKey: ValueKey<String>(
+                                  'subscription-meta-amount-${card.serviceKey.value}',
+                                ),
+                                amountLabel: metadata.amountLabel,
+                                renewalValueKey: ValueKey<String>(
+                                  'subscription-meta-renewal-${card.serviceKey.value}',
+                                ),
+                                renewalLabel: metadata.renewalLabel,
+                                frequencyValueKey: ValueKey<String>(
+                                  'subscription-meta-frequency-${card.serviceKey.value}',
+                                ),
+                                frequencyLabel: metadata.frequencyLabel,
+                              ),
+                            ],
                           ),
+                        ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 4),
-              trailing,
-            ],
+            ),
           ),
-        ),
+          const SizedBox(width: 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 11, 8, 11),
+            child: trailing,
+          ),
+        ],
       ),
     );
   }
@@ -3384,7 +4399,7 @@ class _SubscriptionDetailsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = switch (bucket) {
       DashboardBucket.confirmedSubscriptions => const _BucketStyle(
-          badgeLabel: 'Subscription',
+          badgeLabel: 'Confirmed',
           background: DashboardShellPalette.successSoft,
           border: Color(0xFF355344),
           badgeBackground: DashboardShellPalette.registerPaper,
@@ -3398,7 +4413,7 @@ class _SubscriptionDetailsSheet extends StatelessWidget {
           badgeForeground: DashboardShellPalette.mutedInk,
         ),
       DashboardBucket.trialsAndBenefits => const _BucketStyle(
-          badgeLabel: 'Trial or benefit',
+          badgeLabel: 'Separate access',
           background: Color(0xFF18211C),
           border: Color(0xFF314339),
           badgeBackground: DashboardShellPalette.registerPaper,
@@ -3414,6 +4429,9 @@ class _SubscriptionDetailsSheet extends StatelessWidget {
     };
     final identity =
         _identityStyle(card.title, accentColor: style.badgeForeground);
+    final stackedHeader =
+        MediaQuery.sizeOf(context).width < 340 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.1;
 
     return SafeArea(
       top: false,
@@ -3432,48 +4450,100 @@ class _SubscriptionDetailsSheet extends StatelessWidget {
             children: <Widget>[
               const _SheetHandle(),
               const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  DashboardServiceAvatar(
-                    monogram: identity.monogram,
-                    foregroundColor: identity.foreground,
-                    backgroundColor: identity.background,
-                    borderColor: identity.border,
-                    serviceKey: card.serviceKey.value,
-                    sealColor: style.badgeForeground,
-                    size: 42,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
+              if (stackedHeader)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: _SheetCloseButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ),
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text(
-                          card.title,
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                        DashboardServiceAvatar(
+                          monogram: identity.monogram,
+                          foregroundColor: identity.foreground,
+                          backgroundColor: identity.background,
+                          borderColor: identity.border,
+                          serviceKey: card.serviceKey.value,
+                          sealColor: style.badgeForeground,
+                          size: 42,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          card.subtitle,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: DashboardShellPalette.mutedInk,
-                                  ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                card.title,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                card.subtitle,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DashboardShellPalette.mutedInk,
+                                    ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    DashboardServiceAvatar(
+                      monogram: identity.monogram,
+                      foregroundColor: identity.foreground,
+                      backgroundColor: identity.background,
+                      borderColor: identity.border,
+                      serviceKey: card.serviceKey.value,
+                      sealColor: style.badgeForeground,
+                      size: 42,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            card.title,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            card.subtitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: DashboardShellPalette.mutedInk,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _SheetCloseButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -3547,7 +4617,7 @@ class _SubscriptionDetailsSheet extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 14),
-               const SizedBox(height: 14),
+              const SizedBox(height: 14),
               Row(
                 children: <Widget>[
                   Expanded(
@@ -3605,13 +4675,13 @@ class _SyncProgressPresentation {
       return const _SyncProgressPresentation(
         title: 'Sorting confirmed, review, and benefit items',
         description:
-            'SubWatch is separating stronger paid signals from items that still need a manual check.',
+            'SubWatch is separating stronger paid signals from items that still need a decision.',
       );
     }
     return const _SyncProgressPresentation(
       title: 'Scanning messages on this phone',
       description:
-          'SubWatch is reading local SMS history and looking for recurring billing signals.',
+          'SubWatch is reading local SMS history for recurring billing clues on this device.',
     );
   }
 
@@ -3636,10 +4706,10 @@ class _SourceStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = _shouldReduceMotion(context);
     return ValueListenableBuilder<Duration>(
       valueListenable: syncElapsed,
       builder: (context, elapsed, child) {
-        final style = _statusStyle(status.tone);
         final syncProgress = _SyncProgressPresentation.fromElapsed(elapsed);
         final title = isSyncing ? 'Checking device SMS' : status.title;
         final description = isSyncing
@@ -3732,84 +4802,132 @@ class _SourceStatusCard extends StatelessWidget {
                     ),
                   if (isSyncing) ...<Widget>[
                     const SizedBox(height: 8),
-                    DashboardPanel(
-                      key: const ValueKey<String>('sync-progress-panel'),
-                      backgroundColor: DashboardShellPalette.elevatedPaper,
-                      borderColor: DashboardShellPalette.outlineStrong,
-                      radius: 16,
-                      padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: <Widget>[
-                              const DashboardBadge(
-                                label: 'On-device scan',
-                                backgroundColor: DashboardShellPalette.paper,
-                                foregroundColor: DashboardShellPalette.accent,
+                    AnimatedSwitcher(
+                      duration: reduceMotion
+                          ? Duration.zero
+                          : _DashboardShellState._polishMotionDuration,
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeOutCubic,
+                      transitionBuilder: (child, animation) {
+                        final position = Tween<Offset>(
+                          begin: const Offset(0, -0.04),
+                          end: Offset.zero,
+                        ).animate(animation);
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: position,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: DashboardPanel(
+                        key: const ValueKey<String>('sync-progress-panel'),
+                        backgroundColor: DashboardShellPalette.elevatedPaper,
+                        borderColor: DashboardShellPalette.outlineStrong,
+                        radius: 16,
+                        padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: <Widget>[
+                                const DashboardBadge(
+                                  label: 'On-device scan',
+                                  backgroundColor: DashboardShellPalette.paper,
+                                  foregroundColor: DashboardShellPalette.accent,
+                                ),
+                                Text(
+                                  'Runs only on this phone',
+                                  key: const ValueKey<String>(
+                                    'sync-progress-privacy-label',
+                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall
+                                      ?.copyWith(
+                                        color: DashboardShellPalette.mutedInk,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: const LinearProgressIndicator(
+                                key: ValueKey<String>('sync-progress-indicator'),
+                                minHeight: 6,
+                                backgroundColor:
+                                    DashboardShellPalette.nestedPaper,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  DashboardShellPalette.accent,
+                                ),
                               ),
-                              Text(
-                                'Runs only on this phone',
-                                key: const ValueKey<String>(
-                                  'sync-progress-privacy-label',
+                            ),
+                            const SizedBox(height: 10),
+                            AnimatedSwitcher(
+                              duration: reduceMotion
+                                  ? Duration.zero
+                                  : _DashboardShellState._polishMotionDuration,
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeOutCubic,
+                              transitionBuilder: (child, animation) =>
+                                  FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              ),
+                              child: Text(
+                                syncProgress.title,
+                                key: ValueKey<String>(
+                                  'sync-progress-title-${syncProgress.title}',
                                 ),
                                 style: Theme.of(context)
                                     .textTheme
-                                    .labelSmall
+                                    .titleSmall
                                     ?.copyWith(
-                                      color: DashboardShellPalette.mutedInk,
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w800,
                                     ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: const LinearProgressIndicator(
-                              key: ValueKey<String>('sync-progress-indicator'),
-                              minHeight: 6,
-                              backgroundColor:
-                                  DashboardShellPalette.nestedPaper,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                DashboardShellPalette.accent,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            syncProgress.title,
-                            key: const ValueKey<String>('sync-progress-title'),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
+                            const SizedBox(height: 4),
+                            AnimatedSwitcher(
+                              duration: reduceMotion
+                                  ? Duration.zero
+                                  : _DashboardShellState._polishMotionDuration,
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeOutCubic,
+                              transitionBuilder: (child, animation) =>
+                                  FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              ),
+                              child: Text(
+                                syncProgress.description,
+                                key: ValueKey<String>(
+                                  'sync-progress-description-${syncProgress.description}',
                                 ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            syncProgress.description,
-                            key: const ValueKey<String>(
-                                'sync-progress-description'),
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
                                       color: DashboardShellPalette.mutedInk,
                                     ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'You can keep browsing while this scan finishes.',
-                            key: const ValueKey<String>('sync-progress-hint'),
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: DashboardShellPalette.mutedInk,
-                                    ),
-                          ),
-                        ],
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'You can keep browsing while this scan finishes.',
+                              key: ValueKey<String>('sync-progress-hint'),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DashboardShellPalette.mutedInk,
+                                  ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -3828,32 +4946,7 @@ class _SourceStatusCard extends StatelessWidget {
                     runSpacing: 3,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: <Widget>[
-                      // The provenance title is often redundant with the description
-                      // or the source badge. We keep it as a label for semantics
-                      // but hide it if it overlaps the description's first words.
-                      Semantics(
-                        label: status.provenanceTitle,
-                        child: const SizedBox.shrink(),
-                      ),
-                      Text(
-                        '•',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DashboardShellPalette.mutedInk,
-                            ),
-                      ),
-                      Text(
-                        status.freshnessLabel,
-                        key: const ValueKey<String>('runtime-freshness-label'),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DashboardShellPalette.mutedInk,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      _StatusMetaBadge(
-                        label: style.stateLabel,
-                        valueKey:
-                            const ValueKey<String>('runtime-source-label'),
-                      ),
+                      _SourceStatusMetadataCluster(status: status),
                       TextButton(
                         key: const ValueKey<String>(
                             'open-snapshot-explanation-button'),
@@ -3869,66 +4962,6 @@ class _SourceStatusCard extends StatelessWidget {
         );
       },
     );
-  }
-
-  _StatusStyle _statusStyle(RuntimeLocalMessageSourceTone tone) {
-    switch (tone) {
-      case RuntimeLocalMessageSourceTone.demo:
-        return const _StatusStyle(
-          icon: Icons.auto_awesome_outlined,
-          stateLabel: 'Sample',
-          sourceDescription:
-              'The sample view stays visible until you scan your messages.',
-          tint: Color(0xFF2E2118),
-          border: Color(0xFF604228),
-          badgeBackground: DashboardShellPalette.registerPaper,
-          badgeForeground: DashboardShellPalette.accent,
-        );
-      case RuntimeLocalMessageSourceTone.fresh:
-        return const _StatusStyle(
-          icon: Icons.verified_outlined,
-          stateLabel: 'Checked',
-          sourceDescription:
-              'SubWatch can check your messages again whenever you ask.',
-          tint: DashboardShellPalette.successSoft,
-          border: Color(0xFF355344),
-          badgeBackground: DashboardShellPalette.registerPaper,
-          badgeForeground: DashboardShellPalette.success,
-        );
-      case RuntimeLocalMessageSourceTone.restored:
-        return const _StatusStyle(
-          icon: Icons.history_toggle_off_rounded,
-          stateLabel: 'Saved view',
-          sourceDescription:
-              'This saved view stays separate from a new message check.',
-          tint: DashboardShellPalette.recoverySoft,
-          border: Color(0xFF3B4554),
-          badgeBackground: DashboardShellPalette.registerPaper,
-          badgeForeground: DashboardShellPalette.recovery,
-        );
-      case RuntimeLocalMessageSourceTone.caution:
-        return const _StatusStyle(
-          icon: Icons.lock_outline_rounded,
-          stateLabel: 'SMS off',
-          sourceDescription:
-              'Device SMS can only be read again if you allow access.',
-          tint: DashboardShellPalette.cautionSoft,
-          border: Color(0xFF6A4727),
-          badgeBackground: DashboardShellPalette.registerPaper,
-          badgeForeground: DashboardShellPalette.caution,
-        );
-      case RuntimeLocalMessageSourceTone.unavailable:
-        return const _StatusStyle(
-          icon: Icons.portable_wifi_off_outlined,
-          stateLabel: 'Unavailable',
-          sourceDescription:
-              'This device cannot provide local SMS access for a refresh.',
-          tint: DashboardShellPalette.elevatedPaper,
-          border: DashboardShellPalette.outlineStrong,
-          badgeBackground: DashboardShellPalette.registerPaper,
-          badgeForeground: DashboardShellPalette.mutedInk,
-        );
-    }
   }
 }
 
@@ -3948,6 +4981,12 @@ class _ProductGuidancePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (samplePreview != null) {
+      final stackedPreviewHeader =
+          MediaQuery.sizeOf(context).width < 360 ||
+          MediaQuery.textScalerOf(context).scale(1) > 1.1;
+      final stackedPreviewMetrics =
+          MediaQuery.sizeOf(context).width < 360 ||
+          MediaQuery.textScalerOf(context).scale(1) > 1.08;
       return DashboardPanel(
         key: const ValueKey<String>('product-guidance-panel'),
         gradient: const LinearGradient(
@@ -3975,7 +5014,7 @@ class _ProductGuidancePanel extends StatelessWidget {
                   foregroundColor: DashboardShellPalette.accent,
                 ),
                 const DashboardBadge(
-                  label: 'Replaced after your first scan',
+                  label: 'Your first scan replaces this preview',
                   icon: Icons.sms_rounded,
                   backgroundColor: DashboardShellPalette.elevatedPaper,
                   foregroundColor: DashboardShellPalette.mutedInk,
@@ -3983,64 +5022,137 @@ class _ProductGuidancePanel extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              completion.title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+            if (stackedPreviewHeader)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const SubWatchBrandMark(size: 48, showBase: true),
+                  const SizedBox(height: 10),
+                  Text(
+                    completion.title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                   ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              completion.description,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: DashboardShellPalette.mutedInk,
-                    height: 1.32,
+                  const SizedBox(height: 6),
+                  Text(
+                    completion.description,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: DashboardShellPalette.mutedInk,
+                          height: 1.32,
+                        ),
                   ),
-            ),
+                ],
+              )
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          completion.title,
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          completion.description,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: DashboardShellPalette.mutedInk,
+                                    height: 1.32,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const SubWatchBrandMark(size: 54, showBase: true),
+                ],
+              ),
             const SizedBox(height: 14),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _CompactMetricTile(
-                    label: 'Estimated monthly total',
+            if (stackedPreviewMetrics)
+              Column(
+                children: <Widget>[
+                  _CompactMetricTile(
+                    label: 'Monthly spend estimate',
                     value: samplePreview!.monthlyTotalLabel,
                     caption: samplePreview!.monthlyTotalCaption,
                     accent: DashboardShellPalette.accent,
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _CompactMetricTile(
+                  const SizedBox(height: 8),
+                  _CompactMetricTile(
                     label: 'Confirmed',
                     value: samplePreview!.confirmedCountLabel,
                     caption: 'Paid subscriptions',
                     accent: DashboardShellPalette.success,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _CompactMetricTile(
+                  const SizedBox(height: 8),
+                  _CompactMetricTile(
                     label: 'Needs review',
                     value: samplePreview!.reviewCountLabel,
                     caption: 'Kept separate',
                     accent: DashboardShellPalette.caution,
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _CompactMetricTile(
-                    label: 'Trial or benefit',
+                  const SizedBox(height: 8),
+                  _CompactMetricTile(
+                    label: 'Trials & benefits',
                     value: samplePreview!.trialCountLabel,
                     caption: 'Separate access',
                     accent: DashboardShellPalette.accent,
                   ),
-                ),
-              ],
-            ),
+                ],
+              )
+            else ...<Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _CompactMetricTile(
+                      label: 'Monthly spend estimate',
+                      value: samplePreview!.monthlyTotalLabel,
+                      caption: samplePreview!.monthlyTotalCaption,
+                      accent: DashboardShellPalette.accent,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _CompactMetricTile(
+                      label: 'Confirmed',
+                      value: samplePreview!.confirmedCountLabel,
+                      caption: 'Paid subscriptions',
+                      accent: DashboardShellPalette.success,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _CompactMetricTile(
+                      label: 'Needs review',
+                      value: samplePreview!.reviewCountLabel,
+                      caption: 'Kept separate',
+                      accent: DashboardShellPalette.caution,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _CompactMetricTile(
+                      label: 'Trials & benefits',
+                      value: samplePreview!.trialCountLabel,
+                      caption: 'Separate access',
+                      accent: DashboardShellPalette.accent,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 14),
             DashboardPanel(
               key: const ValueKey<String>('sample-preview-details-panel'),
@@ -4052,7 +5164,7 @@ class _ProductGuidancePanel extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    'What this sample is showing',
+                    'What this preview shows',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -4097,79 +5209,104 @@ class _ProductGuidancePanel extends StatelessWidget {
 
     return Container(
       key: const ValueKey<String>('product-guidance-panel'),
-      padding: const EdgeInsets.fromLTRB(4, 2, 4, 2),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: DashboardShellPalette.outline.withValues(alpha: 0.7),
-          ),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                if (completion.eyebrow.isNotEmpty) ...<Widget>[
-                  Text(
-                    completion.eyebrow,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: DashboardShellPalette.accent,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 3),
-                ],
-                Text(
-                  completion.title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  completion.description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DashboardShellPalette.mutedInk,
-                      ),
-                ),
-                if (completion.bullets.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 6),
-                  Text(
-                    completion.bullets.first,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DashboardShellPalette.ink,
-                        ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: <Widget>[
-              if (onPrimaryAction != null)
-                FilledButton(
-                  key:
-                      const ValueKey<String>('product-guidance-primary-action'),
-                  onPressed: () {
-                    onPrimaryAction!();
-                  },
-                  child: Text(completion.primaryActionLabel),
-                ),
-              if (onOpenTrustSheet != null)
-                TextButton(
-                  key: const ValueKey<String>(
-                      'product-guidance-open-trust-sheet'),
-                  onPressed: onOpenTrustSheet,
-                  child: Text(completion.learnMoreActionLabel),
-                ),
+      child: DashboardPanel(
+        backgroundColor: DashboardShellPalette.elevatedPaper,
+        borderColor: DashboardShellPalette.outline,
+        radius: 20,
+        padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            if (completion.eyebrow.isNotEmpty) ...<Widget>[
+              DashboardBadge(
+                label: completion.eyebrow,
+                icon: Icons.info_outline_rounded,
+                backgroundColor: DashboardShellPalette.paper,
+                foregroundColor: DashboardShellPalette.accent,
+              ),
+              const SizedBox(height: 10),
             ],
-          ),
-        ],
+            Text(
+              completion.title,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              completion.description,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DashboardShellPalette.mutedInk,
+                    height: 1.28,
+                  ),
+            ),
+            if (completion.bullets.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 10),
+              _InsetListGroup(
+                children: completion.bullets
+                    .map(
+                      (bullet) => Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Padding(
+                              padding: EdgeInsets.only(top: 3),
+                              child: Icon(
+                                Icons.check_circle_outline_rounded,
+                                size: 16,
+                                color: DashboardShellPalette.accent,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                bullet,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DashboardShellPalette.ink,
+                                      height: 1.24,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ],
+            if (onPrimaryAction != null || onOpenTrustSheet != null) ...<Widget>[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: <Widget>[
+                  if (onPrimaryAction != null)
+                    FilledButton(
+                      key: const ValueKey<String>(
+                        'product-guidance-primary-action',
+                      ),
+                      onPressed: () {
+                        onPrimaryAction!();
+                      },
+                      child: Text(completion.primaryActionLabel),
+                    ),
+                  if (onOpenTrustSheet != null)
+                    TextButton(
+                      key: const ValueKey<String>(
+                        'product-guidance-open-trust-sheet',
+                      ),
+                      onPressed: onOpenTrustSheet,
+                      child: Text(completion.learnMoreActionLabel),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -4226,12 +5363,12 @@ class _SampleHomePreviewState {
           badgeLabel: _previewCountLabel(confirmedCards.length),
           description: confirmedTitles.isEmpty
               ? 'Paid subscriptions appear here when billing evidence is strong enough.'
-              : '${_joinPreviewTitles(confirmedTitles)} show up as paid subscriptions.',
+              : '${_joinPreviewTitles(confirmedTitles)} appear as paid subscriptions here.',
         ),
         _SamplePreviewHighlight(
           icon: Icons.schedule_rounded,
           title: 'Due soon',
-          badgeLabel: dueSoon.hasItems ? 'Live in sample' : 'Preview',
+          badgeLabel: dueSoon.hasItems ? 'Shown in preview' : 'Preview example',
           description: dueSoon.hasItems
               ? _dueSoonPreviewDescription(
                   dueSoon.items.first.serviceTitle,
@@ -4249,15 +5386,15 @@ class _SampleHomePreviewState {
           badgeLabel: _previewCountLabel(reviewItems.length),
           description: reviewTitles.isEmpty
               ? 'Unclear recurring signals stay separate until you decide.'
-              : '${_joinPreviewTitles(reviewTitles)} stay separate until you review them.',
+              : '${_joinPreviewTitles(reviewTitles)} stay separate until you decide.',
         ),
         _SamplePreviewHighlight(
           icon: Icons.workspace_premium_outlined,
-          title: 'Trial or bundle benefit',
+          title: 'Trials & benefits',
           badgeLabel: _previewCountLabel(trialCards.length),
           description: trialTitles.isEmpty
               ? 'Bundled access stays visible without being counted as paid.'
-              : '${trialTitles.first} stays separate from paid subscriptions.',
+              : '${trialTitles.first} stays visible as separate access.',
         ),
       ],
     );
@@ -4294,6 +5431,9 @@ class _SamplePreviewHighlightRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final stackedHeader =
+        MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.08;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
       child: Row(
@@ -4317,27 +5457,47 @@ class _SamplePreviewHighlightRow extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+                if (stackedHeader)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
                         highlight.title,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
                       ),
-                    ),
-                    DashboardBadge(
-                      label: highlight.badgeLabel,
-                      backgroundColor: DashboardShellPalette.paper,
-                      foregroundColor: DashboardShellPalette.mutedInk,
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 6),
+                      DashboardBadge(
+                        label: highlight.badgeLabel,
+                        backgroundColor: DashboardShellPalette.paper,
+                        foregroundColor: DashboardShellPalette.mutedInk,
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          highlight.title,
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                        ),
+                      ),
+                      DashboardBadge(
+                        label: highlight.badgeLabel,
+                        backgroundColor: DashboardShellPalette.paper,
+                        foregroundColor: DashboardShellPalette.mutedInk,
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 3),
                 Text(
                   highlight.description,
@@ -4359,14 +5519,16 @@ class _ZeroConfirmedRescuePanel extends StatelessWidget {
   const _ZeroConfirmedRescuePanel({
     required this.completion,
     required this.rescueState,
-    required this.onReviewFoundItems,
+    required this.onOpenReview,
+    required this.onOpenSubscriptions,
     required this.onAddManually,
     required this.onOpenTrustSheet,
   });
 
   final DashboardCompletionPresentation completion;
   final _ZeroConfirmedRescueState rescueState;
-  final Future<void> Function() onReviewFoundItems;
+  final Future<void> Function() onOpenReview;
+  final Future<void> Function() onOpenSubscriptions;
   final Future<void> Function() onAddManually;
   final VoidCallback onOpenTrustSheet;
 
@@ -4398,21 +5560,7 @@ class _ZeroConfirmedRescuePanel extends StatelessWidget {
                 backgroundColor: DashboardShellPalette.elevatedPaper,
                 foregroundColor: DashboardShellPalette.ink,
               ),
-              DashboardBadge(
-                label: rescueState.freshnessLabel,
-                icon: Icons.schedule_rounded,
-                backgroundColor: DashboardShellPalette.elevatedPaper,
-                foregroundColor: DashboardShellPalette.mutedInk,
-              ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            rescueState.contextDescription,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DashboardShellPalette.mutedInk,
-                  height: 1.28,
-                ),
           ),
           const SizedBox(height: 12),
           Text(
@@ -4440,23 +5588,23 @@ class _ZeroConfirmedRescuePanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  'What SubWatch counts',
+                  rescueState.explanationTitle,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  completion.bullets.first,
+                  rescueState.explanationBody,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DashboardShellPalette.ink,
                         height: 1.28,
                       ),
                 ),
-                if (completion.bullets.length > 1) ...<Widget>[
+                if (rescueState.supportingExplanationBody != null) ...<Widget>[
                   const SizedBox(height: 6),
                   Text(
-                    completion.bullets[1],
+                    rescueState.supportingExplanationBody!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DashboardShellPalette.mutedInk,
                           height: 1.28,
@@ -4466,63 +5614,83 @@ class _ZeroConfirmedRescuePanel extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          DashboardPanel(
-            key: const ValueKey<String>('home-zero-confirmed-findings'),
-            backgroundColor: DashboardShellPalette.elevatedPaper,
-            borderColor: DashboardShellPalette.outline,
-            radius: 20,
-            padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'What SubWatch found',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                ..._buildFindingRows(),
-              ],
+          if (rescueState.visibleFindings.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 12),
+            DashboardPanel(
+              key: const ValueKey<String>('home-zero-confirmed-findings'),
+              backgroundColor: DashboardShellPalette.elevatedPaper,
+              borderColor: DashboardShellPalette.outline,
+              radius: 20,
+              padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'What stayed visible',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 10),
+                  ..._buildFindingRows(),
+                ],
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 14),
+          Text(
+            'What you can do next',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 6,
             children: <Widget>[
               FilledButton(
                 key: const ValueKey<String>('zero-confirmed-primary-action'),
-                onPressed: onReviewFoundItems,
-                child: const Text('Review found items'),
+                onPressed: switch (rescueState.primaryActionKind) {
+                  _ZeroConfirmedPrimaryActionKind.review => onOpenReview,
+                  _ZeroConfirmedPrimaryActionKind.subscriptions =>
+                    onOpenSubscriptions,
+                  _ZeroConfirmedPrimaryActionKind.manualAdd => onAddManually,
+                },
+                child: Text(rescueState.primaryActionLabel),
               ),
-              OutlinedButton(
-                key: const ValueKey<String>(
-                    'zero-confirmed-add-manually-action'),
-                onPressed: onAddManually,
-                child: const Text('Add manually'),
-              ),
+              if (rescueState.primaryActionKind !=
+                  _ZeroConfirmedPrimaryActionKind.manualAdd)
+                OutlinedButton(
+                  key: const ValueKey<String>(
+                      'zero-confirmed-add-manually-action'),
+                  onPressed: onAddManually,
+                  child: const Text('Add manually'),
+                ),
               TextButton(
                 key: const ValueKey<String>('zero-confirmed-secondary-action'),
                 onPressed: onOpenTrustSheet,
-                child: const Text('Learn why nothing was confirmed'),
+                child: const Text('Why the list is still empty'),
               ),
             ],
           ),
+          if (rescueState.actionHint != null) ...<Widget>[
+            const SizedBox(height: 10),
+            Text(
+              rescueState.actionHint!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DashboardShellPalette.mutedInk,
+                    height: 1.28,
+                  ),
+            ),
+          ],
         ],
       ),
     );
   }
 
   List<Widget> _buildFindingRows() {
-    final rows = <_ZeroConfirmedFindingSummary>[
-      rescueState.reviewSummary,
-      rescueState.trialSummary,
-      rescueState.manualSummary,
-    ];
-
-    return rows
+    return rescueState.visibleFindings
         .map(
           (summary) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -4537,11 +5705,12 @@ class _ZeroConfirmedRescueState {
   const _ZeroConfirmedRescueState({
     required this.sourceLabel,
     required this.sourceIcon,
-    required this.freshnessLabel,
-    required this.contextDescription,
+    required this.explanationTitle,
+    required this.explanationBody,
+    required this.supportingExplanationBody,
     required this.reviewSummary,
     required this.trialSummary,
-    required this.manualSummary,
+    required this.manualCount,
   });
 
   factory _ZeroConfirmedRescueState.fromSnapshot(
@@ -4553,12 +5722,29 @@ class _ZeroConfirmedRescueState {
         .toList(growable: false);
     final reviewItems = snapshot.reviewQueue;
     final manualEntries = snapshot.manualSubscriptions;
+    final hasReviewItems = reviewItems.isNotEmpty;
+    final hasTrialCards = trialCards.isNotEmpty;
+
+    final explanationTitle = hasReviewItems || hasTrialCards
+        ? 'Why the confirmed list is still empty'
+        : 'Why nothing is confirmed yet';
+    final explanationBody = hasReviewItems
+        ? 'Possible recurring items were kept in Review so SubWatch does not count them as paid too early.'
+        : hasTrialCards
+            ? 'This scan found trial or bundled access signals, and those stay separate from paid subscriptions.'
+            : 'This scan did not surface recurring paid billing proof strong enough to confirm yet.';
+    final supportingExplanationBody = hasReviewItems
+        ? 'You can review each item yourself, add something manually, or wait for a later billing message to make the picture clearer.'
+        : hasTrialCards
+            ? 'Recharges, bundled access, and free benefits do not get counted as paid subscriptions. If you already know one you pay for directly, you can still add it manually.'
+            : 'One-time payments, mandate setup, recharges, and bundled access are kept out of confirmed subscriptions on purpose. If you already know one you pay for, you can still add it manually.';
 
     return _ZeroConfirmedRescueState(
       sourceLabel: sourceStatus.title,
       sourceIcon: _sourceIconForTone(sourceStatus.tone),
-      freshnessLabel: sourceStatus.freshnessLabel,
-      contextDescription: sourceStatus.provenanceDescription,
+      explanationTitle: explanationTitle,
+      explanationBody: explanationBody,
+      supportingExplanationBody: supportingExplanationBody,
       reviewSummary: _ZeroConfirmedFindingSummary(
         key: 'review',
         icon: Icons.rule_folder_outlined,
@@ -4585,29 +5771,67 @@ class _ZeroConfirmedRescueState {
                 pluralLabel: 'separate access items found',
               ),
       ),
-      manualSummary: _ZeroConfirmedFindingSummary(
-        key: 'manual',
-        icon: Icons.edit_note_rounded,
-        title: 'Added manually',
-        count: manualEntries.length,
-        description: manualEntries.isEmpty
-            ? 'No manual subscriptions have been added on this device yet.'
-            : _summarizeFindingTitles(
-                manualEntries.map((entry) => entry.serviceName),
-                singularLabel: 'manual entry already in your list',
-                pluralLabel: 'manual entries already in your list',
-              ),
-      ),
+      manualCount: manualEntries.length,
     );
   }
 
   final String sourceLabel;
   final IconData sourceIcon;
-  final String freshnessLabel;
-  final String contextDescription;
+  final String explanationTitle;
+  final String explanationBody;
+  final String? supportingExplanationBody;
   final _ZeroConfirmedFindingSummary reviewSummary;
   final _ZeroConfirmedFindingSummary trialSummary;
-  final _ZeroConfirmedFindingSummary manualSummary;
+  final int manualCount;
+
+  List<_ZeroConfirmedFindingSummary> get visibleFindings =>
+      <_ZeroConfirmedFindingSummary>[
+        if (reviewSummary.count > 0) reviewSummary,
+        if (trialSummary.count > 0) trialSummary,
+      ];
+
+  _ZeroConfirmedPrimaryActionKind get primaryActionKind {
+    if (reviewSummary.count > 0) {
+      return _ZeroConfirmedPrimaryActionKind.review;
+    }
+    if (trialSummary.count > 0 || manualCount > 0) {
+      return _ZeroConfirmedPrimaryActionKind.subscriptions;
+    }
+    return _ZeroConfirmedPrimaryActionKind.manualAdd;
+  }
+
+  String get primaryActionLabel {
+    switch (primaryActionKind) {
+      case _ZeroConfirmedPrimaryActionKind.review:
+        return reviewSummary.count == 1
+            ? 'Review 1 item'
+            : 'Review ${reviewSummary.count} items';
+      case _ZeroConfirmedPrimaryActionKind.subscriptions:
+        return trialSummary.count > 0
+            ? 'See what was found'
+            : 'Open subscriptions';
+      case _ZeroConfirmedPrimaryActionKind.manualAdd:
+        return 'Add manually';
+    }
+  }
+
+  String? get actionHint {
+    if (manualCount > 0) {
+      return manualCount == 1
+          ? '1 manual entry already stays separate in your subscriptions list.'
+          : '$manualCount manual entries already stay separate in your subscriptions list.';
+    }
+    if (primaryActionKind == _ZeroConfirmedPrimaryActionKind.manualAdd) {
+      return 'If you already know one you pay for, you can track it manually without changing this scan result.';
+    }
+    return null;
+  }
+}
+
+enum _ZeroConfirmedPrimaryActionKind {
+  review,
+  subscriptions,
+  manualAdd,
 }
 
 class _ZeroConfirmedFindingSummary {
@@ -4717,32 +5941,46 @@ class _SmsPermissionOnboardingSheetState
       <_SmsOnboardingPageContent>[
     _SmsOnboardingPageContent(
       icon: Icons.search_rounded,
-      title: 'Find recurring payments from your SMS',
+      title: 'Why SubWatch asks before checking SMS',
       description:
-          'SubWatch looks for renewals, recurring card charges, and plan signals on this device.',
+          'SubWatch looks for recurring billing, renewal, and plan clues only after you choose to continue.',
+      stamps: <String>[
+        'You choose when',
+        'Sample view first',
+      ],
       highlights: <String>[
-        'Estimate monthly spend when billed amounts are visible.',
-        'Keep unclear recurring-looking messages in Review instead of overclaiming.',
+        'You can keep browsing the sample view before deciding about SMS access.',
+        'If billed amounts are visible, SubWatch can estimate monthly spend without claiming perfect coverage.',
       ],
     ),
     _SmsOnboardingPageContent(
       icon: Icons.lock_outline_rounded,
-      title: 'Everything stays on your phone',
+      title: 'Kept on this device',
       description:
-          'SMS is read only when you start a scan. Messages and review actions stay local to this device.',
+          'SMS is read only when you start a scan. The subscription view and your review actions stay on this device.',
+      stamps: <String>[
+        'On this device',
+        'No cloud account',
+      ],
       highlights: <String>[
-        'SubWatch does not upload your SMS inbox to the cloud.',
+        'SubWatch does not upload your SMS inbox to build this view.',
+        'No cloud account is required to use SubWatch.',
         'You can browse first and grant access only when you are ready.',
       ],
     ),
     _SmsOnboardingPageContent(
       icon: Icons.rule_folder_outlined,
-      title: 'Trust-first by default',
+      title: 'Careful by default',
       description:
-          'Confirmed subscriptions, review-needed items, and bundled benefits stay separate.',
+          'Paid subscriptions, Review items, and separate access stay in different places.',
+      stamps: <String>[
+        'No auto-confirming',
+        'Bundles stay separate',
+      ],
       highlights: <String>[
-        'If SubWatch is unsure, it leaves items in Review.',
-        'It will not catch every subscription perfectly on the first pass.',
+        'Recharge-linked perks, telecom bundles, OTT access, and trials stay separate from paid subscriptions.',
+        'If SubWatch is unsure, it keeps the item in Review instead of guessing.',
+        'A quiet scan can still be correct when the proof is limited.',
       ],
     ),
   ];
@@ -4753,6 +5991,9 @@ class _SmsPermissionOnboardingSheetState
   Widget build(BuildContext context) {
     final page = _pages[_pageIndex];
     final isLastPage = _pageIndex == _pages.length - 1;
+    final stackedHeader =
+        MediaQuery.sizeOf(context).width < 340 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.1;
 
     return SafeArea(
       top: false,
@@ -4771,50 +6012,106 @@ class _SmsPermissionOnboardingSheetState
               children: <Widget>[
                 const _SheetHandle(),
                 const SizedBox(height: 10),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          const DashboardBadge(
-                            label: 'Before SMS permission',
-                            icon: Icons.auto_awesome_outlined,
-                            backgroundColor:
-                                DashboardShellPalette.registerPaper,
-                            foregroundColor: DashboardShellPalette.accent,
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            page.title,
-                            key: ValueKey<String>(
-                              'sms-onboarding-page-$_pageIndex',
-                            ),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            page.description,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: DashboardShellPalette.mutedInk,
-                                      height: 1.3,
-                                    ),
-                          ),
-                        ],
+                if (stackedHeader)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const DashboardBadge(
+                        label: 'Before SMS permission',
+                        icon: Icons.auto_awesome_outlined,
+                        backgroundColor: DashboardShellPalette.registerPaper,
+                        foregroundColor: DashboardShellPalette.accent,
                       ),
-                    ),
-                    DashboardBadge(
-                      label: '${_pageIndex + 1} of ${_pages.length}',
-                      backgroundColor: DashboardShellPalette.elevatedPaper,
-                      foregroundColor: DashboardShellPalette.mutedInk,
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 10),
+                      Text(
+                        page.title,
+                        key: ValueKey<String>(
+                          'sms-onboarding-page-$_pageIndex',
+                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        page.description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DashboardShellPalette.mutedInk,
+                              height: 1.3,
+                            ),
+                      ),
+                      const SizedBox(height: 10),
+                      DashboardBadge(
+                        label: '${_pageIndex + 1} of ${_pages.length}',
+                        backgroundColor: DashboardShellPalette.elevatedPaper,
+                        foregroundColor: DashboardShellPalette.mutedInk,
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const DashboardBadge(
+                              label: 'Before SMS permission',
+                              icon: Icons.auto_awesome_outlined,
+                              backgroundColor:
+                                  DashboardShellPalette.registerPaper,
+                              foregroundColor: DashboardShellPalette.accent,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              page.title,
+                              key: ValueKey<String>(
+                                'sms-onboarding-page-$_pageIndex',
+                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              page.description,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: DashboardShellPalette.mutedInk,
+                                    height: 1.3,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      DashboardBadge(
+                        label: '${_pageIndex + 1} of ${_pages.length}',
+                        backgroundColor: DashboardShellPalette.elevatedPaper,
+                        foregroundColor: DashboardShellPalette.mutedInk,
+                      ),
+                    ],
+                  ),
+                if (page.stamps.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: page.stamps
+                        .map(
+                          (stamp) => DashboardBadge(
+                            label: stamp,
+                            backgroundColor: DashboardShellPalette.elevatedPaper,
+                            foregroundColor: DashboardShellPalette.mutedInk,
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 DashboardPanel(
                   backgroundColor: DashboardShellPalette.elevatedPaper,
@@ -4935,6 +6232,13 @@ class _SmsPermissionOnboardingSheetState
                   },
                   child: const Text('Browse first'),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  'No SMS access is requested until you continue.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DashboardShellPalette.mutedInk,
+                      ),
+                ),
               ],
             ),
           ),
@@ -4949,12 +6253,14 @@ class _SmsOnboardingPageContent {
     required this.icon,
     required this.title,
     required this.description,
+    required this.stamps,
     required this.highlights,
   });
 
   final IconData icon;
   final String title;
   final String description;
+  final List<String> stamps;
   final List<String> highlights;
 }
 
@@ -5015,11 +6321,9 @@ class _SmsPermissionRationaleSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -5113,26 +6417,26 @@ class _SmsPermissionRationaleContent {
     switch (variant) {
       case RuntimeLocalMessageSourcePermissionRationaleVariant.firstRun:
         return const _SmsPermissionRationaleContent(
-          title: 'Before SubWatch scans SMS',
+          title: 'Before Android asks for SMS access',
           description:
-              'SubWatch finds subscriptions from SMS on this device. Android will ask for SMS access next.',
+              'SubWatch only checks messages after you choose to continue. Android shows the SMS permission next.',
           bullets: <String>[
-            'SMS access is used only to find subscription, trial, and renewal messages.',
-            'Messages stay on this device and are not uploaded to the cloud.',
-            'The first scan can take a moment, and anything unclear stays separate for review.',
+            'SubWatch reads SMS only to build the current subscription view on this device.',
+            'Recharge perks, bundled access, and anything uncertain stay separate instead of being counted too early.',
+            'You can browse first if you want to see the app before deciding.',
           ],
           primaryActionLabel: 'Continue to SMS permission',
           secondaryActionLabel: 'Browse first',
         );
       case RuntimeLocalMessageSourcePermissionRationaleVariant.retry:
         return const _SmsPermissionRationaleContent(
-          title: 'Turn on SMS access when you are ready',
+          title: 'Turn on SMS access only when you are ready',
           description:
-              'Without SMS access, SubWatch can only show demo or saved local results.',
+              'Without SMS access, SubWatch can keep showing sample or saved local results, but it will not claim a fresh message check.',
           bullets: <String>[
-            'SMS access is used only to find subscription and renewal messages.',
-            'Messages stay on this device and are not uploaded to the cloud.',
-            'If you continue, Android shows the SMS permission again. You can also review details in Settings first.',
+            'If you continue, Android shows the SMS permission again.',
+            'SubWatch reads SMS only for a refresh on this device.',
+            'Privacy details and on-device limits stay available in Settings before you decide.',
           ],
           primaryActionLabel: 'Try device SMS again',
           secondaryActionLabel: 'Open Settings',
@@ -5147,90 +6451,82 @@ class _SmsPermissionRationaleContent {
   final String secondaryActionLabel;
 }
 
-class _HomeReviewSummaryCard extends StatelessWidget {
-  const _HomeReviewSummaryCard({
+class _ReviewQueueSummaryCard extends StatelessWidget {
+  const _ReviewQueueSummaryCard({
     required this.reviewCount,
-    required this.onOpenReview,
   });
 
   final int reviewCount;
-  final Future<void> Function() onOpenReview;
 
   @override
   Widget build(BuildContext context) {
     final countLabel = reviewCount == 1 ? '1 item' : '$reviewCount items';
+    final isEmpty = reviewCount == 0;
 
-    return Container(
-      key: const ValueKey<String>('home-review-summary-card'),
-      padding: const EdgeInsets.fromLTRB(2, 4, 2, 4),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: DashboardShellPalette.outline.withValues(alpha: 0.7),
-          ),
-        ),
-      ),
-      child: Row(
+    return DashboardPanel(
+      key: const ValueKey<String>('review-queue-summary-card'),
+      backgroundColor: DashboardShellPalette.paper,
+      borderColor: DashboardShellPalette.outlineStrong,
+      radius: 22,
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Review',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '$countLabel waiting',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DashboardShellPalette.mutedInk,
-                      ),
-                ),
-              ],
-            ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              DashboardBadge(
+                label: isEmpty ? 'Clear for now' : '$countLabel kept separate',
+                icon: isEmpty
+                    ? Icons.verified_outlined
+                    : Icons.rule_folder_outlined,
+                backgroundColor: isEmpty
+                    ? DashboardShellPalette.successSoft
+                    : DashboardShellPalette.cautionSoft,
+                foregroundColor: isEmpty
+                    ? DashboardShellPalette.success
+                    : DashboardShellPalette.caution,
+              ),
+              const DashboardBadge(
+                label: 'Decisions stay reversible',
+                icon: Icons.restore_rounded,
+                backgroundColor: DashboardShellPalette.elevatedPaper,
+                foregroundColor: DashboardShellPalette.mutedInk,
+              ),
+            ],
           ),
-          TextButton.icon(
-            key: const ValueKey<String>('home-open-review-summary'),
-            onPressed: onOpenReview,
-            icon: const Icon(Icons.arrow_forward_rounded),
-            label: const Text('Review'),
+          const SizedBox(height: 12),
+          Text(
+            isEmpty
+                ? 'Review is clear for now'
+                : 'Review protects the confirmed list',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            isEmpty
+                ? 'SubWatch only places uncertain recurring-looking items here. A blank Review screen means nothing currently needs your decision.'
+                : 'These items looked recurring, but SubWatch kept them out of confirmed subscriptions until the evidence or your decision makes the picture clearer.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DashboardShellPalette.ink,
+                  height: 1.28,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isEmpty
+                ? 'Confirmed subscriptions, benefits, and past decisions stay in their own places.'
+                : 'You can confirm something paid, keep bundled access separate, or mark it as not a subscription. Every choice stays reversible later.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DashboardShellPalette.mutedInk,
+                  height: 1.28,
+                ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SettingsOverviewPanel extends StatelessWidget {
-  const _SettingsOverviewPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      key: const ValueKey<String>('settings-overview-panel'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Semantics(
-          header: true,
-          child: Text(
-            'Settings',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          'Everything here stays on this device.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: DashboardShellPalette.mutedInk,
-              ),
-        ),
-      ],
     );
   }
 }
@@ -5250,7 +6546,6 @@ class _SettingsGroupPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      key: key,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Semantics(
@@ -5340,34 +6635,34 @@ class _HelpSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SettingsDetailSheet(
       sheetKey: const ValueKey<String>('help-sheet'),
-      title: 'Help',
+      title: 'Using SubWatch',
       subtitle:
-          'A short guide to how SubWatch reads device SMS carefully and what to expect after a refresh.',
+          'How scans, review, saved views, and separate access work in SubWatch.',
       children: const <Widget>[
         _TrustSheetSection(
-          title: 'Refresh',
+          title: 'Refresh & source',
           items: <String>[
-            'Refresh reads device SMS only when you ask for it.',
-            'A fresh scan replaces the current derived snapshot instead of appending duplicate state.',
-            'Denied or unavailable access stays visible instead of pretending a fresh read happened.',
+            'SubWatch reads SMS only when you start a refresh.',
+            'The current view is labeled as sample, fresh, or saved so you know what you are seeing.',
+            'If access is denied or unavailable, SubWatch says so instead of pretending a fresh scan happened.',
           ],
         ),
         SizedBox(height: 14),
         _TrustSheetSection(
           title: 'Review',
           items: <String>[
-            'Items in Review looked recurring, but were not safe to confirm automatically.',
-            'Confirm only the subscriptions you trust.',
-            'Hide anything that is not a subscription. Undo remains available later.',
+            'Review holds items that looked recurring but are not safe to auto-confirm.',
+            'Confirm only the subscriptions you recognise as paid.',
+            'If something is bundled, free, or wrong, keep it separate or dismiss it. Undo remains available later.',
           ],
         ),
         SizedBox(height: 14),
         _TrustSheetSection(
-          title: 'Confirmed vs observed',
+          title: 'Confirmed, Review, separate access',
           items: <String>[
-            'Confirmed subscriptions require stronger evidence than simple payment-like SMS.',
-            'Observed signals stay visible without being promoted into confirmed subscriptions.',
-            'Trials and bundled benefits stay separate from paid subscriptions.',
+            'Confirmed subscriptions need stronger proof than a payment-like SMS alone.',
+            'Review is for uncertain recurring signals.',
+            'Trials and bundled benefits stay separate from direct paid subscriptions.',
           ],
         ),
       ],
@@ -5413,7 +6708,7 @@ class _PrivacyLocalDataSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'SubWatch stays local-first and does not turn device SMS into a payments inbox or cloud account.',
+                            'What SubWatch reads, what it keeps on this device, and what it deliberately does not do.',
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: DashboardShellPalette.mutedInk,
@@ -5422,38 +6717,36 @@ class _PrivacyLocalDataSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 const _TrustSheetSection(
                   title: 'What stays local',
                   items: <String>[
-                    'Derived snapshots, review decisions, and restored state stay on this device.',
-                    'Raw SMS is read during a refresh and is not kept as an app inbox.',
-                    'Fresh, restored, and demo views stay labeled separately so local state is honest.',
+                    'Current and saved subscription views, review decisions, and manual changes stay on this device.',
+                    'SMS is read during a refresh and is not kept as an in-app inbox.',
+                    'Sample, fresh, and saved views stay labeled separately so the current state stays honest.',
                   ],
                 ),
                 const SizedBox(height: 14),
                 const _TrustSheetSection(
                   title: 'When SMS is read',
                   items: <String>[
-                    'Device SMS is read only when you choose a refresh.',
+                    'SubWatch reads device SMS only after you start a refresh.',
                     'Denied or unavailable access never pretends a fresh scan happened.',
-                    'Repeated refreshes replace the current derived snapshot instead of appending duplicate state.',
+                    'Another refresh replaces the current subscription view instead of building a hidden message history in the app.',
                   ],
                 ),
                 const SizedBox(height: 14),
                 const _TrustSheetSection(
-                  title: 'What you control',
+                  title: 'What SubWatch does not do',
                   items: <String>[
-                    'Review decisions are explicit and reversible.',
-                    'Hidden items can be restored later if you change your mind.',
-                    'SubWatch keeps uncertain recurring-looking signals separate instead of auto-confirming them.',
+                    'It does not upload your SMS inbox to create your subscription view.',
+                    'It does not run passive background monitoring.',
+                    'It does not turn every payment, mandate, or micro-charge into a subscription.',
                   ],
                 ),
               ],
@@ -5474,7 +6767,7 @@ class _AboutSubWatchSheet extends StatelessWidget {
       sheetKey: const ValueKey<String>('about-subwatch-sheet'),
       title: 'About SubWatch',
       subtitle:
-          'A careful subscription manager that checks messages only when you ask.',
+          'What SubWatch is designed to do, and where it stays deliberately narrow.',
       children: const <Widget>[
         _TrustSheetSection(
           title: 'What it is',
@@ -5521,9 +6814,9 @@ class _FeedbackSheet extends StatelessWidget {
         _TrustSheetSection(
           title: 'How to share it',
           items: <String>[
-            'Share it through the same place you received SubWatch.',
+            'Use the same channel where you received SubWatch, or contact the person who gave you access.',
             'Include screenshots of the visible state when possible.',
-            'You do not need to copy raw SMS unless someone specifically asks for it.',
+            'Screenshots are usually enough. Share message text only if someone specifically asks for it.',
           ],
         ),
       ],
@@ -5551,6 +6844,8 @@ class _TrustHowItWorksSheet extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
+                const _SheetHandle(),
+                const SizedBox(height: 10),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -5567,7 +6862,7 @@ class _TrustHowItWorksSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'A careful local-first way to review subscriptions from device SMS.',
+                            'How SubWatch stays conservative when it reads device SMS.',
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: DashboardShellPalette.mutedInk,
@@ -5576,38 +6871,36 @@ class _TrustHowItWorksSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 const _TrustSheetSection(
-                  title: 'Trust-first by default',
+                  title: 'What SubWatch confirms',
                   items: <String>[
-                    'Device SMS is read only when you ask for a refresh.',
-                    'High-confidence subscriptions stay separate from uncertain signals.',
-                    'Review actions and restored snapshots stay on this device.',
+                    'Confirmed subscriptions appear only when recurring billing proof is strong enough.',
+                    'Single payments, mandate setup, and tiny verification charges are not enough by themselves.',
+                    'If the signal is still weak, the item stays separate.',
                   ],
                 ),
                 const SizedBox(height: 14),
                 const _TrustSheetSection(
-                  title: 'What refresh does',
+                  title: 'What stays separate',
                   items: <String>[
-                    'Refresh recomputes the current snapshot from device SMS when available.',
-                    'Denied or unavailable states fail safely instead of pretending a fresh read happened.',
-                    'Repeated refreshes replace stale derived state instead of appending unpredictably.',
+                    'Review is for items that may be subscriptions but still need a decision.',
+                    'Trials, bundles, and free access stay outside paid subscriptions.',
+                    'Local hide or ignore actions do not rewrite what the scan actually found.',
                   ],
                 ),
                 const SizedBox(height: 14),
                 const _TrustSheetSection(
-                  title: 'What to expect',
+                  title: 'What refresh means',
                   items: <String>[
-                    'Confirmed subscriptions appear only when the signal is strong enough.',
-                    'Weak recurring-looking messages stay in Review or separate observed sections.',
-                    'Hidden items can be recovered later if you change your mind.',
+                    'Refresh recomputes the current view from device SMS when available.',
+                    'Saved views and limited-access states stay labeled separately from fresh checks.',
+                    'Another refresh can replace this view when stronger evidence appears.',
                   ],
                 ),
               ],
@@ -5676,11 +6969,9 @@ class _SettingsDetailSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -5700,62 +6991,86 @@ class _SettingsNavRow extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    this.onTap,
+    this.trailing,
   });
 
   final Key tileKey;
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        key: tileKey,
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        splashColor: DashboardShellPalette.accent.withValues(alpha: 0.08),
-        highlightColor: DashboardShellPalette.accent.withValues(alpha: 0.04),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Icon(
-                icon,
-                color: DashboardShellPalette.accent,
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: '$title. $subtitle.',
+      child: ExcludeSemantics(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: tileKey,
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            splashColor: DashboardShellPalette.accent.withValues(alpha: 0.08),
+            highlightColor:
+                DashboardShellPalette.accent.withValues(alpha: 0.04),
+            hoverColor: DashboardShellPalette.accent.withValues(alpha: 0.03),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 52),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                    Icon(
+                      icon,
+                      color: DashboardShellPalette.accent,
+                      size: 20,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DashboardShellPalette.mutedInk,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            title,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
                           ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: DashboardShellPalette.mutedInk,
+                                  height: 1.26,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
+                    trailing ??
+                        Icon(
+                          onTap == null
+                              ? Icons.hourglass_top_rounded
+                              : Icons.chevron_right_rounded,
+                          color: DashboardShellPalette.mutedInk,
+                        ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: DashboardShellPalette.mutedInk,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -5783,51 +7098,63 @@ class _SettingsRecoveryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+    final stackedAction =
+        MediaQuery.sizeOf(context).width < 390 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.12;
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DashboardShellPalette.mutedInk,
+                height: 1.26,
+              ),
+        ),
+        if (statusLabel != subtitle) ...<Widget>[
+          const SizedBox(height: 4),
+          Text(
+            statusLabel,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: DashboardShellPalette.mutedInk,
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DashboardShellPalette.mutedInk,
-                      ),
-                ),
-                if (statusLabel != subtitle) ...<Widget>[
-                  const SizedBox(height: 4),
-                  Text(
-                    statusLabel,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: DashboardShellPalette.mutedInk,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          TextButton(
-            key: actionKey,
-            onPressed: isBusy ? null : onUndo,
-            child: Text(isBusy ? 'Working...' : 'Undo'),
           ),
         ],
-      ),
+      ],
+    );
+    final action = TextButton(
+      key: actionKey,
+      onPressed: isBusy ? null : onUndo,
+      child: Text(isBusy ? 'Working...' : 'Undo'),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+      child: stackedAction
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                details,
+                const SizedBox(height: 8),
+                action,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(child: details),
+                const SizedBox(width: 10),
+                action,
+              ],
+            ),
     );
   }
 }
@@ -5846,49 +7173,63 @@ class _SettingsReminderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final stackedAction =
+        MediaQuery.sizeOf(context).width < 390 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.12;
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          item.renewal.serviceTitle,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          item.renewal.renewalDateLabel,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DashboardShellPalette.mutedInk,
+                height: 1.26,
+              ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          item.statusLabel,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: DashboardShellPalette.mutedInk,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      ],
+    );
+    final action = TextButton(
+      key: ValueKey<String>(
+        'open-renewal-reminder-controls-${item.renewal.serviceKey}',
+      ),
+      onPressed: isBusy ? null : onOpenReminderControls,
+      child: Text(isBusy ? 'Working...' : 'Reminder'),
+    );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Expanded(
-            child: Column(
+      child: stackedAction
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  item.renewal.serviceTitle,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.renewal.renewalDateLabel,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: DashboardShellPalette.mutedInk,
-                      ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  item.statusLabel,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: DashboardShellPalette.mutedInk,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
+                details,
+                const SizedBox(height: 8),
+                action,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(child: details),
+                const SizedBox(width: 10),
+                action,
               ],
             ),
-          ),
-          const SizedBox(width: 10),
-          TextButton(
-            key: ValueKey<String>(
-              'open-renewal-reminder-controls-${item.renewal.serviceKey}',
-            ),
-            onPressed: isBusy ? null : onOpenReminderControls,
-            child: Text(isBusy ? 'Working...' : 'Reminder'),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -6045,7 +7386,11 @@ class _ServiceViewControlsPanel extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final useStackedActions = constraints.maxWidth < 340;
+          final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+          final useStackedActions =
+              constraints.maxWidth < 340 ||
+              textScale > 1.12 ||
+              (controls.hasActiveControls && constraints.maxWidth < 420);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -6278,8 +7623,9 @@ class _ServiceViewEmptyState extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         _EmptySectionText(
-          title: 'No matches',
-          message: 'Try another search or reset the filters.',
+          title: 'Nothing matches this view',
+          message:
+              'Try another search or reset the filters. If something is still missing, you can add it manually.',
           icon: Icons.search_off_rounded,
         ),
         const SizedBox(height: 6),
@@ -6346,11 +7692,9 @@ class _TotalsExplanationSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -6453,11 +7797,9 @@ class _RenewalReminderControlsSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -6569,76 +7911,162 @@ class _ManualSubscriptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final amountLabel = _formatManualSubscriptionAmount(entry.amountInMinorUnits) ??
+        'Amount not added';
+    final renewalLabel = entry.hasNextRenewalDate
+        ? _formatManualDate(entry.nextRenewalDate!)
+        : 'No renewal date';
+    final frequencyLabel = entry.billingCycle ==
+            ManualSubscriptionBillingCycle.monthly
+        ? 'Monthly'
+        : 'Yearly';
     final identity = _identityStyle(
       entry.serviceName,
       accentColor: DashboardShellPalette.accent,
     );
+    final summary = _manualSubscriptionRowSemantics(entry);
+    final stackedHeader =
+        MediaQuery.sizeOf(context).width < 340 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.1;
+    final expandedSubtitle =
+        MediaQuery.sizeOf(context).width < 340 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.15;
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 11, 8, 11),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              DashboardServiceAvatar(
-                monogram: identity.monogram,
-                foregroundColor: identity.foreground,
-                backgroundColor: identity.background,
-                borderColor: identity.border,
-                sealColor: DashboardShellPalette.accent,
-                size: 34,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      entry.serviceName,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _manualSubscriptionSubtitle(entry),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: DashboardShellPalette.mutedInk,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Semantics(
+              key: ValueKey<String>('manual-row-semantics-${entry.id}'),
+              button: true,
+              label: summary,
+              hint: 'Opens manual entry details',
+              child: ExcludeSemantics(
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(18),
+                  splashColor:
+                      DashboardShellPalette.accent.withValues(alpha: 0.08),
+                  highlightColor:
+                      DashboardShellPalette.accent.withValues(alpha: 0.04),
+                  hoverColor:
+                      DashboardShellPalette.accent.withValues(alpha: 0.03),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 11, 0, 11),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        const DashboardBadge(
-                          label: 'Manual',
-                          backgroundColor: DashboardShellPalette.registerPaper,
-                          foregroundColor: DashboardShellPalette.accent,
+                        DashboardServiceAvatar(
+                          monogram: identity.monogram,
+                          foregroundColor: identity.foreground,
+                          backgroundColor: identity.background,
+                          borderColor: identity.border,
+                          sealColor: DashboardShellPalette.accent,
+                          size: 34,
                         ),
-                        DashboardBadge(
-                          label: entry.billingCycle ==
-                                  ManualSubscriptionBillingCycle.monthly
-                              ? 'Monthly'
-                              : 'Yearly',
-                          backgroundColor: DashboardShellPalette.paper,
-                          foregroundColor: DashboardShellPalette.ink,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              if (stackedHeader)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(
+                                      entry.serviceName,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    const DashboardBadge(
+                                      label: 'Added by you',
+                                      backgroundColor:
+                                          DashboardShellPalette.registerPaper,
+                                      foregroundColor:
+                                          DashboardShellPalette.accent,
+                                    ),
+                                  ],
+                                )
+                              else
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: Text(
+                                        entry.serviceName,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const DashboardBadge(
+                                      label: 'Added by you',
+                                      backgroundColor:
+                                          DashboardShellPalette.registerPaper,
+                                      foregroundColor:
+                                          DashboardShellPalette.accent,
+                                    ),
+                                  ],
+                                ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _manualSubscriptionSubtitle(entry),
+                                maxLines: expandedSubtitle ? null : 2,
+                                overflow: expandedSubtitle
+                                    ? null
+                                    : TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DashboardShellPalette.mutedInk,
+                                    ),
+                              ),
+                              const SizedBox(height: 8),
+                              _SubscriptionMetaPanel(
+                                amountValueKey: ValueKey<String>(
+                                  'manual-meta-amount-${entry.id}',
+                                ),
+                                amountLabel: amountLabel,
+                                renewalValueKey: ValueKey<String>(
+                                  'manual-meta-renewal-${entry.id}',
+                                ),
+                                renewalLabel: renewalLabel,
+                                frequencyValueKey: ValueKey<String>(
+                                  'manual-meta-frequency-${entry.id}',
+                                ),
+                                frequencyLabel: frequencyLabel,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-              PopupMenuButton<String>(
-                key:
-                    ValueKey<String>('manual-subscription-actions-${entry.id}'),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 11, 8, 11),
+            child: SizedBox.square(
+              dimension: 48,
+              child: PopupMenuButton<String>(
+                key: ValueKey<String>('manual-subscription-actions-${entry.id}'),
                 enabled: !isBusy,
+                tooltip: 'More actions for ${entry.serviceName}',
+                padding: EdgeInsets.zero,
                 onSelected: (value) {
                   switch (value) {
                     case 'edit':
@@ -6653,24 +8081,24 @@ class _ManualSubscriptionRow extends StatelessWidget {
                   }
                 },
                 itemBuilder: (context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'edit',
+                  child: Text('Edit details'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Text('Remove from list'),
+                ),
+                if (onOpenReminderControls != null)
                   const PopupMenuItem<String>(
-                    value: 'edit',
-                    child: Text('Edit'),
+                    value: 'reminder',
+                    child: Text('Set local reminder'),
                   ),
-                  const PopupMenuItem<String>(
-                    value: 'delete',
-                    child: Text('Delete'),
-                  ),
-                  if (onOpenReminderControls != null)
-                    const PopupMenuItem<String>(
-                      value: 'reminder',
-                      child: Text('Reminder'),
-                    ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -6738,7 +8166,7 @@ class _ManualSubscriptionDetailsSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Added by you on this device.',
+                            'Added by you on this device. It stays separate from detected subscriptions and gives you a fallback when a scan is limited.',
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -6748,11 +8176,9 @@ class _ManualSubscriptionDetailsSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -6761,7 +8187,7 @@ class _ManualSubscriptionDetailsSheet extends StatelessWidget {
                   runSpacing: 6,
                   children: <Widget>[
                     const DashboardBadge(
-                      label: 'Manual entry',
+                      label: 'Added by you',
                       backgroundColor: DashboardShellPalette.registerPaper,
                       foregroundColor: DashboardShellPalette.accent,
                     ),
@@ -6776,6 +8202,36 @@ class _ManualSubscriptionDetailsSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
+                if (!entry.hasAmount || !entry.hasNextRenewalDate) ...<Widget>[
+                  DashboardPanel(
+                    backgroundColor: DashboardShellPalette.elevatedPaper,
+                    borderColor: DashboardShellPalette.outline,
+                    radius: 20,
+                    padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Make this entry more useful',
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _manualEntryImprovementCopy(entry),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DashboardShellPalette.mutedInk,
+                                    height: 1.28,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 _ManualSubscriptionDetailBlock(
                   title: 'Billing',
                   value: _manualSubscriptionBillingSummary(entry),
@@ -6799,26 +8255,37 @@ class _ManualSubscriptionDetailsSheet extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: <Widget>[
-                    FilledButton(
-                      key: ValueKey<String>(
-                          'edit-manual-subscription-${entry.id}'),
-                      onPressed: onEdit,
-                      child: const Text('Edit'),
+                    _ContextualActionSemantics(
+                      label: 'Edit manual entry for ${entry.serviceName}',
+                      child: FilledButton(
+                        key: ValueKey<String>(
+                            'edit-manual-subscription-${entry.id}'),
+                        onPressed: onEdit,
+                        child: const Text('Edit details'),
+                      ),
                     ),
-                    TextButton(
-                      key: ValueKey<String>(
-                          'delete-manual-subscription-${entry.id}'),
-                      onPressed: onDelete,
-                      child: const Text('Delete'),
+                    _ContextualActionSemantics(
+                      label: 'Remove manual entry for ${entry.serviceName}',
+                      child: TextButton(
+                        key: ValueKey<String>(
+                            'delete-manual-subscription-${entry.id}'),
+                        onPressed: onDelete,
+                        child: const Text('Remove from list'),
+                      ),
                     ),
                     if (onOpenReminderControls != null)
-                      TextButton.icon(
-                        key: ValueKey<String>(
-                            'open-reminder-manual-subscription-${entry.id}'),
-                        onPressed: onOpenReminderControls,
-                        icon: const Icon(Icons.notifications_active_outlined,
-                            size: 18),
-                        label: const Text('Set local reminder'),
+                      _ContextualActionSemantics(
+                        label: 'Set a local reminder for ${entry.serviceName}',
+                        child: TextButton.icon(
+                          key: ValueKey<String>(
+                              'open-reminder-manual-subscription-${entry.id}'),
+                          onPressed: onOpenReminderControls,
+                          icon: const Icon(
+                            Icons.notifications_active_outlined,
+                            size: 18,
+                          ),
+                          label: const Text('Set local reminder'),
+                        ),
                       ),
                   ],
                 ),
@@ -6959,94 +8426,108 @@ class _PopularServicePickerInlineState
           borderColor: DashboardShellPalette.outlineStrong,
           radius: 28,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const _SheetHandle(),
-              const SizedBox(height: 10),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          'Add subscription',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Pick a service or add your own.',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: DashboardShellPalette.mutedInk),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                key: const ValueKey<String>('popular-service-search'),
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Search services',
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: DashboardShellPalette.outline,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: DashboardShellPalette.outline,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: DashboardShellPalette.elevatedPaper,
-                ),
-              ),
-              const SizedBox(height: 14),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.4,
-                ),
-                child: SingleChildScrollView(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      for (final entry in _filteredEntries)
-                        _PopularServiceChip(
-                          entry: entry,
-                          onTap: () {
-                            widget.onPickService(entry);
-                          },
-                        ),
-                      _CustomEntryChip(
-                        onTap: widget.onCustomEntry,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const _SheetHandle(),
+                const SizedBox(height: 10),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Add a subscription you already know',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Start with a popular service or add your own. Manual entries stay marked as added by you.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                    color: DashboardShellPalette.mutedInk),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: const <Widget>[
+                    DashboardBadge(
+                      label: 'Added by you',
+                      icon: Icons.edit_note_rounded,
+                      backgroundColor: DashboardShellPalette.registerPaper,
+                      foregroundColor: DashboardShellPalette.accent,
+                    ),
+                    DashboardBadge(
+                      label: 'Does not change scan results',
+                      icon: Icons.verified_outlined,
+                      backgroundColor: DashboardShellPalette.elevatedPaper,
+                      foregroundColor: DashboardShellPalette.mutedInk,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const ValueKey<String>('popular-service-search'),
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  decoration: InputDecoration(
+                    hintText: 'Search popular services',
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: DashboardShellPalette.outline,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: DashboardShellPalette.outline,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: DashboardShellPalette.elevatedPaper,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    for (final entry in _filteredEntries)
+                      _PopularServiceChip(
+                        entry: entry,
+                        onTap: () {
+                          widget.onPickService(entry);
+                        },
+                      ),
+                    _CustomEntryChip(
+                      onTap: widget.onCustomEntry,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -7091,97 +8572,110 @@ class _PopularServicePickerSheetState
           borderColor: DashboardShellPalette.outlineStrong,
           radius: 28,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const _SheetHandle(),
-              const SizedBox(height: 10),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          'Add subscription',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Pick a service or add your own.',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: DashboardShellPalette.mutedInk),
-                        ),
-                      ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const _SheetHandle(),
+                const SizedBox(height: 10),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Add a subscription you already know',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Start with a popular service or add your own. Manual entries stay marked as added by you.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                    color: DashboardShellPalette.mutedInk),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Close',
+                    _SheetCloseButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                key: const ValueKey<String>('popular-service-search'),
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Search services',
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: DashboardShellPalette.outline,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: DashboardShellPalette.outline,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: DashboardShellPalette.elevatedPaper,
+                  ],
                 ),
-              ),
-              const SizedBox(height: 14),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: const <Widget>[
+                    DashboardBadge(
+                      label: 'Added by you',
+                      icon: Icons.edit_note_rounded,
+                      backgroundColor: DashboardShellPalette.registerPaper,
+                      foregroundColor: DashboardShellPalette.accent,
+                    ),
+                    DashboardBadge(
+                      label: 'Does not change scan results',
+                      icon: Icons.verified_outlined,
+                      backgroundColor: DashboardShellPalette.elevatedPaper,
+                      foregroundColor: DashboardShellPalette.mutedInk,
+                    ),
+                  ],
                 ),
-                child: SingleChildScrollView(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      for (final entry in _filteredEntries)
-                        _PopularServiceChip(
-                          entry: entry,
-                          onTap: () {
-                            Navigator.of(context).pop(entry);
-                          },
-                        ),
-                      _CustomEntryChip(
+                const SizedBox(height: 12),
+                TextField(
+                  key: const ValueKey<String>('popular-service-search'),
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  decoration: InputDecoration(
+                    hintText: 'Search popular services',
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: DashboardShellPalette.outline,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: DashboardShellPalette.outline,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: DashboardShellPalette.elevatedPaper,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    for (final entry in _filteredEntries)
+                      _PopularServiceChip(
+                        entry: entry,
                         onTap: () {
-                          Navigator.of(context).pop();
+                          Navigator.of(context).pop(entry);
                         },
                       ),
-                    ],
-                  ),
+                    _CustomEntryChip(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -7221,6 +8715,10 @@ class _PopularServiceChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         splashColor: (brandEntry?.brandColor ?? DashboardShellPalette.accent)
             .withValues(alpha: 0.08),
+        highlightColor: (brandEntry?.brandColor ?? DashboardShellPalette.accent)
+            .withValues(alpha: 0.04),
+        hoverColor: (brandEntry?.brandColor ?? DashboardShellPalette.accent)
+            .withValues(alpha: 0.03),
         child: Container(
           width: (MediaQuery.of(context).size.width - 56) / 2,
           padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
@@ -7286,6 +8784,8 @@ class _CustomEntryChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         splashColor: DashboardShellPalette.accent.withValues(alpha: 0.08),
+        highlightColor: DashboardShellPalette.accent.withValues(alpha: 0.04),
+        hoverColor: DashboardShellPalette.accent.withValues(alpha: 0.03),
         child: Container(
           width: (MediaQuery.of(context).size.width - 56) / 2,
           padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
@@ -7317,7 +8817,7 @@ class _CustomEntryChip extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Custom entry',
+                  'Something else',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -7407,6 +8907,9 @@ class _ManualSubscriptionEditorSheetState
   Widget build(BuildContext context) {
     final isEditing = widget.existingEntry != null;
     final canSave = !_isSaving && _serviceNameController.text.trim().isNotEmpty;
+    final stackedHeader =
+        MediaQuery.sizeOf(context).width < 340 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.1;
 
     return SafeArea(
       top: false,
@@ -7429,42 +8932,95 @@ class _ManualSubscriptionEditorSheetState
               children: <Widget>[
                 const _SheetHandle(),
                 const SizedBox(height: 10),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            isEditing
-                                ? 'Edit manual subscription'
-                                : 'Add subscription manually',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Manual entries stay clearly marked as added by you.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                    color: DashboardShellPalette.mutedInk),
-                          ),
-                        ],
+                if (stackedHeader)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _SheetCloseButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
+                      Text(
+                        isEditing
+                            ? 'Edit manual entry'
+                            : 'Add a manual subscription',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Added by you on this device. Use this when a scan is limited or you want something tracked right away without changing detected results.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: DashboardShellPalette.mutedInk),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              isEditing
+                                  ? 'Edit manual entry'
+                                  : 'Add a manual subscription',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Added by you on this device. Use this when a scan is limited or you want something tracked right away without changing detected results.',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                      color: DashboardShellPalette.mutedInk),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _SheetCloseButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 14),
+                DashboardPanel(
+                  key: const ValueKey<String>('manual-subscription-guidance'),
+                  backgroundColor: DashboardShellPalette.elevatedPaper,
+                  borderColor: DashboardShellPalette.outline,
+                  radius: 20,
+                  padding: const EdgeInsets.fromLTRB(14, 13, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'How this helps',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Manual entries are a fallback path when a scan is sparse or something is missing. Add an amount to improve your estimate, and add a renewal date to show it in renewals and reminders.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DashboardShellPalette.mutedInk,
+                              height: 1.28,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   key: const ValueKey<String>('manual-service-name-input'),
                   controller: _serviceNameController,
@@ -7473,6 +9029,7 @@ class _ManualSubscriptionEditorSheetState
                   decoration: const InputDecoration(
                     labelText: 'Service name',
                     hintText: 'Netflix, Adobe, Gym membership',
+                    helperText: 'Use the name you want to recognise later.',
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -7485,6 +9042,7 @@ class _ManualSubscriptionEditorSheetState
                   decoration: const InputDecoration(
                     labelText: 'Amount (optional)',
                     hintText: '499',
+                    helperText: 'Adds this entry to your estimate when filled.',
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -7493,6 +9051,7 @@ class _ManualSubscriptionEditorSheetState
                   initialValue: _billingCycle,
                   decoration: const InputDecoration(
                     labelText: 'Billing cycle',
+                    helperText: 'Used with the amount you enter.',
                   ),
                   items: const <DropdownMenuItem<
                       ManualSubscriptionBillingCycle>>[
@@ -7521,6 +9080,7 @@ class _ManualSubscriptionEditorSheetState
                   decoration: const InputDecoration(
                     labelText: 'Plan label (optional)',
                     hintText: 'Family, Premium, Annual plan',
+                    helperText: 'Helps you recognise this entry later.',
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -7546,6 +9106,13 @@ class _ManualSubscriptionEditorSheetState
                             ? 'Not set'
                             : _formatManualDate(_nextRenewalDate!),
                         style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Add a date to show this entry in renewals and local reminders.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DashboardShellPalette.mutedInk,
+                            ),
                       ),
                       const SizedBox(height: 10),
                       Wrap(
@@ -7586,8 +9153,8 @@ class _ManualSubscriptionEditorSheetState
                     FilledButton(
                       key: const ValueKey<String>('save-manual-subscription'),
                       onPressed: canSave ? _submit : null,
-                      child: Text(
-                          isEditing ? 'Save changes' : 'Save subscription'),
+                      child:
+                          Text(isEditing ? 'Save changes' : 'Add to your list'),
                     ),
                     if (widget.onDelete != null)
                       TextButton(
@@ -7655,10 +9222,11 @@ class _ManualSubscriptionEditorSheetState
 
   Future<void> _pickNextRenewalDate() async {
     final now = DateTime.now();
+    final firstDate = DateTime(now.year, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
       initialDate: _nextRenewalDate ?? now,
-      firstDate: DateTime(now.year - 1),
+      firstDate: firstDate,
       lastDate: DateTime(now.year + 10),
     );
     if (picked == null || !mounted) {
@@ -7779,11 +9347,9 @@ class _LocalServiceControlsSheetState
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -8151,20 +9717,23 @@ class _SubscriptionCardOverflowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<_SubscriptionCardMenuAction>(
-      key: ValueKey<String>(
-        'service-card-actions-${bucket.name}-${card.serviceKey.value}',
-      ),
-      enabled: !(localControlBusy || localPresentationBusy),
-      tooltip: 'More actions',
-      color: DashboardShellPalette.elevatedPaper,
-      surfaceTintColor: Colors.transparent,
-      icon: const Icon(Icons.more_horiz_rounded),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: DashboardShellPalette.outlineStrong),
-      ),
-      onSelected: (action) {
+    return SizedBox.square(
+      dimension: 48,
+      child: PopupMenuButton<_SubscriptionCardMenuAction>(
+        key: ValueKey<String>(
+          'service-card-actions-${bucket.name}-${card.serviceKey.value}',
+        ),
+        enabled: !(localControlBusy || localPresentationBusy),
+        tooltip: 'More actions for ${card.title}',
+        padding: EdgeInsets.zero,
+        color: DashboardShellPalette.elevatedPaper,
+        surfaceTintColor: Colors.transparent,
+        icon: const Icon(Icons.more_horiz_rounded),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: DashboardShellPalette.outlineStrong),
+        ),
+        onSelected: (action) {
         switch (action) {
           case _SubscriptionCardMenuAction.explain:
             onExplain();
@@ -8179,8 +9748,8 @@ class _SubscriptionCardOverflowButton extends StatelessWidget {
             onIgnore();
             break;
         }
-      },
-      itemBuilder: (context) => <PopupMenuEntry<_SubscriptionCardMenuAction>>[
+        },
+        itemBuilder: (context) => <PopupMenuEntry<_SubscriptionCardMenuAction>>[
         PopupMenuItem<_SubscriptionCardMenuAction>(
           key: ValueKey<String>(
             'open-card-explanation-${bucket.name}-${card.title}',
@@ -8238,7 +9807,8 @@ class _SubscriptionCardOverflowButton extends StatelessWidget {
             ],
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -8274,56 +9844,91 @@ class _ReviewDecisionPassportCard extends StatelessWidget {
       item.title,
       accentColor: DashboardShellPalette.caution,
     );
+    final summary = _reviewCardSemantics(
+      item,
+      presentation: presentation,
+      descriptor: descriptor,
+    );
 
-    return _PassportCard(
-      title: item.title,
-      subtitle: presentation.explanationDescription,
-      stampLabel: descriptor.canConfirm ? 'Needs review' : 'Check carefully',
-      secondaryStampLabel: presentation.explanationTitle,
-      accentColor: DashboardShellPalette.caution,
-      stampBackgroundColor: DashboardShellPalette.paper,
-      secondaryStampBackgroundColor: DashboardShellPalette.paper,
-      secondaryStampForegroundColor: DashboardShellPalette.mutedInk,
-      backgroundColor: DashboardShellPalette.elevatedPaper,
-      borderColor: DashboardShellPalette.outlineStrong,
-      identity: identity,
-      serviceKey: item.serviceKey.value,
-      evidenceLabel: presentation.rationaleLabel,
-      evidenceText: presentation.cardRationale,
-      headerTrailing: _ReviewActionOverflowButton(
-        descriptor: descriptor,
-        explanation: explanation,
-        isBusy: isBusy,
-        onExplain: onExplain,
-        onIgnore: onIgnore,
-      ),
-      footer: Align(
-        alignment: Alignment.centerLeft,
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 10,
+    return Semantics(
+      container: true,
+      label: summary,
+      child: _PassportCard(
+        title: item.title,
+        subtitle: presentation.explanationDescription,
+        stampLabel:
+            descriptor.canConfirm ? 'Needs your review' : 'Needs a clearer service',
+        secondaryStampLabel: presentation.stampLabel,
+        accentColor: DashboardShellPalette.caution,
+        stampBackgroundColor: DashboardShellPalette.paper,
+        secondaryStampBackgroundColor: DashboardShellPalette.paper,
+        secondaryStampForegroundColor: DashboardShellPalette.mutedInk,
+        backgroundColor: DashboardShellPalette.elevatedPaper,
+        borderColor: DashboardShellPalette.outlineStrong,
+        identity: identity,
+        serviceKey: item.serviceKey.value,
+        evidenceLabel: presentation.rationaleLabel,
+        evidenceText: presentation.cardRationale,
+        headerTrailing: _ReviewActionOverflowButton(
+          title: item.title,
+          descriptor: descriptor,
+          explanation: explanation,
+          isBusy: isBusy,
+          onExplain: onExplain,
+          onIgnore: onIgnore,
+        ),
+        footer: _ReviewDecisionActionsBlock(
+          title: descriptor.canConfirm
+              ? 'Choose what fits'
+              : 'Choose how to handle it',
+          helper:
+              'Every decision stays local to this device and can be undone later.',
           children: <Widget>[
-            OutlinedButton(
-              key: ValueKey<String>(
-                'open-review-details-${descriptor.targetKey}',
+            _ContextualActionSemantics(
+              label: descriptor.canConfirm
+                  ? 'See why ${item.title} is in review'
+                  : 'See details for ${item.title}',
+              enabled: !isBusy,
+              child: OutlinedButton(
+                key: ValueKey<String>(
+                  'open-review-details-${descriptor.targetKey}',
+                ),
+                onPressed: isBusy ? null : onOpenDetails,
+                child: Text(
+                  isBusy
+                      ? 'Working...'
+                      : descriptor.canConfirm
+                          ? 'See why'
+                          : 'See details',
+                ),
               ),
-              onPressed: isBusy ? null : onOpenDetails,
-              child: Text(isBusy ? 'Working...' : 'Review details'),
             ),
             if (descriptor.canConfirm)
-              FilledButton(
-                key: ValueKey<String>(
-                  'confirm-review-action-${descriptor.targetKey}',
+              _ContextualActionSemantics(
+                label: 'Confirm ${item.title} as a paid subscription',
+                enabled: !isBusy,
+                child: FilledButton(
+                  key: ValueKey<String>(
+                    'confirm-review-action-${descriptor.targetKey}',
+                  ),
+                  onPressed: isBusy ? null : onConfirm,
+                  child: Text(
+                    isBusy ? 'Working...' : presentation.confirmLabel!,
+                  ),
                 ),
-                onPressed: isBusy ? null : onConfirm,
-                child: Text(isBusy ? 'Working...' : presentation.confirmLabel!),
               ),
-            OutlinedButton(
-              key: ValueKey<String>(
-                'dismiss-review-action-${descriptor.targetKey}',
+            _ContextualActionSemantics(
+              label: 'Mark ${item.title} as not a subscription',
+              enabled: !isBusy,
+              child: OutlinedButton(
+                key: ValueKey<String>(
+                  'dismiss-review-action-${descriptor.targetKey}',
+                ),
+                onPressed: isBusy ? null : onDismiss,
+                child: Text(
+                  isBusy ? 'Working...' : presentation.dismissLabel,
+                ),
               ),
-              onPressed: isBusy ? null : onDismiss,
-              child: Text(isBusy ? 'Working...' : presentation.dismissLabel),
             ),
           ],
         ),
@@ -8361,7 +9966,10 @@ class _ReviewItemDetailsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final accentColor = DashboardShellPalette.caution;
     final stampLabel =
-        descriptor.canConfirm ? 'Needs review' : 'Check carefully';
+        descriptor.canConfirm ? 'Needs your review' : 'Needs a clearer service';
+    final stackedHeader =
+        MediaQuery.sizeOf(context).width < 340 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.1;
 
     return SafeArea(
       top: false,
@@ -8381,58 +9989,110 @@ class _ReviewItemDetailsSheet extends StatelessWidget {
               children: <Widget>[
                 const _SheetHandle(),
                 const SizedBox(height: 10),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                if (stackedHeader)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _SheetCloseButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                      Text(
+                        item.title,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        presentation.explanationDescription,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DashboardShellPalette.mutedInk,
+                            ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: <Widget>[
-                          Text(
-                            item.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w800),
+                          DashboardBadge(
+                            label: stampLabel,
+                            backgroundColor: DashboardShellPalette.elevatedPaper,
+                            foregroundColor: accentColor,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            presentation.explanationDescription,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: DashboardShellPalette.mutedInk,
-                                    ),
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: <Widget>[
-                              DashboardBadge(
-                                label: stampLabel,
-                                backgroundColor:
-                                    DashboardShellPalette.elevatedPaper,
-                                foregroundColor: accentColor,
-                              ),
-                              DashboardBadge(
-                                label: 'Manual check',
-                                backgroundColor:
-                                    DashboardShellPalette.elevatedPaper,
-                                foregroundColor: DashboardShellPalette.mutedInk,
-                              ),
-                            ],
+                          const DashboardBadge(
+                            label: 'Reversible',
+                            backgroundColor: DashboardShellPalette.elevatedPaper,
+                            foregroundColor: DashboardShellPalette.mutedInk,
                           ),
                         ],
                       ),
-                    ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
+                    ],
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              item.title,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              presentation.explanationDescription,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: DashboardShellPalette.mutedInk,
+                                  ),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: <Widget>[
+                                DashboardBadge(
+                                  label: stampLabel,
+                                  backgroundColor:
+                                      DashboardShellPalette.elevatedPaper,
+                                  foregroundColor: accentColor,
+                                ),
+                                const DashboardBadge(
+                                  label: 'Reversible',
+                                  backgroundColor:
+                                      DashboardShellPalette.elevatedPaper,
+                                  foregroundColor:
+                                      DashboardShellPalette.mutedInk,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      _SheetCloseButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 14),
+                _ReviewDetailsInfoCard(
+                  title: presentation.rationaleLabel,
+                  body: presentation.rationale,
+                  icon: Icons.receipt_long_outlined,
+                  accentColor: accentColor,
+                ),
+                const SizedBox(height: 10),
                 _ReviewDetailsInfoCard(
                   title: presentation.whyFlaggedTitle,
                   body: presentation.whyFlagged,
@@ -8481,52 +10141,95 @@ class _ReviewItemDetailsSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                _ReviewDecisionActionsBlock(
+                  framed: true,
+                  title: descriptor.canConfirm
+                      ? 'Choose what fits'
+                      : 'Choose how to handle it',
+                  helper:
+                      'Every decision stays local to this device and can be undone later.',
+                  accentColor: accentColor,
                   children: <Widget>[
                     if (onConfirm != null)
-                      FilledButton(
-                        key: ValueKey<String>(
-                          'review-details-confirm-${descriptor.targetKey}',
+                      _ContextualActionSemantics(
+                        label: 'Confirm ${item.title} as a paid subscription',
+                        enabled: !isBusy,
+                        child: FilledButton(
+                          key: ValueKey<String>(
+                            'review-details-confirm-${descriptor.targetKey}',
+                          ),
+                          onPressed: isBusy ? null : onConfirm,
+                          child: Text(
+                            isBusy ? 'Working...' : presentation.confirmLabel!,
+                          ),
                         ),
-                        onPressed: isBusy ? null : onConfirm,
-                        child: Text(
-                          isBusy ? 'Working...' : presentation.confirmLabel!,
+                      ),
+                    if (onConfirm == null)
+                      _ContextualActionSemantics(
+                        label: 'Edit review details for ${item.title}',
+                        enabled: !isBusy,
+                        child: FilledButton(
+                          key: ValueKey<String>(
+                            'review-details-edit-${descriptor.targetKey}',
+                          ),
+                          onPressed: isBusy ? null : onEditDetails,
+                          child: Text(
+                            isBusy ? 'Working...' : presentation.editLabel,
+                          ),
                         ),
                       ),
                     if (onMarkAsBenefit != null)
-                      OutlinedButton(
+                      _ContextualActionSemantics(
+                        label:
+                            'Keep ${item.title} separate as a benefit or bundle',
+                        enabled: !isBusy,
+                        child: OutlinedButton(
+                          key: ValueKey<String>(
+                            'review-details-benefit-${descriptor.targetKey}',
+                          ),
+                          onPressed: isBusy ? null : onMarkAsBenefit,
+                          child: Text(
+                            isBusy ? 'Working...' : presentation.benefitLabel!,
+                          ),
+                        ),
+                      ),
+                    _ContextualActionSemantics(
+                      label: 'Mark ${item.title} as not a subscription',
+                      enabled: !isBusy,
+                      child: OutlinedButton(
                         key: ValueKey<String>(
-                          'review-details-benefit-${descriptor.targetKey}',
+                          'review-details-dismiss-${descriptor.targetKey}',
                         ),
-                        onPressed: isBusy ? null : onMarkAsBenefit,
+                        onPressed: isBusy ? null : onDismiss,
                         child: Text(
-                          isBusy ? 'Working...' : presentation.benefitLabel!,
+                          isBusy ? 'Working...' : presentation.dismissLabel,
                         ),
                       ),
-                    OutlinedButton(
-                      key: ValueKey<String>(
-                        'review-details-dismiss-${descriptor.targetKey}',
-                      ),
-                      onPressed: isBusy ? null : onDismiss,
-                      child: Text(
-                          isBusy ? 'Working...' : presentation.dismissLabel),
                     ),
-                    TextButton(
-                      key: ValueKey<String>(
-                        'review-details-edit-${descriptor.targetKey}',
+                    if (onConfirm != null)
+                      _ContextualActionSemantics(
+                        label: 'Edit review details for ${item.title}',
+                        enabled: !isBusy,
+                        child: TextButton(
+                          key: ValueKey<String>(
+                            'review-details-edit-${descriptor.targetKey}',
+                          ),
+                          onPressed: isBusy ? null : onEditDetails,
+                          child: Text(
+                            isBusy ? 'Working...' : presentation.editLabel,
+                          ),
+                        ),
                       ),
-                      onPressed: isBusy ? null : onEditDetails,
-                      child:
-                          Text(isBusy ? 'Working...' : presentation.editLabel),
-                    ),
-                    TextButton(
-                      key: ValueKey<String>(
-                        'review-details-explain-${descriptor.targetKey}',
+                    _ContextualActionSemantics(
+                      label: 'Explain why ${item.title} is in review',
+                      enabled: !isBusy,
+                      child: TextButton(
+                        key: ValueKey<String>(
+                          'review-details-explain-${descriptor.targetKey}',
+                        ),
+                        onPressed: isBusy ? null : onExplain,
+                        child: Text(explanation.actionLabel),
                       ),
-                      onPressed: isBusy ? null : onExplain,
-                      child: Text(explanation.actionLabel),
                     ),
                   ],
                 ),
@@ -8597,8 +10300,66 @@ class _ReviewDetailsInfoCard extends StatelessWidget {
   }
 }
 
+class _ReviewDecisionActionsBlock extends StatelessWidget {
+  const _ReviewDecisionActionsBlock({
+    required this.title,
+    required this.helper,
+    required this.children,
+    this.framed = false,
+    this.accentColor = DashboardShellPalette.caution,
+  });
+
+  final String title;
+  final String helper;
+  final List<Widget> children;
+  final bool framed;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          helper,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DashboardShellPalette.mutedInk,
+                height: 1.24,
+              ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: children,
+        ),
+      ],
+    );
+
+    if (!framed) {
+      return content;
+    }
+
+    return DashboardPanel(
+      backgroundColor: DashboardShellPalette.nestedPaper,
+      borderColor: accentColor.withValues(alpha: 0.18),
+      radius: 18,
+      padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
+      child: content,
+    );
+  }
+}
+
 class _ReviewActionOverflowButton extends StatelessWidget {
   const _ReviewActionOverflowButton({
+    required this.title,
     required this.descriptor,
     required this.explanation,
     required this.isBusy,
@@ -8606,6 +10367,7 @@ class _ReviewActionOverflowButton extends StatelessWidget {
     required this.onIgnore,
   });
 
+  final String title;
   final ReviewItemActionDescriptor descriptor;
   final ContextualExplanationPresentation explanation;
   final bool isBusy;
@@ -8614,18 +10376,21 @@ class _ReviewActionOverflowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<_ReviewCardMenuAction>(
-      key: ValueKey<String>('review-card-actions-${descriptor.targetKey}'),
-      enabled: !isBusy,
-      tooltip: 'More actions',
-      color: DashboardShellPalette.elevatedPaper,
-      surfaceTintColor: Colors.transparent,
-      icon: const Icon(Icons.more_horiz_rounded),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: DashboardShellPalette.outlineStrong),
-      ),
-      onSelected: (action) {
+    return SizedBox.square(
+      dimension: 48,
+      child: PopupMenuButton<_ReviewCardMenuAction>(
+        key: ValueKey<String>('review-card-actions-${descriptor.targetKey}'),
+        enabled: !isBusy,
+        tooltip: 'More actions for $title',
+        padding: EdgeInsets.zero,
+        color: DashboardShellPalette.elevatedPaper,
+        surfaceTintColor: Colors.transparent,
+        icon: const Icon(Icons.more_horiz_rounded),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: DashboardShellPalette.outlineStrong),
+        ),
+        onSelected: (action) {
         switch (action) {
           case _ReviewCardMenuAction.explain:
             onExplain();
@@ -8634,8 +10399,8 @@ class _ReviewActionOverflowButton extends StatelessWidget {
             onIgnore();
             break;
         }
-      },
-      itemBuilder: (context) => <PopupMenuEntry<_ReviewCardMenuAction>>[
+        },
+        itemBuilder: (context) => <PopupMenuEntry<_ReviewCardMenuAction>>[
         PopupMenuItem<_ReviewCardMenuAction>(
           key: ValueKey<String>(
               'open-review-explanation-${descriptor.targetKey}'),
@@ -8656,11 +10421,12 @@ class _ReviewActionOverflowButton extends StatelessWidget {
             children: <Widget>[
               Icon(Icons.do_not_disturb_on_outlined, size: 18),
               SizedBox(width: 10),
-              Expanded(child: Text('Ignore locally')),
+              Expanded(child: Text('Hide on this device')),
             ],
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -8716,11 +10482,9 @@ class _ContextualExplanationSheet extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+                    _SheetCloseButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -8732,6 +10496,28 @@ class _ContextualExplanationSheet extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SheetCloseButton extends StatelessWidget {
+  const _SheetCloseButton({
+    required this.onPressed,
+  });
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 48,
+      child: IconButton(
+        tooltip: 'Close',
+        padding: EdgeInsets.zero,
+        splashRadius: 24,
+        onPressed: onPressed,
+        icon: const Icon(Icons.close_rounded),
       ),
     );
   }
@@ -8788,6 +10574,91 @@ class _StatusMetaBadge extends StatelessWidget {
   }
 }
 
+class _SourceStatusMetadataCluster extends StatelessWidget {
+  const _SourceStatusMetadataCluster({
+    required this.status,
+  });
+
+  final RuntimeLocalMessageSourceStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final showFreshnessLabel =
+        status.freshnessLabel.trim() != status.provenanceTitle.trim();
+    final labels = <String>[
+      'Current view ${status.provenanceTitle}',
+      if (showFreshnessLabel) 'Freshness ${status.freshnessLabel}',
+      if (status.hasLocalModifications &&
+          status.localModificationsLabel != null)
+        status.localModificationsLabel!,
+    ];
+
+    return Semantics(
+      key: const ValueKey<String>('runtime-source-metadata-semantics'),
+      label: labels.join('. '),
+      child: ExcludeSemantics(
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 3,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            if (showFreshnessLabel) ...<Widget>[
+              Text(
+                '\u2022',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DashboardShellPalette.mutedInk,
+                    ),
+              ),
+              Text(
+                status.freshnessLabel,
+                key: const ValueKey<String>('runtime-freshness-label'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: DashboardShellPalette.mutedInk,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+            _StatusMetaBadge(
+              label: status.provenanceTitle,
+              valueKey: const ValueKey<String>('runtime-provenance-title'),
+            ),
+            if (status.hasLocalModifications &&
+                status.localModificationsLabel != null)
+              _StatusMetaBadge(
+                label: status.localModificationsLabel!,
+                valueKey: const ValueKey<String>(
+                  'runtime-local-state-label',
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContextualActionSemantics extends StatelessWidget {
+  const _ContextualActionSemantics({
+    required this.label,
+    this.enabled = true,
+    required this.child,
+  });
+
+  final String label;
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      child: ExcludeSemantics(child: child),
+    );
+  }
+}
+
 class _BucketStyle {
   const _BucketStyle({
     required this.badgeLabel,
@@ -8799,26 +10670,6 @@ class _BucketStyle {
 
   final String badgeLabel;
   final Color background;
-  final Color border;
-  final Color badgeBackground;
-  final Color badgeForeground;
-}
-
-class _StatusStyle {
-  const _StatusStyle({
-    required this.icon,
-    required this.stateLabel,
-    required this.sourceDescription,
-    required this.tint,
-    required this.border,
-    required this.badgeBackground,
-    required this.badgeForeground,
-  });
-
-  final IconData icon;
-  final String stateLabel;
-  final String sourceDescription;
-  final Color tint;
   final Color border;
   final Color badgeBackground;
   final Color badgeForeground;
@@ -8893,14 +10744,14 @@ String _summarizeFindingTitles(
   }
 
   if (normalizedTitles.length == 1) {
-    return '${normalizedTitles.first} · 1 $singularLabel.';
+    return '${normalizedTitles.first} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· 1 $singularLabel.';
   }
 
   if (normalizedTitles.length == 2) {
-    return '${normalizedTitles.first} and ${normalizedTitles.last} · 2 $pluralLabel.';
+    return '${normalizedTitles.first} and ${normalizedTitles.last} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· 2 $pluralLabel.';
   }
 
-  return '${normalizedTitles.first}, ${normalizedTitles[1]}, and ${normalizedTitles.length - 2} more · ${normalizedTitles.length} $pluralLabel.';
+  return '${normalizedTitles.first}, ${normalizedTitles[1]}, and ${normalizedTitles.length - 2} more ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${normalizedTitles.length} $pluralLabel.';
 }
 
 String _previewCountLabel(int count) {
@@ -9012,6 +10863,63 @@ String _formatPreviewDate(DateTime value) {
   return '${value.day} ${months[value.month - 1]}';
 }
 
+String _subscriptionRowSemantics(
+  DashboardCard card, {
+  required _SubscriptionCardMetadata metadata,
+  required _BucketStyle style,
+  required LocalServicePresentationState servicePresentationState,
+}) {
+  final visibleTitle = servicePresentationState.displayTitle;
+  final parts = <String>[
+    visibleTitle,
+    style.badgeLabel,
+    card.subtitle,
+    'Amount ${metadata.amountLabel}',
+    'Next renewal ${metadata.renewalLabel}',
+    'Frequency ${metadata.frequencyLabel}',
+    if (servicePresentationState.isPinned) 'Pinned on this device',
+    if (servicePresentationState.hasLocalLabel)
+      'Original name ${servicePresentationState.originalTitle}',
+  ];
+  return '${parts.join('. ')}.';
+}
+
+String _manualSubscriptionRowSemantics(ManualSubscriptionEntry entry) {
+  final parts = <String>[
+    entry.serviceName,
+    'Added by you',
+    _manualSubscriptionSemanticsSummary(entry),
+  ];
+  return '${parts.join('. ')}.';
+}
+
+String _reviewCardSemantics(
+  ReviewItem item, {
+  required ReviewQueueItemPresentation presentation,
+  required ReviewItemActionDescriptor descriptor,
+}) {
+  final statusLabel =
+      descriptor.canConfirm ? 'Needs your review' : 'Needs a clearer service';
+  final parts = <String>[
+    item.title,
+    statusLabel,
+    presentation.explanationDescription,
+    presentation.cardRationale,
+  ];
+  if (presentation.stampLabel.isNotEmpty) {
+    parts.add(presentation.stampLabel);
+  }
+  return '${parts.join('. ')}.';
+}
+
+bool _shouldReduceMotion(BuildContext context) {
+  final mediaQuery = MediaQuery.maybeOf(context);
+  if (mediaQuery == null) {
+    return false;
+  }
+  return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
+}
+
 String _manualSubscriptionSubtitle(ManualSubscriptionEntry entry) {
   final parts = <String>[
     entry.billingCycle == ManualSubscriptionBillingCycle.monthly
@@ -9028,7 +10936,26 @@ String _manualSubscriptionSubtitle(ManualSubscriptionEntry entry) {
   if (entry.hasPlanLabel) {
     parts.add(entry.planLabel!);
   }
-  return parts.join(' • ');
+  return parts.join(' ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ ');
+}
+
+String _manualSubscriptionSemanticsSummary(ManualSubscriptionEntry entry) {
+  final parts = <String>[
+    entry.billingCycle == ManualSubscriptionBillingCycle.monthly
+        ? 'Monthly'
+        : 'Yearly',
+  ];
+  final amount = _formatManualSubscriptionAmount(entry.amountInMinorUnits);
+  if (amount != null) {
+    parts.add(amount);
+  }
+  if (entry.hasNextRenewalDate) {
+    parts.add('Renews ${_formatManualDate(entry.nextRenewalDate!)}');
+  }
+  if (entry.hasPlanLabel) {
+    parts.add(entry.planLabel!);
+  }
+  return parts.join(', ');
 }
 
 String _manualSubscriptionBillingSummary(ManualSubscriptionEntry entry) {
@@ -9039,7 +10966,17 @@ String _manualSubscriptionBillingSummary(ManualSubscriptionEntry entry) {
   if (amount == null) {
     return cycle;
   }
-  return '$cycle • $amount';
+  return '$cycle ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ $amount';
+}
+
+String _manualEntryImprovementCopy(ManualSubscriptionEntry entry) {
+  if (!entry.hasAmount && !entry.hasNextRenewalDate) {
+    return 'Add an amount if you want this entry included in your estimate, and add a renewal date if you want it to appear in renewals and reminders.';
+  }
+  if (!entry.hasAmount) {
+    return 'Add an amount if you want this entry included in your estimate.';
+  }
+  return 'Add a renewal date if you want this entry to appear in renewals and reminders.';
 }
 
 String? _formatManualSubscriptionAmount(int? amountInMinorUnits) {

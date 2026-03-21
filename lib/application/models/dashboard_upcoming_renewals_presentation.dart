@@ -23,12 +23,25 @@ class DashboardUpcomingRenewalsPresentation {
 
   bool get hasItems => items.isNotEmpty;
 
-  String get summaryCopy => hasItems
-      ? 'Renewals with clear dates.'
-      : 'No renewals yet.';
+  String get summaryCopy {
+    if (!hasItems) {
+      return 'No renewal dates yet.';
+    }
 
-  String get emptyTitle => 'Nothing coming up';
+    final next = items.first;
+    if (items.length == 1) {
+      return 'Next up: ${next.serviceTitle} on ${next.renewalDateLabel}.';
+    }
 
-  String get emptyMessage => 'Renewals appear here when a clear date is available.';
+    final remaining = items.length - 1;
+    final renewalLabel = remaining == 1 ? 'renewal date' : 'renewal dates';
+    return 'Next up: ${next.serviceTitle} on ${next.renewalDateLabel}. '
+        '$remaining more $renewalLabel follow.';
+  }
+
+  String get emptyTitle => 'No renewal dates yet';
+
+  String get emptyMessage =>
+      'Renewals appear here when a confirmed subscription or manual entry has a clear date.';
 }
 

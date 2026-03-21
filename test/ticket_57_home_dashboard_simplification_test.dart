@@ -30,6 +30,8 @@ void main() {
         findsNothing);
     expect(find.byKey(const ValueKey<String>('totals-summary-card')),
         findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('home-focus-card')),
+        findsOneWidget);
 
     await scrollDashboardUntilVisible(
       tester,
@@ -53,7 +55,7 @@ void main() {
   });
 
   testWidgets(
-      'home review summary routes into the dedicated review destination', (
+      'home focus card routes into the dedicated review destination', (
     tester,
   ) async {
     final provider = MutableCapabilityProvider(
@@ -89,18 +91,35 @@ void main() {
 
     await scrollDashboardUntilVisible(
       tester,
-      find.byKey(const ValueKey<String>('home-review-summary-card')),
+      find.byKey(const ValueKey<String>('home-focus-card')),
     );
-    expect(find.byKey(const ValueKey<String>('home-review-summary-card')),
+    expect(find.byKey(const ValueKey<String>('home-focus-card')),
         findsOneWidget);
-    expect(find.text('Review'), findsWidgets);
+    expect(find.text('What to do next'), findsOneWidget);
+    expect(
+      find.text(
+        '1 item still needs your decision before it can move into confirmed subscriptions.',
+      ),
+      findsOneWidget,
+    );
+    final focusTop = tester
+        .getTopLeft(find.byKey(const ValueKey<String>('home-focus-card')))
+        .dy;
+    final totalsTop = tester
+        .getTopLeft(find.byKey(const ValueKey<String>('totals-summary-card')))
+        .dy;
+    final statusTop = tester
+        .getTopLeft(find.byKey(const ValueKey<String>('snapshot-certificate-card')))
+        .dy;
+    expect(focusTop, lessThan(totalsTop));
+    expect(totalsTop, lessThan(statusTop));
 
     await tapAndPumpDashboardShell(
       tester,
-      find.byKey(const ValueKey<String>('home-open-review-summary')),
+      find.byKey(const ValueKey<String>('home-focus-primary-action')),
     );
 
-    expect(find.text('Needs review'), findsWidgets);
+    expect(find.text('Items for your review'), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('section-reviewQueue')),
         findsWidgets);
   });

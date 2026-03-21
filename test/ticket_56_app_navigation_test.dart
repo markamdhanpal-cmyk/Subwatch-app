@@ -20,7 +20,7 @@ void main() {
       find.byKey(const ValueKey<String>('top-level-navigation')),
       findsOneWidget,
     );
-    expect(find.text('Overview'), findsOneWidget);
+    expect(find.text('Overview'), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('snapshot-certificate-card')),
       findsOneWidget,
@@ -77,7 +77,7 @@ void main() {
 
     expect(find.text('On this device'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey<String>('settings-overview-panel')),
+      find.byKey(const ValueKey<String>('settings-quick-actions-panel')),
       findsOneWidget,
     );
     expect(
@@ -100,7 +100,7 @@ void main() {
       find.byKey(const ValueKey<String>('snapshot-certificate-card')),
       findsOneWidget,
     );
-    expect(find.text('Overview'), findsOneWidget);
+    expect(find.text('Overview'), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('section-reviewQueue')),
       findsNothing,
@@ -115,8 +115,3 @@ void main() {
     );
   });
 }
-
-
-
-
-

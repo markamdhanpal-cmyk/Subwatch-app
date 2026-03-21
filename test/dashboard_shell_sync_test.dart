@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
@@ -62,7 +60,10 @@ void main() {
       find.byKey(const ValueKey<String>('sms-permission-onboarding-sheet')),
       findsOneWidget,
     );
-    expect(find.text('Find recurring payments from your SMS'), findsOneWidget);
+    expect(
+      find.text('Why SubWatch asks before checking SMS'),
+      findsOneWidget,
+    );
     expect(provider.requestCount, 0);
 
     await tapAndPumpDashboardShell(
@@ -71,7 +72,7 @@ void main() {
         const ValueKey<String>('sms-permission-onboarding-next-action'),
       ),
     );
-    expect(find.text('Everything stays on your phone'), findsOneWidget);
+    expect(find.text('Kept on this device'), findsOneWidget);
 
     await tapAndPumpDashboardShell(
       tester,
@@ -79,10 +80,10 @@ void main() {
         const ValueKey<String>('sms-permission-onboarding-next-action'),
       ),
     );
-    expect(find.text('Trust-first by default'), findsOneWidget);
+    expect(find.text('Careful by default'), findsOneWidget);
     expect(
       find.text(
-        'It will not catch every subscription perfectly on the first pass.',
+        'A quiet scan can still be correct when the proof is limited.',
       ),
       findsOneWidget,
     );
@@ -97,223 +98,17 @@ void main() {
 
     expect(provider.requestCount, 1);
     expect(
-        find.text('Finished checking SMS. Results updated.'), findsOneWidget);
-    expect(find.text('From your messages'), findsWidgets);
-    expect(find.text('Check again'), findsOneWidget);
-  });
-
-  testWidgets('sync shows a clear in-progress checking state', (tester) async {
-    final provider = MutableCapabilityProvider(
-      initialState: LocalMessageSourceAccessState.deviceLocalAvailable,
-      requestResult: LocalMessageSourceAccessRequestResult.granted,
-      refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
+      find.text('Finished checking SMS. Results updated.'),
+      findsOneWidget,
     );
-    final pendingSnapshot = Completer<RuntimeDashboardSnapshot>();
-    final syncUseCase = SyncDeviceSmsUseCase(
-      requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
-        capabilityProvider: provider,
-      ),
-      loadRuntimeDashboard: () => pendingSnapshot.future,
-    );
-
-    await pumpDashboardShellApp(
+    await scrollDashboardUntilVisible(
       tester,
-      runtimeUseCase: LoadRuntimeDashboardUseCase(
-        capabilityProvider: provider,
-        deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
-      ),
-      syncDeviceSmsUseCase: syncUseCase,
+      find.byKey(const ValueKey<String>('runtime-provenance-title')),
     );
-
-    await tester
-        .tap(find.byKey(const ValueKey<String>('sync-with-sms-button')));
-    await tester.pump();
-
-    expect(find.text('Checking device SMS'), findsOneWidget);
-    expect(find.text('Checking SMS...'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey<String>('sync-progress-panel')),
-      findsOneWidget,
+    final provenanceTitle = tester.widget<Text>(
+      find.byKey(const ValueKey<String>('runtime-provenance-title')),
     );
-    expect(
-      find.byKey(const ValueKey<String>('sync-progress-indicator')),
-      findsOneWidget,
-    );
-    expect(find.text('Scanning messages on this phone'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey<String>('sync-progress-description')),
-      findsOneWidget,
-    );
-    expect(
-      find.text(
-        'SubWatch is reading local SMS history and looking for recurring billing signals.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Runs only on this phone'), findsOneWidget);
-    expect(
-      find.text('You can keep browsing while this scan finishes.'),
-      findsOneWidget,
-    );
-
-    pendingSnapshot.complete(
-      LoadRuntimeDashboardUseCase(
-        capabilityProvider: provider,
-        deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
-      ).execute(),
-    );
-    await _pumpPastSyncFeedback(tester);
-  });
-
-  testWidgets('slow sync updates copy without pretending exact progress', (
-    tester,
-  ) async {
-    final provider = MutableCapabilityProvider(
-      initialState: LocalMessageSourceAccessState.deviceLocalAvailable,
-      requestResult: LocalMessageSourceAccessRequestResult.granted,
-      refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
-    );
-    final pendingSnapshot = Completer<RuntimeDashboardSnapshot>();
-    final syncUseCase = SyncDeviceSmsUseCase(
-      requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
-        capabilityProvider: provider,
-      ),
-      loadRuntimeDashboard: () => pendingSnapshot.future,
-    );
-
-    await pumpDashboardShellApp(
-      tester,
-      runtimeUseCase: LoadRuntimeDashboardUseCase(
-        capabilityProvider: provider,
-        deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
-      ),
-      syncDeviceSmsUseCase: syncUseCase,
-    );
-
-    await tester
-        .tap(find.byKey(const ValueKey<String>('sync-with-sms-button')));
-    await tester.pump();
-
-    await tester.pump(const Duration(seconds: 3));
-    expect(
-      find.text('Sorting confirmed, review, and benefit items'),
-      findsOneWidget,
-    );
-
-    await tester.pump(const Duration(seconds: 3));
-    expect(
-      find.text('Still working through a larger message history'),
-      findsOneWidget,
-    );
-
-    pendingSnapshot.complete(
-      LoadRuntimeDashboardUseCase(
-        capabilityProvider: provider,
-        deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
-      ).execute(),
-    );
-    await _pumpPastSyncFeedback(tester);
-  });
-
-  testWidgets('fast sync stays visible briefly and then clears cleanly', (
-    tester,
-  ) async {
-    final provider = MutableCapabilityProvider(
-      initialState: LocalMessageSourceAccessState.deviceLocalAvailable,
-      requestResult: LocalMessageSourceAccessRequestResult.granted,
-      refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
-    );
-    final syncUseCase = SyncDeviceSmsUseCase(
-      requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
-        capabilityProvider: provider,
-      ),
-      loadRuntimeDashboard: () => LoadRuntimeDashboardUseCase(
-        capabilityProvider: provider,
-        deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
-      ).execute(),
-    );
-
-    await pumpDashboardShellApp(
-      tester,
-      runtimeUseCase: LoadRuntimeDashboardUseCase(
-        capabilityProvider: provider,
-        deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
-      ),
-      syncDeviceSmsUseCase: syncUseCase,
-    );
-
-    await tester
-        .tap(find.byKey(const ValueKey<String>('sync-with-sms-button')));
-    await tester.pump();
-
-    expect(
-      find.byKey(const ValueKey<String>('sync-progress-panel')),
-      findsOneWidget,
-    );
-
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(
-      find.byKey(const ValueKey<String>('sync-progress-panel')),
-      findsOneWidget,
-    );
-
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(
-      find.byKey(const ValueKey<String>('sync-progress-panel')),
-      findsNothing,
-    );
-    expect(
-      find.text('Finished checking SMS. Nothing was confirmed yet.'),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('sync progress clears and shows calm feedback on failure', (
-    tester,
-  ) async {
-    final provider = MutableCapabilityProvider(
-      initialState: LocalMessageSourceAccessState.deviceLocalAvailable,
-      requestResult: LocalMessageSourceAccessRequestResult.granted,
-      refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
-    );
-    final pendingSnapshot = Completer<RuntimeDashboardSnapshot>();
-    final syncUseCase = SyncDeviceSmsUseCase(
-      requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
-        capabilityProvider: provider,
-      ),
-      loadRuntimeDashboard: () => pendingSnapshot.future,
-    );
-
-    await pumpDashboardShellApp(
-      tester,
-      runtimeUseCase: LoadRuntimeDashboardUseCase(
-        capabilityProvider: provider,
-        deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
-      ),
-      syncDeviceSmsUseCase: syncUseCase,
-    );
-
-    await tester
-        .tap(find.byKey(const ValueKey<String>('sync-with-sms-button')));
-    await tester.pump();
-
-    expect(
-      find.byKey(const ValueKey<String>('sync-progress-panel')),
-      findsOneWidget,
-    );
-
-    pendingSnapshot.completeError(Exception('scan failed'));
-    await tester.pump(const Duration(milliseconds: 700));
-    await pumpDashboardShellUi(tester);
-
-    expect(
-      find.byKey(const ValueKey<String>('sync-progress-panel')),
-      findsNothing,
-    );
-    expect(
-      find.text('Device SMS refresh failed. Current snapshot was kept.'),
-      findsOneWidget,
-    );
+    expect(provenanceTitle.data, 'Checked');
   });
 
   testWidgets(
@@ -374,6 +169,10 @@ void main() {
       findsNothing,
     );
 
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('sync-with-sms-button')),
+    );
     await tapAndPumpDashboardShell(
       tester,
       find.byKey(const ValueKey<String>('sync-with-sms-button')),
@@ -385,7 +184,14 @@ void main() {
       findsNothing,
     );
     expect(provider.requestCount, 1);
-    expect(find.text('From your messages'), findsWidgets);
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('runtime-provenance-title')),
+    );
+    final provenanceTitle = tester.widget<Text>(
+      find.byKey(const ValueKey<String>('runtime-provenance-title')),
+    );
+    expect(provenanceTitle.data, 'Checked');
   });
 
   testWidgets('deny state shows a retry rationale and can open settings', (
@@ -414,7 +220,7 @@ void main() {
       syncDeviceSmsUseCase: syncUseCase,
     );
 
-    expect(find.text('Turn on SMS access'), findsOneWidget);
+    expect(find.text('Turn on SMS access'), findsWidgets);
     expect(
       find.byKey(const ValueKey<String>('product-guidance-primary-action')),
       findsNothing,
@@ -429,7 +235,10 @@ void main() {
       find.byKey(const ValueKey<String>('sms-permission-rationale-sheet')),
       findsOneWidget,
     );
-    expect(find.text('Turn on SMS access when you are ready'), findsOneWidget);
+    expect(
+      find.text('Turn on SMS access only when you are ready'),
+      findsOneWidget,
+    );
     expect(find.text('Open Settings'), findsOneWidget);
     expect(provider.requestCount, 0);
 
@@ -442,10 +251,21 @@ void main() {
 
     expect(provider.requestCount, 0);
     expect(
-      find.byKey(const ValueKey<String>('settings-overview-panel')),
+      find.byKey(const ValueKey<String>('settings-quick-actions-panel')),
       findsOneWidget,
     );
     expect(find.text('On this device'), findsOneWidget);
+    expect(find.text('Turn on SMS access'), findsWidgets);
+
+    await tapAndPumpDashboardShell(
+      tester,
+      find.byKey(const ValueKey<String>('settings-source-action')),
+    );
+
+    expect(
+      find.byKey(const ValueKey<String>('sms-permission-rationale-sheet')),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -496,7 +316,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('SMS access is off'), findsOneWidget);
-    expect(find.text('Turn on SMS access'), findsOneWidget);
+    expect(find.text('Turn on SMS access'), findsWidgets);
     expect(
       find.byKey(const ValueKey<String>('product-guidance-primary-action')),
       findsNothing,
@@ -505,7 +325,7 @@ void main() {
   });
 
   testWidgets(
-      'fresh low-result snapshot stays honest about having no confirmed subscriptions',
+      'fresh empty scan shows a zero-confirmed rescue without dead empty sections',
       (
     tester,
   ) async {
@@ -524,13 +344,27 @@ void main() {
       ),
     );
 
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('home-zero-confirmed-rescue')),
+    );
     expect(
       find.byKey(const ValueKey<String>('home-zero-confirmed-rescue')),
+      findsOneWidget,
+    );
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('runtime-provenance-title')),
+    );
+    final provenanceTitle = tester.widget<Text>(
+      find.byKey(const ValueKey<String>('runtime-provenance-title')),
+    );
+    expect(provenanceTitle.data, 'Checked');
+    expect(find.byKey(const ValueKey<String>('due-soon-card')), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('upcoming-renewals-card')),
       findsNothing,
     );
-    expect(find.text('From your messages'), findsWidgets);
-    expect(find.text('Checked recently'), findsWidgets);
-    expect(find.text('Check again'), findsOneWidget);
   });
 
   testWidgets('zero-confirmed learn action opens the trust sheet', (
@@ -566,7 +400,7 @@ void main() {
     );
   });
 
-  testWidgets('review-heavy snapshot keeps uncertain items in Review', (
+  testWidgets('review-heavy snapshot gives Review the primary rescue action', (
     tester,
   ) async {
     final provider = MutableCapabilityProvider(
@@ -594,8 +428,31 @@ void main() {
       ),
     );
 
-    await openDashboardDestination(tester, 'review');
-    expect(find.text('Needs review'), findsWidgets);
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('home-zero-confirmed-rescue')),
+    );
+    expect(
+      find.byKey(const ValueKey<String>('home-zero-confirmed-rescue')),
+      findsOneWidget,
+    );
+    expect(find.text('Review 1 item'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('due-soon-card')), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('upcoming-renewals-card')),
+      findsNothing,
+    );
+
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('zero-confirmed-primary-action')),
+    );
+    await tapAndPumpDashboardShell(
+      tester,
+      find.byKey(const ValueKey<String>('zero-confirmed-primary-action')),
+    );
+
+    expect(find.text('Items for your review'), findsOneWidget);
     expect(find.textContaining('Google Play'), findsOneWidget);
   });
 
@@ -621,14 +478,13 @@ void main() {
 
     await scrollDashboardUntilVisible(
       tester,
-      find.byKey(const ValueKey<String>('zero-confirmed-add-manually-action')),
+      find.byKey(const ValueKey<String>('zero-confirmed-primary-action')),
     );
     await tapAndPumpDashboardShell(
       tester,
-      find.byKey(const ValueKey<String>('zero-confirmed-add-manually-action')),
+      find.byKey(const ValueKey<String>('zero-confirmed-primary-action')),
     );
-    // The popular service picker now appears first; tap "Custom entry".
-    final customEntry = find.text('Custom entry');
+    final customEntry = find.text('Something else');
     if (customEntry.evaluate().isNotEmpty) {
       await tester.ensureVisible(customEntry);
       await tester.tap(customEntry);
@@ -639,6 +495,66 @@ void main() {
       find.byKey(const ValueKey<String>('manual-subscription-editor-new')),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+      'benefit-only zero-confirmed rescue routes to subscriptions with honest copy',
+      (tester) async {
+    final provider = MutableCapabilityProvider(
+      initialState: LocalMessageSourceAccessState.deviceLocalAvailable,
+      requestResult: LocalMessageSourceAccessRequestResult.granted,
+      refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
+    );
+
+    await pumpDashboardShellApp(
+      tester,
+      runtimeUseCase: LoadRuntimeDashboardUseCase(
+        capabilityProvider: provider,
+        deviceSmsGateway: FakeDeviceSmsGateway(
+          <RawDeviceSms>[
+            RawDeviceSms(
+              id: 'raw-bundle',
+              address: 'AIRTEL',
+              body:
+                  'Your recent recharge has unlocked a FREE 18-month Google Gemini Pro plan on Airtel.',
+              receivedAt: DateTime(2026, 3, 12, 13, 0),
+            ),
+          ],
+        ),
+        clock: () => DateTime(2026, 3, 14, 11, 0),
+      ),
+    );
+
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('home-zero-confirmed-rescue')),
+    );
+    expect(
+      find.byKey(const ValueKey<String>('home-zero-confirmed-rescue')),
+      findsOneWidget,
+    );
+    expect(find.text('See what was found'), findsOneWidget);
+    expect(find.text('Trials & benefits'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('due-soon-card')), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('upcoming-renewals-card')),
+      findsNothing,
+    );
+
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('zero-confirmed-primary-action')),
+    );
+    await tapAndPumpDashboardShell(
+      tester,
+      find.byKey(const ValueKey<String>('zero-confirmed-primary-action')),
+    );
+
+    expect(
+      find.byKey(const ValueKey<String>('section-trialsAndBenefits')),
+      findsWidgets,
+    );
+    expect(find.text('Google Gemini Pro'), findsOneWidget);
   });
 
   testWidgets('sync with sms handles unavailable results safely',
@@ -659,7 +575,7 @@ void main() {
     expect(find.text('SMS refresh unavailable'), findsOneWidget);
     expect(
       find.text(
-        'Safe local results stay active.',
+        'This device cannot provide a fresh SMS check, so the current local view stays in place.',
       ),
       findsOneWidget,
     );

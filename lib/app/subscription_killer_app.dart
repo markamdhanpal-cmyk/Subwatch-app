@@ -73,6 +73,7 @@ class SubKillerApp extends StatelessWidget {
       theme: baseTheme.copyWith(
         colorScheme: colorScheme,
         scaffoldBackgroundColor: DashboardShellPalette.canvas,
+        splashFactory: InkRipple.splashFactory,
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           foregroundColor: DashboardShellPalette.ink,
@@ -92,6 +93,71 @@ class SubKillerApp extends StatelessWidget {
         bottomSheetTheme: const BottomSheetThemeData(
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
+        ),
+        iconButtonTheme: IconButtonThemeData(
+          style: IconButton.styleFrom(
+            foregroundColor: DashboardShellPalette.ink,
+            disabledForegroundColor:
+                DashboardShellPalette.mutedInk.withValues(alpha: 0.72),
+            overlayColor: const Color(0x14E1A55A),
+            highlightColor: const Color(0x10E1A55A),
+            hoverColor: const Color(0x0DE1A55A),
+            animationDuration: const Duration(milliseconds: 140),
+            padding: const EdgeInsets.all(10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: DashboardShellPalette.paper.withValues(alpha: 0.98),
+          indicatorColor: DashboardShellPalette.accentSoft,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          height: 74,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          labelPadding: const EdgeInsets.only(top: 4),
+          overlayColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.pressed)
+                ? const Color(0x14E1A55A)
+                : states.contains(WidgetState.hovered)
+                    ? const Color(0x0DE1A55A)
+                    : null,
+          ),
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => baseTheme.textTheme.labelMedium?.copyWith(
+              color: states.contains(WidgetState.selected)
+                  ? DashboardShellPalette.ink
+                  : DashboardShellPalette.mutedInk,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w800
+                  : FontWeight.w700,
+              letterSpacing: 0.18,
+            ),
+          ),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? DashboardShellPalette.ink
+                  : DashboardShellPalette.mutedInk,
+              size: 24,
+            ),
+          ),
+        ),
+        popupMenuTheme: PopupMenuThemeData(
+          color: DashboardShellPalette.elevatedPaper,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: DashboardShellPalette.shadow,
+          elevation: 0,
+          position: PopupMenuPosition.under,
+          menuPadding: const EdgeInsets.symmetric(vertical: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: DashboardShellPalette.outlineStrong),
+          ),
+          textStyle: baseTheme.textTheme.bodyMedium?.copyWith(
+            color: DashboardShellPalette.ink,
+          ),
         ),
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
@@ -113,6 +179,8 @@ class SubKillerApp extends StatelessWidget {
             foregroundColor: const Color(0xFF1B140F),
             disabledBackgroundColor: DashboardShellPalette.outline,
             disabledForegroundColor: DashboardShellPalette.mutedInk,
+            overlayColor: const Color(0x1FF7ECDD),
+            animationDuration: const Duration(milliseconds: 140),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -129,6 +197,8 @@ class SubKillerApp extends StatelessWidget {
             foregroundColor: DashboardShellPalette.ink,
             side: const BorderSide(color: DashboardShellPalette.outlineStrong),
             backgroundColor: DashboardShellPalette.elevatedPaper,
+            overlayColor: const Color(0x14F7ECDD),
+            animationDuration: const Duration(milliseconds: 140),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -142,6 +212,8 @@ class SubKillerApp extends StatelessWidget {
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
             foregroundColor: DashboardShellPalette.accent,
+            overlayColor: const Color(0x14E1A55A),
+            animationDuration: const Duration(milliseconds: 140),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),

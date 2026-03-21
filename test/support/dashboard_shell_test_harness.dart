@@ -254,6 +254,7 @@ Future<void> scrollDashboardUntilVisible(
   await tester.pump();
 }
 
+
 Future<void> openDashboardDestination(
   WidgetTester tester,
   String destination,

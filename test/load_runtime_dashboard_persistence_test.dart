@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
@@ -311,7 +311,60 @@ void main() {
         );
       },
     );
+    test(
+      'refresh mode falls back to the last persisted snapshot when source loading throws',
+      () async {
+        await LoadRuntimeDashboardUseCase(
+          capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+            accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+          ),
+          deviceSmsGateway: _CountingDeviceSmsGateway(
+            <RawDeviceSms>[
+              RawDeviceSms(
+                id: 'raw-netflix',
+                address: 'BANK',
+                body: 'Your Netflix subscription has been renewed for Rs 499.',
+                receivedAt: DateTime(2026, 3, 12, 13, 0),
+              ),
+            ],
+          ),
+          ledgerSnapshotStore: store,
+          loadMode: RuntimeLedgerLoadMode.refreshFromSource,
+          clock: () => DateTime(2026, 3, 13, 9, 30),
+        ).execute();
 
+        final result = await LoadRuntimeDashboardUseCase(
+          capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+            accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+          ),
+          deviceSmsGateway: _ThrowingDeviceSmsGateway(),
+          ledgerSnapshotStore: store,
+          loadMode: RuntimeLedgerLoadMode.refreshFromSource,
+          clock: () => DateTime(2026, 3, 13, 10, 0),
+        ).execute();
+
+        expect(
+          result.provenance.kind,
+          RuntimeSnapshotProvenanceKind.restoredLocalSnapshot,
+        );
+        expect(
+          result.provenance.sourceKind,
+          RuntimeSnapshotSourceKind.deviceSms,
+        );
+        expect(
+          result.provenance.refreshedAt,
+          DateTime(2026, 3, 13, 9, 30),
+        );
+        expect(
+          result.cards
+              .where(
+                (card) => card.bucket == DashboardBucket.confirmedSubscriptions,
+              )
+              .map((card) => card.serviceKey.value),
+          contains('NETFLIX'),
+        );
+      },
+    );
     test(
       'local service presentation overlays relabel cards locally and keep pinned services first',
       () async {
@@ -443,9 +496,8 @@ void main() {
         final seedSnapshot = await LoadRuntimeDashboardUseCase(
           clock: () => DateTime(2026, 3, 14, 9, 30),
         ).execute();
-        final unresolvedReview = seedSnapshot.reviewQueue.firstWhere(
-          (item) => item.serviceKey.value == 'UNRESOLVED',
-        );
+        expect(seedSnapshot.reviewQueue, isNotEmpty);
+        final reviewItem = seedSnapshot.reviewQueue.first;
 
         await localControlOverlayStore.save(
           LocalControlDecision.ignoreService(
@@ -461,7 +513,7 @@ void main() {
         );
         await localControlOverlayStore.save(
           LocalControlDecision.ignoreReviewItem(
-            reviewItem: unresolvedReview,
+            reviewItem: reviewItem,
             decidedAt: DateTime(2026, 3, 14, 10, 5),
           ),
         );
@@ -477,16 +529,23 @@ void main() {
         );
         expect(
           result.reviewQueue.map((item) => item.title),
-          isNot(contains('Unresolved')),
+          isNot(contains(reviewItem.title)),
         );
         expect(
           result.ignoredLocalItems.map((item) => item.title),
-          containsAll(<String>['Netflix', 'Unresolved']),
+          containsAll(<String>['Netflix', reviewItem.title]),
         );
         expect(result.hiddenLocalItems, isEmpty);
       },
     );
   });
+}
+
+class _ThrowingDeviceSmsGateway implements DeviceSmsGateway {
+  @override
+  Future<List<RawDeviceSms>> readMessages() async {
+    throw Exception('source read failed');
+  }
 }
 
 class _CountingDeviceSmsGateway implements DeviceSmsGateway {
@@ -501,5 +560,3 @@ class _CountingDeviceSmsGateway implements DeviceSmsGateway {
     return messages;
   }
 }
-
-

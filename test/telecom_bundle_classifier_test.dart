@@ -52,5 +52,12 @@ void main() {
 
       expect(result, isNull);
     });
+    test('does not classify a paid JioHotstar renewal as a telecom bundle', () {
+      final result = classifier.classify(
+        message('Your JioHotstar subscription has been renewed for Rs 299.'),
+      );
+
+      expect(result, isNull);
+    });
   });
 }

@@ -21,35 +21,35 @@ class ContextualExplanationPresentation {
           actionLabel: 'Why it is listed',
           title: 'Why this is listed',
           description:
-              'This service is counted as active because the current signal is strong enough to treat it as a paid subscription.',
+              'This service is counted as paid because the current message evidence is strong enough.',
           bullets: <String>[
-            'Confirmed subscriptions require stronger evidence than a payment, setup, or micro-charge alone.',
-            'This card appears in confirmed subscriptions because it passed the conservative threshold.',
-            'A later refresh can replace the snapshot cleanly if the device SMS view changes.',
+            'Confirmed subscriptions need stronger proof than a setup, mandate, or one-time payment alone.',
+            'SubWatch keeps weaker signals in Review or separate access instead of inflating this list.',
+            'A later refresh can replace this snapshot cleanly if the device SMS picture changes.',
           ],
         );
       case DashboardBucket.needsReview:
         return const ContextualExplanationPresentation(
           actionLabel: 'Why it is separate',
-          title: 'Why this is separate',
+          title: 'Why this stays separate',
           description:
-              'This signal looked recurring, but it is not strong enough to count as an active paid subscription.',
+              'This looked recurring, but SubWatch does not have enough proof to count it as paid.',
           bullets: <String>[
-            'Observed signals stay visible without being promoted into confirmed subscriptions.',
-            'Payment-like, setup, or weak recurring messages are kept out of active paid counts.',
-            'Review stays the only place for an explicit decision.',
+            'Review keeps uncertain recurring signals visible without promoting them into confirmed subscriptions.',
+            'Payment-like, setup, or weak recurring messages stay out of active paid counts on purpose.',
+            'A later refresh or your review decision can clarify what belongs here.',
           ],
         );
       case DashboardBucket.trialsAndBenefits:
         return const ContextualExplanationPresentation(
           actionLabel: 'Why it is separate',
-          title: 'Why this is separate',
+          title: 'Why this stays separate',
           description:
-              'This service is shown separately because the current signal looks like a bundled benefit, free access, or a trial.',
+              'This looks like bundled, free, or trial access rather than a direct paid subscription.',
           bullets: <String>[
             'Bundled or free access is not counted as an active paid subscription.',
             'This section keeps telecom offers and trial-like access visible without inflating confirmed subscriptions.',
-            'A later refresh can replace the snapshot if stronger paid evidence appears.',
+            'A later refresh can replace this snapshot if stronger paid evidence appears.',
           ],
         );
       case DashboardBucket.hidden:
@@ -75,11 +75,11 @@ class ContextualExplanationPresentation {
         actionLabel: 'Why it needs review',
         title: 'Why this item is in review',
         description:
-            'This signal looks recurring, but it is not safe to confirm automatically yet.',
+            'This looked recurring, but SubWatch is still waiting for proof strong enough to count it as paid.',
         bullets: <String>[
-          'SubWatch keeps limited-confidence recurring signals separate from confirmed subscriptions.',
-          'This item is not counted as active paid until you make an explicit decision.',
-          'You can confirm it, hide it from review, or undo a later decision.',
+          'It stays separate until you decide or stronger evidence appears in a later refresh.',
+          'Bundles, mandates, micro-charges, and weak recurring signals are treated carefully on purpose.',
+          'Any decision you make stays local to this device and can be undone later.',
         ],
       );
     }
@@ -88,11 +88,11 @@ class ContextualExplanationPresentation {
       actionLabel: 'Why it needs review',
       title: 'Why this item still needs review',
       description:
-          'This signal looks recurring, but the service is not identified clearly enough to confirm automatically.',
+          'This looked recurring, but the service details are still too unclear to confirm safely.',
       bullets: <String>[
-        'Service identity is still too unclear to move this into confirmed subscriptions safely.',
-        'This item is not counted as active paid while the signal remains uncertain.',
-        'You can keep it separate, hide it from review, or wait for a later refresh.',
+        'SubWatch does not guess the service when identity is still weak.',
+        'This item stays separate while the evidence remains unclear.',
+        'You can add it manually on this device, dismiss it, or wait for a later refresh.',
       ],
     );
   }
@@ -106,11 +106,11 @@ class ContextualExplanationPresentation {
           actionLabel: 'About this view',
           title: 'Why the sample view is showing',
           description:
-              'The sample view lets you understand the layout before your first message scan.',
+              'This sample view lets you understand the layout before your first message scan.',
           bullets: <String>[
             'The sample view does not come from your messages.',
             'It stays visible until you choose a message scan.',
-            'Fresh and restored local snapshots are labeled separately so the current state stays honest.',
+            'Fresh and saved views stay labeled separately so the current state stays honest.',
           ],
         );
       case RuntimeLocalMessageSourceTone.fresh:
@@ -142,7 +142,7 @@ class ContextualExplanationPresentation {
           actionLabel: 'About this view',
           title: 'Why this is not a fresh refresh',
           description:
-              'SMS access is currently off, so this view stays limited to safe local state.',
+              'SMS access is currently off, so this view is limited to a saved view or another local view already on this device.',
           bullets: <String>[
             'SubWatch does not read device SMS unless access is allowed and you ask for a refresh.',
             'Denied access never pretends a fresh device snapshot happened.',
@@ -157,7 +157,7 @@ class ContextualExplanationPresentation {
               'This device cannot provide a direct local SMS refresh for the current snapshot.',
           bullets: <String>[
             'Unavailable access does not pretend a fresh device snapshot happened.',
-            'Safe local state can remain visible without turning into background monitoring.',
+            'Keeping this local view visible does not mean SubWatch is reading SMS in the background.',
             'Restored snapshots still stay labeled separately from fresh device-backed views.',
           ],
         );

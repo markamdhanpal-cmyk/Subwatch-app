@@ -229,6 +229,15 @@ class HandleManualSubscriptionUseCase {
     final wholeUnits = int.parse(parts.first);
     final fraction = parts.length == 2 ? parts.last.padRight(2, '0') : '00';
     final amountInMinorUnits = (wholeUnits * 100) + int.parse(fraction);
+    if (amountInMinorUnits <= 0) {
+      return (
+        serviceName: normalizedServiceName,
+        amountInMinorUnits: null,
+        nextRenewalDate: nextRenewalDate,
+        planLabel: normalizedPlanLabel,
+        errorMessage: 'Enter an amount above zero or leave it blank.',
+      );
+    }
 
     return (
       serviceName: normalizedServiceName,

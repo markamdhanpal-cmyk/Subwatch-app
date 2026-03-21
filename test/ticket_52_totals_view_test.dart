@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_killer/application/message_sources/sample_local_message_source.dart';
+import 'package:sub_killer/application/models/dashboard_completion_presentation.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
+import 'package:sub_killer/application/models/local_renewal_reminder_models.dart';
+import 'package:sub_killer/application/models/local_service_presentation_overlay_models.dart';
 import 'package:sub_killer/application/models/manual_subscription_models.dart';
 import 'package:sub_killer/application/models/raw_device_sms.dart';
+import 'package:sub_killer/application/models/runtime_snapshot_provenance.dart';
 import 'package:sub_killer/application/use_cases/build_dashboard_totals_summary_use_case.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
+import 'package:sub_killer/application/use_cases/select_local_message_source_use_case.dart';
 import 'package:sub_killer/domain/entities/dashboard_card.dart';
 import 'package:sub_killer/domain/enums/dashboard_bucket.dart';
 import 'package:sub_killer/domain/enums/resolver_state.dart';
@@ -115,13 +121,39 @@ void main() {
     expect(summary.showSummary, isTrue);
     expect(summary.activePaidCount, 1);
     expect(summary.includedInMonthlyTotalCount, 0);
-    expect(summary.monthlyTotalValueLabel, 'Estimate unavailable');
-    expect(summary.estimateBadgeLabel, 'No amount data');
+    expect(summary.monthlyTotalValueLabel, 'Amount not available yet');
+    expect(summary.estimateBadgeLabel, 'Amount pending');
     expect(
       summary.monthlyTotalCaption,
-      'Waiting for billed or manual amounts',
+      'Shown when a billed or manual amount is available',
     );
   });
+
+  test(
+    'totals review count follows surfaced review items when unresolved signals stay out of Review',
+    () {
+      final summary = useCase.execute(
+        cards: <DashboardCard>[
+          _card(
+            key: 'UNRESOLVED',
+            bucket: DashboardBucket.needsReview,
+            state: ResolverState.possibleSubscription,
+            subtitle: 'Needs confirmation',
+          ),
+          _card(
+            key: 'AIRTEL_GEMINI',
+            bucket: DashboardBucket.trialsAndBenefits,
+            state: ResolverState.activeBundled,
+            subtitle: 'Bundled benefit',
+          ),
+        ],
+        reviewCount: 0,
+      );
+
+      expect(summary.reviewCount, 0);
+      expect(summary.reviewValueLabel, '0');
+    },
+  );
 
   testWidgets('dashboard renders the top home spend summary and explainer', (
     tester,
@@ -155,12 +187,13 @@ void main() {
       find.byKey(const ValueKey<String>('totals-summary-card')),
       findsOneWidget,
     );
-    expect(find.text('Estimated monthly spend'), findsOneWidget);
+    expect(find.text('What SubWatch found'), findsOneWidget);
+    expect(find.text('Monthly spend estimate'), findsOneWidget);
     expect(find.text('Rs 499'), findsOneWidget);
     expect(find.text('Confirmed'), findsOneWidget);
     expect(find.text('Needs review'), findsWidgets);
-    expect(find.text('Last updated'), findsOneWidget);
-    expect(find.text('Included'), findsOneWidget);
+    expect(find.text('Current view'), findsOneWidget);
+    expect(find.text('How totals work'), findsOneWidget);
 
     // Accessibility: Verify information button has a descriptive semantics label
     final infoButton =
@@ -202,6 +235,58 @@ void main() {
       findsOneWidget,
     );
   });
+
+  test(
+    'completion copy follows surfaced review items when unresolved signals stay out of Review',
+    () {
+      final snapshot = RuntimeDashboardSnapshot(
+        cards: <DashboardCard>[
+          _card(
+            key: 'UNRESOLVED',
+            bucket: DashboardBucket.needsReview,
+            state: ResolverState.possibleSubscription,
+            subtitle: 'Needs confirmation',
+          ),
+          _card(
+            key: 'AIRTEL_GEMINI',
+            bucket: DashboardBucket.trialsAndBenefits,
+            state: ResolverState.activeBundled,
+            subtitle: 'Bundled benefit',
+          ),
+        ],
+        reviewQueue: const [],
+        messageSourceSelection: LocalMessageSourceSelection(
+          accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+          resolution: LocalMessageSourceResolution.deviceLocal,
+          messageSource: const SampleLocalMessageSource(),
+        ),
+        provenance: RuntimeSnapshotProvenance(
+          kind: RuntimeSnapshotProvenanceKind.freshLoad,
+          sourceKind: RuntimeSnapshotSourceKind.deviceSms,
+          recordedAt: DateTime(2026, 3, 14, 9, 0),
+          refreshedAt: DateTime(2026, 3, 14, 9, 0),
+        ),
+        confirmedReviewItems: const [],
+        benefitReviewItems: const [],
+        dismissedReviewItems: const [],
+        ignoredLocalItems: const [],
+        hiddenLocalItems: const [],
+        manualSubscriptions: const [],
+        localServicePresentationStates: const <String, LocalServicePresentationState>{},
+        localRenewalReminderPreferences: const <String, LocalRenewalReminderPreference>{},
+      );
+
+      final presentation = DashboardCompletionPresentation.fromSnapshot(
+        snapshot,
+      );
+
+      expect(presentation.title, 'No paid subscriptions confirmed yet');
+      expect(
+        presentation.description,
+        'SubWatch found access or benefit signals, but nothing strong enough to confirm as a paid subscription yet.',
+      );
+    },
+  );
 }
 
 DashboardCard _card({

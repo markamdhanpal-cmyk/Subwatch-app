@@ -95,9 +95,9 @@ void main() {
     await tester.pumpAndSettle();
 
     await openDashboardDestination(tester, 'settings');
-    await scrollDashboardUntilVisible(tester, find.text('Dismissed'));
-    expect(find.text('Dismissed'), findsOneWidget);
-    expect(find.text('Hidden by your review'), findsWidgets);
+    await scrollDashboardUntilVisible(tester, find.text('Not subscriptions'));
+    expect(find.text('Not subscriptions'), findsOneWidget);
+    expect(find.text('Marked as not a subscription'), findsWidgets);
     expect(
       find.byKey(
         const ValueKey<String>('undo-review-action-$targetKey'),
@@ -164,8 +164,13 @@ void main() {
         find.byKey(const ValueKey<String>('section-reviewQueue')),
         findsWidgets,
       );
-      expect(find.text('Nothing to review'), findsOneWidget);
-      expect(find.text('A quiet list is a good sign.'), findsWidgets);
+      expect(find.text('Nothing to review right now'), findsOneWidget);
+      expect(
+        find.text(
+          'SubWatch only uses Review for items that still look uncertain. If later evidence still needs your decision, it will appear here again.',
+        ),
+        findsWidgets,
+      );
       expect(
         find.byKey(const ValueKey<String>('service-search-input')),
         findsNothing,
@@ -225,7 +230,7 @@ void main() {
 
     await openDashboardDestination(tester, 'settings');
     await scrollDashboardUntilVisible(tester, find.text('Hidden items'));
-    expect(find.text('Hidden locally'), findsOneWidget);
+    expect(find.text('Hidden on this device'), findsWidgets);
 
     await tapAndPumpDashboardShell(
       tester,
@@ -276,7 +281,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Jiohotstar ignored locally.'), findsOneWidget);
+    expect(find.text('Jiohotstar hidden on this device.'), findsOneWidget);
     expect(
       find.byKey(ValueKey<String>('review-item-$targetKey')),
       findsNothing,
@@ -284,7 +289,7 @@ void main() {
 
     await openDashboardDestination(tester, 'settings');
     await scrollDashboardUntilVisible(tester, find.text('Hidden items'));
-    expect(find.text('Ignored locally'), findsOneWidget);
+    expect(find.text('Hidden on this device'), findsWidgets);
 
     await tapAndPumpDashboardShell(
       tester,
@@ -332,10 +337,10 @@ void main() {
         ),
         findsWidgets,
       );
-      expect(find.text('Why this was flagged'), findsOneWidget);
-      expect(find.text('Why it was not confirmed'), findsOneWidget);
-      expect(find.text('What you can do'), findsOneWidget);
-      expect(find.text('Mark as benefit'), findsOneWidget);
+      expect(find.text('What SubWatch saw'), findsWidgets);
+      expect(find.text('What stood out'), findsOneWidget);
+      expect(find.text('Why it stays separate'), findsOneWidget);
+      expect(find.text('Best next step'), findsOneWidget);
 
       await _scrollSheetUntilVisible(
         tester,
@@ -356,12 +361,12 @@ void main() {
       );
 
       await openDashboardDestination(tester, 'settings');
-      await scrollDashboardUntilVisible(tester, find.text('Benefits'));
+      await scrollDashboardUntilVisible(tester, find.text('Separate access'));
       expect(
         find.byKey(const ValueKey<String>('section-benefitsByYou')),
         findsWidgets,
       );
-      expect(find.text('Marked as benefit by your review'), findsWidgets);
+      expect(find.text('Kept separate as a benefit'), findsWidgets);
     },
   );
 

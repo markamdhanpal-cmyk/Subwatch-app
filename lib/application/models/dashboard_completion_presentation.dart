@@ -38,9 +38,7 @@ class DashboardCompletionPresentation {
     final confirmedCount = snapshot.cards
         .where((card) => card.bucket == DashboardBucket.confirmedSubscriptions)
         .length;
-    final observedCount = snapshot.cards
-        .where((card) => card.bucket == DashboardBucket.needsReview)
-        .length;
+    final observedCount = snapshot.reviewQueue.length;
     final trialCount = snapshot.cards
         .where((card) => card.bucket == DashboardBucket.trialsAndBenefits)
         .length;
@@ -57,19 +55,19 @@ class DashboardCompletionPresentation {
       return const DashboardCompletionPresentation(
         kind: DashboardCompletionKind.standard,
         showPanel: true,
-        eyebrow: 'Sample preview',
-        title: 'See what SubWatch can surface before your first scan',
+        eyebrow: 'Before your first scan',
+        title: 'See how SubWatch stays careful before your first scan',
         description:
-            'This demo uses realistic local billing examples so you can understand the result before granting SMS access.',
+            'This preview shows realistic recurring examples so you can understand SubWatch before granting SMS access.',
         bullets: <String>[
-          'Confirmed subscriptions, review-needed items, and bundled benefits stay clearly separated.',
-          'Your first scan replaces this sample with results from this device only.',
+          'Confirmed subscriptions, items that need review, and separate access stay clearly separated.',
+          'Your first scan replaces this preview with results from this device only.',
           'SMS is read only when you ask for it, and messages stay local.',
         ],
         primaryAction: DashboardCompletionPrimaryAction.none,
         primaryActionLabel: '',
         showLearnMoreAction: true,
-        learnMoreActionLabel: 'How it works',
+        learnMoreActionLabel: 'How SubWatch works',
       );
     }
 
@@ -80,7 +78,7 @@ class DashboardCompletionPresentation {
         eyebrow: 'Next step',
         title: 'Turn on SMS access to refresh',
         description:
-            'Without SMS access, SubWatch can only show safe local results.',
+            'Without SMS access, SubWatch can only show a saved or limited local view.',
         bullets: <String>[
           'SMS is read only when you refresh from this device.',
           'Confirmed subscriptions appear only when the signal is strong enough.',
@@ -89,7 +87,7 @@ class DashboardCompletionPresentation {
         primaryAction: DashboardCompletionPrimaryAction.none,
         primaryActionLabel: '',
         showLearnMoreAction: true,
-        learnMoreActionLabel: 'About',
+        learnMoreActionLabel: 'How SubWatch works',
       );
     }
 
@@ -108,7 +106,7 @@ class DashboardCompletionPresentation {
         primaryAction: DashboardCompletionPrimaryAction.none,
         primaryActionLabel: '',
         showLearnMoreAction: true,
-        learnMoreActionLabel: 'About',
+        learnMoreActionLabel: 'How SubWatch works',
       );
     }
 
@@ -116,14 +114,14 @@ class DashboardCompletionPresentation {
       return const DashboardCompletionPresentation(
         kind: DashboardCompletionKind.zeroConfirmedRescue,
         showPanel: true,
-        eyebrow: 'Scan finished successfully',
-        title: 'No subscriptions confirmed yet',
+        eyebrow: 'Scan complete',
+        title: 'No paid subscriptions confirmed yet',
         description:
-            'SubWatch checked your SMS, but it did not see enough proof to count anything as a subscription yet.',
+            'SubWatch checked your SMS, but nothing looked paid and recurring strongly enough to count yet.',
         bullets: <String>[
-          'SubWatch confirms subscriptions only when renewal or plan evidence is strong enough.',
+          'SubWatch confirms subscriptions only when renewal or billing evidence is strong enough.',
           'Anything unclear stays separate instead of being counted too early.',
-          'You can refresh again later while keeping this view honest.',
+          'A later billing message can make the picture clearer.',
         ],
         primaryAction: DashboardCompletionPrimaryAction.learn,
         primaryActionLabel: 'How SubWatch decides',
@@ -136,19 +134,19 @@ class DashboardCompletionPresentation {
       return const DashboardCompletionPresentation(
         kind: DashboardCompletionKind.zeroConfirmedRescue,
         showPanel: true,
-        eyebrow: 'Scan finished successfully',
-        title: 'Nothing confirmed yet',
+        eyebrow: 'Scan complete',
+        title: 'Review what SubWatch found',
         description:
-            'SubWatch found possible recurring items and kept them separate on purpose.',
+            'Possible recurring items are waiting in Review instead of being counted too early.',
         bullets: <String>[
           'A confirmed subscription needs stronger proof than these messages provide right now.',
-          'Review is where you decide what to confirm or dismiss.',
+          'Review lets you confirm, keep separate, or dismiss each item.',
           'Undo stays available if you need to recover an item later.',
         ],
         primaryAction: DashboardCompletionPrimaryAction.review,
-        primaryActionLabel: 'Go to Review',
+        primaryActionLabel: 'Open Review',
         showLearnMoreAction: true,
-        learnMoreActionLabel: 'How it works',
+        learnMoreActionLabel: 'How SubWatch works',
       );
     }
 
@@ -156,10 +154,10 @@ class DashboardCompletionPresentation {
       return const DashboardCompletionPresentation(
         kind: DashboardCompletionKind.zeroConfirmedRescue,
         showPanel: true,
-        eyebrow: 'Scan finished successfully',
-        title: 'Nothing confirmed yet',
+        eyebrow: 'Scan complete',
+        title: 'No paid subscriptions confirmed yet',
         description:
-            'SubWatch saw recurring-looking signals, but not strongly enough to confirm them as paid subscriptions.',
+            'SubWatch noticed recurring-looking signals, but kept them separate until the proof is stronger.',
         bullets: <String>[
           'SubWatch only confirms a subscription when the recurring proof is stronger than these signals.',
           'Review stays separate so the dashboard does not overclaim.',
@@ -176,8 +174,8 @@ class DashboardCompletionPresentation {
       return const DashboardCompletionPresentation(
         kind: DashboardCompletionKind.zeroConfirmedRescue,
         showPanel: true,
-        eyebrow: 'Scan finished successfully',
-        title: 'Nothing confirmed yet',
+        eyebrow: 'Scan complete',
+        title: 'No paid subscriptions confirmed yet',
         description:
             'SubWatch found access or benefit signals, but nothing strong enough to confirm as a paid subscription yet.',
         bullets: <String>[

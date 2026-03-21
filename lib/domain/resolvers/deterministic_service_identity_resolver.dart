@@ -26,12 +26,26 @@ class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
         'ADOBE_SYSTEMS', RegExp(r'\badobe systems\b', caseSensitive: false)),
     _ServiceHint('ADOBE_SYSTEMS', RegExp(r'\badobe\b', caseSensitive: false)),
     _ServiceHint(
+        'APPLE_MUSIC', RegExp(r'\bapple music\b', caseSensitive: false)),
+    _ServiceHint(
         'APPLE_SERVICES',
         RegExp(r'\bapple(?:\.com\/bill| services| bill)\b',
             caseSensitive: false)),
     _ServiceHint('SPOTIFY', RegExp(r'\bspotify\b', caseSensitive: false)),
     _ServiceHint('JIOHOTSTAR', RegExp(r'\bjiohotstar\b', caseSensitive: false)),
+    _ServiceHint('JIOHOTSTAR',
+        RegExp(r'\b(?:disney\+?\s*)?hotstar\b', caseSensitive: false)),
     _ServiceHint('NETFLIX', RegExp(r'\bnetflix\b', caseSensitive: false)),
+    _ServiceHint(
+        'CRUNCHYROLL', RegExp(r'\bcrunchyroll\b', caseSensitive: false)),
+    _ServiceHint(
+        'SWIGGY_ONE', RegExp(r'\bswiggy ?one\b', caseSensitive: false)),
+    _ServiceHint(
+        'ZOMATO_GOLD', RegExp(r'\bzomato ?gold\b', caseSensitive: false)),
+    _ServiceHint('SONYLIV', RegExp(r'\bsony ?liv\b', caseSensitive: false)),
+    _ServiceHint('ZEE5', RegExp(r'\bzee5\b', caseSensitive: false)),
+    _ServiceHint('WYNK', RegExp(r'\bwynk\b', caseSensitive: false)),
+    _ServiceHint('GAANA', RegExp(r'\bgaana\b', caseSensitive: false)),
   ];
 
   static final RegExp _providerPattern = RegExp(

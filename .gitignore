@@ -17,3 +17,5 @@ android/.kotlin/
 *.log
 *test_output*.txt
 ticket*.txt
+
+_tmp_device_screen.png

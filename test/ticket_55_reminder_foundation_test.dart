@@ -144,7 +144,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Reminders'), findsOneWidget);
+      expect(find.text('Renewal reminders'), findsOneWidget);
       expect(
         find.byKey(
           const ValueKey<String>('settings-renewal-reminder-NETFLIX'),

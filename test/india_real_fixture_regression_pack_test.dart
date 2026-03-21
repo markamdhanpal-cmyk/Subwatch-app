@@ -158,7 +158,13 @@ void main() {
             .where(
                 (card) => card.bucket == DashboardBucket.confirmedSubscriptions)
             .map((card) => card.serviceKey.value),
-        containsAll(<String>['NETFLIX', 'SPOTIFY', 'YOUTUBE_PREMIUM']),
+        containsAll(<String>[
+          'NETFLIX',
+          'SPOTIFY',
+          'SWIGGY_ONE',
+          'YOUTUBE_PREMIUM',
+          'JIOHOTSTAR'
+        ]),
       );
       expect(
         cards
@@ -170,12 +176,12 @@ void main() {
         cards
             .where((card) => card.bucket == DashboardBucket.needsReview)
             .map((card) => card.serviceKey.value),
-        containsAll(<String>['CRUNCHYROLL', 'GOOGLE_PLAY', 'JIOHOTSTAR']),
+        containsAll(<String>['CRUNCHYROLL', 'GOOGLE_PLAY']),
       );
-      expect(reviewQueue, hasLength(3));
+      expect(reviewQueue, hasLength(2));
       expect(
         reviewQueue.map((item) => item.serviceKey.value),
-        containsAll(<String>['CRUNCHYROLL', 'GOOGLE_PLAY', 'JIOHOTSTAR']),
+        containsAll(<String>['CRUNCHYROLL', 'GOOGLE_PLAY']),
       );
       expect(
         result.ledgerEntries
@@ -188,7 +194,7 @@ void main() {
             .where(
                 (card) => card.bucket == DashboardBucket.confirmedSubscriptions)
             .length,
-        3,
+        5,
       );
     });
   });

@@ -238,6 +238,32 @@ const billedSpotifyCardCase = IndiaRealSmsRegressionCase(
   expectedTotalBilled: 119,
 );
 
+const billedJioHotstarRenewalCase = IndiaRealSmsRegressionCase(
+  id: 'billed-jiohotstar-renewal',
+  category: IndiaRealSmsFixtureCategory.billedSubscription,
+  protection:
+      'A paid JioHotstar renewal must stay paid evidence and not collapse into telecom-bundle handling.',
+  sourceAddress: 'HDFCBK',
+  body: 'Your JioHotstar subscription has been renewed for Rs 299.',
+  expectedEventType: SubscriptionEventType.subscriptionBilled,
+  expectedServiceKey: 'JIOHOTSTAR',
+  expectedState: ResolverState.activePaid,
+  expectedTotalBilled: 299,
+);
+
+const billedSwiggyOneCardCase = IndiaRealSmsRegressionCase(
+  id: 'billed-swiggy-one-card',
+  category: IndiaRealSmsFixtureCategory.billedSubscription,
+  protection:
+      'India-heavy membership merchants should not disappear when the bank message is a plain card debit.',
+  sourceAddress: 'HDFCBK',
+  body: 'HDFC Card XX1212 used for Rs 99 at SWIGGY ONE on 17 Mar.',
+  expectedEventType: SubscriptionEventType.subscriptionBilled,
+  expectedServiceKey: 'SWIGGY_ONE',
+  expectedState: ResolverState.activePaid,
+  expectedTotalBilled: 99,
+);
+
 const reviewGooglePlayRecurringCase = IndiaRealSmsRegressionCase(
   id: 'review-google-play-recurring',
   category: IndiaRealSmsFixtureCategory.weakRecurringReview,
@@ -328,6 +354,8 @@ const curatedSingleMessageCases = <IndiaRealSmsRegressionCase>[
   billedYouTubePremiumCase,
   billedAppleMusicCase,
   billedSpotifyCardCase,
+  billedJioHotstarRenewalCase,
+  billedSwiggyOneCardCase,
   reviewGooglePlayRecurringCase,
   dailyQuotaFragmentCase,
   truncatedAmpersandFragmentCase,
@@ -382,6 +410,8 @@ const curatedMixedPackScenario = IndiaRealSmsRegressionScenario(
     billedNetflixCase,
     billedYouTubePremiumCase,
     billedSpotifyCardCase,
+    billedJioHotstarRenewalCase,
+    billedSwiggyOneCardCase,
     reviewGooglePlayRecurringCase,
     ambiguousUpiReminderCase,
   ],
