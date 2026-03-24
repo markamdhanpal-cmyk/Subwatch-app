@@ -211,6 +211,7 @@ class HandleManualSubscriptionUseCase {
 
     final cleanedInput = normalizedAmountInput
         .replaceAll(',', '')
+        .replaceAll('\u20B9', '')
         .replaceAll(RegExp(r'rs\.?', caseSensitive: false), '')
         .replaceAll(RegExp(r'inr', caseSensitive: false), '')
         .trim();

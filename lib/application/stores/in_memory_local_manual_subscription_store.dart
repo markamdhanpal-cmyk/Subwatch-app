@@ -22,4 +22,9 @@ class InMemoryLocalManualSubscriptionStore
   Future<bool> remove(String id) async {
     return _entries.remove(id) != null;
   }
+
+  @override
+  Future<void> clear() async {
+    _entries.clear();
+  }
 }

@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/manual_subscription_models.dart';
@@ -39,7 +39,7 @@ void main() {
       final createResult = await createUseCase.create(
         serviceName: 'Adobe Creative Cloud',
         billingCycle: ManualSubscriptionBillingCycle.yearly,
-        amountInput: '5999',
+        amountInput: '\u20B95999',
         nextRenewalDate: DateTime(2026, 12, 1),
         planLabel: 'Individual',
       );
@@ -63,3 +63,4 @@ void main() {
     });
   });
 }
+

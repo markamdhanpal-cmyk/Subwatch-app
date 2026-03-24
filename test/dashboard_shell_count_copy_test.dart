@@ -5,7 +5,7 @@ import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case
 import 'support/dashboard_shell_test_harness.dart';
 
 void main() {
-  testWidgets('subscriptions view uses explicit bucket-specific count copy',
+  testWidgets('subscriptions view keeps section headers compact',
       (tester) async {
     await pumpDashboardShellApp(
       tester,
@@ -16,24 +16,31 @@ void main() {
 
     await openDashboardDestination(tester, 'subscriptions');
 
+    expect(find.text('2 subscriptions'), findsNothing);
+    expect(find.text('1 subscription'), findsNothing);
+    expect(find.text('1 benefit'), findsNothing);
     expect(
-      tester
-          .widget<Text>(
-            find.byKey(const ValueKey<String>('service-view-visible-count')),
-          )
-          .data,
-      '3 items in this list',
+      find.text(
+        'Save one on this device when you want to track it yourself.',
+      ),
+      findsNothing,
     );
-    expect(find.text('2 subscriptions'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('section-confirmedSubscriptions')),
+      findsWidgets,
+    );
 
     await scrollDashboardUntilVisible(
       tester,
-      find.text('Google Gemini Pro'),
+      find.byKey(const ValueKey<String>('toggle-section-trialsAndBenefits')),
     );
-    expect(find.text('1 benefit'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('section-trialsAndBenefits')),
+      findsWidgets,
+    );
   });
 
-  testWidgets('review destination count copy says review items',
+  testWidgets('review destination keeps the summary calm and count-free',
       (tester) async {
     await pumpDashboardShellApp(
       tester,
@@ -44,6 +51,7 @@ void main() {
 
     await openDashboardDestination(tester, 'review');
 
-    expect(find.text('1 review item'), findsOneWidget);
+    expect(find.text('1 review item'), findsNothing);
+    expect(find.text('Ready for your decision'), findsWidgets);
   });
 }

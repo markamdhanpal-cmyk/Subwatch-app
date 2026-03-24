@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/dashboard_upcoming_renewals_presentation.dart';
 import 'package:sub_killer/application/use_cases/build_dashboard_due_soon_use_case.dart';
@@ -19,7 +19,7 @@ void main() {
           serviceTitle: 'Netflix',
           renewalDate: DateTime(2026, 3, 20),
           renewalDateLabel: '20 Mar 2026',
-          amountLabel: 'Rs 499',
+          amountLabel: '\u20B9499',
         ),
         DashboardUpcomingRenewalItemPresentation(
           serviceKey: 'YOUTUBE',
@@ -32,7 +32,7 @@ void main() {
           serviceTitle: 'Adobe',
           renewalDate: DateTime(2026, 3, 23),
           renewalDateLabel: '23 Mar 2026',
-          amountLabel: 'Rs 799',
+          amountLabel: '\u20B9799',
         ),
       ],
     );
@@ -42,7 +42,7 @@ void main() {
     expect(result.items, hasLength(2));
     expect(result.items.first.serviceTitle, 'YouTube Premium');
     expect(result.items.last.serviceTitle, 'Netflix');
-    expect(result.items.last.amountLabel, 'Rs 499');
+    expect(result.items.last.amountLabel, '\u20B9499');
   });
 
   test('due soon excludes items outside the near-term window', () {
@@ -53,7 +53,7 @@ void main() {
           serviceTitle: 'Netflix',
           renewalDate: DateTime(2026, 3, 25),
           renewalDateLabel: '25 Mar 2026',
-          amountLabel: 'Rs 499',
+          amountLabel: '\u20B9499',
         ),
       ],
     );
@@ -75,25 +75,12 @@ void main() {
       ),
     );
 
-    await scrollDashboardUntilVisible(
-      tester,
-      find.byKey(const ValueKey<String>('due-soon-card')),
-    );
-
-    expect(find.byKey(const ValueKey<String>('due-soon-card')), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('due-soon-card')),
-        matching: find.text('Due soon'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Nothing due soon'), findsOneWidget);
-    expect(
-      find.text(
-        'Only confirmed subscriptions or manual entries with a clear renewal date appear here.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey<String>('due-soon-card')), findsNothing);
+    expect(find.text('Due soon'), findsNothing);
+    expect(find.text('Nothing due soon'), findsNothing);
   });
 }
+
+
+
+

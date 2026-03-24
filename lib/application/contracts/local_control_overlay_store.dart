@@ -6,4 +6,6 @@ abstract interface class LocalControlOverlayStore {
   Future<void> save(LocalControlDecision decision);
 
   Future<bool> remove(String targetKey);
+
+  Future<void> clear();
 }

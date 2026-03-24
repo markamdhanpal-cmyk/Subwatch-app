@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/message_sources/sample_local_message_source.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
 import 'package:sub_killer/application/models/runtime_local_message_source_status.dart';
@@ -22,20 +22,20 @@ void main() {
         ),
       );
 
-      expect(status.title, 'Sample view');
+      expect(status.title, 'Preview');
       expect(
         status.description,
-        'This is a sample layout until you scan messages on this device.',
+        'Showing sample data until you scan.',
       );
-      expect(status.provenanceTitle, 'Sample view');
+      expect(status.provenanceTitle, 'Preview');
       expect(
         status.provenanceDescription,
-        'Showing the sample view prepared on 13 Mar 2026, 09:00.',
+        'Sample prepared on 13 Mar 2026, 09:00.',
       );
-      expect(status.freshnessLabel, 'Sample view');
+      expect(status.freshnessLabel, 'Preview');
       expect(
         status.freshnessDescription,
-        'This sample stays fixed until you scan messages on this device.',
+        'Stays until you scan.',
       );
       expect(status.actionLabel, 'Scan messages');
       expect(
@@ -63,17 +63,17 @@ void main() {
       expect(status.title, 'From your messages');
       expect(
         status.description,
-        'Showing what SubWatch found from messages on this device.',
+        'Showing results from your messages.',
       );
       expect(status.provenanceTitle, 'Checked');
       expect(
         status.provenanceDescription,
-        'Checked your messages on 13 Mar 2026, 10:00.',
+        'Scanned messages on 13 Mar 2026, 10:00.',
       );
-      expect(status.freshnessLabel, 'Checked recently');
+      expect(status.freshnessLabel, 'Last scan: today');
       expect(
         status.freshnessDescription,
-        'Based on a recent message check on this device.',
+        'From a recent scan.',
       );
       expect(status.actionLabel, 'Check again');
       expect(status.permissionRationaleVariant, isNull);
@@ -95,15 +95,15 @@ void main() {
         clock: () => DateTime(2026, 3, 13, 15, 0),
       );
 
-      expect(status.provenanceTitle, 'Saved view');
+      expect(status.provenanceTitle, 'Last results');
       expect(
         status.provenanceDescription,
-        'Opened the saved view from 13 Mar 2026, 10:00. It was last checked on 13 Mar 2026, 09:30 from your messages.',
+        'Saved on 13 Mar 2026, 10:00. Last scan 13 Mar 2026, 09:30 from your messages.',
       );
-      expect(status.freshnessLabel, 'Still recent');
+      expect(status.freshnessLabel, 'Last scan: today');
       expect(
         status.freshnessDescription,
-        'The last message check on this device is still recent.',
+        'Last scan is still recent.',
       );
     });
 
@@ -123,11 +123,11 @@ void main() {
         clock: () => DateTime(2026, 3, 13, 15, 0),
       );
 
-      expect(status.provenanceTitle, 'Saved view');
-      expect(status.freshnessLabel, 'May be out of date');
+      expect(status.provenanceTitle, 'Last results');
+      expect(status.freshnessLabel, 'Last scan: 9 Mar');
       expect(
         status.freshnessDescription,
-        'This saved view may be out of date.',
+        'This saved view may be old.',
       );
     });
 
@@ -149,12 +149,12 @@ void main() {
 
         expect(
           status.provenanceDescription,
-          'Opened the saved view from 13 Mar 2026, 10:00.',
+          'Opened saved view from 13 Mar 2026, 10:00.',
         );
-        expect(status.freshnessLabel, 'Timing unavailable');
+        expect(status.freshnessLabel, 'Last scan unavailable');
         expect(
           status.freshnessDescription,
-          'This saved view does not include recent check timing.',
+          'No recent scan time is available.',
         );
       },
     );
@@ -174,12 +174,12 @@ void main() {
         ),
       );
 
-      expect(status.title, 'Saved view');
+      expect(status.title, 'Last results');
       expect(
         status.description,
-        'Showing the last saved view on this device. It is not a new SMS check.',
+        'Showing your last saved results.',
       );
-      expect(status.provenanceTitle, 'Saved view');
+      expect(status.provenanceTitle, 'Last results');
       expect(status.actionLabel, 'Turn on SMS access');
       expect(
         status.permissionRationaleVariant,
@@ -203,9 +203,20 @@ void main() {
         hasLocalModifications: true,
       );
 
-      expect(status.provenanceTitle, 'Saved view');
+      expect(status.provenanceTitle, 'Last results');
       expect(status.hasLocalModifications, isTrue);
-      expect(status.localModificationsLabel, 'Adjusted on this device');
+      expect(status.localModificationsLabel, 'Changed on this phone');
     });
   });
 }
+
+
+
+
+
+
+
+
+
+
+

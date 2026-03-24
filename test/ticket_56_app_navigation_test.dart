@@ -22,8 +22,12 @@ void main() {
     );
     expect(find.text('Overview'), findsNothing);
     expect(
-      find.byKey(const ValueKey<String>('snapshot-certificate-card')),
+      find.byKey(const ValueKey<String>('totals-summary-card')),
       findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('snapshot-certificate-card')),
+      findsNothing,
     );
     expect(
       find.byKey(const ValueKey<String>('service-search-input')),
@@ -39,23 +43,20 @@ void main() {
     );
 
     await openDashboardDestination(tester, 'subscriptions');
+    await pumpDashboardShellUi(tester);
 
-    expect(find.text('Your list'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('service-search-input')),
+
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey<String>('snapshot-certificate-card')),
+      find.byKey(const ValueKey<String>('totals-summary-card')),
       findsNothing,
     );
 
     await openDashboardDestination(tester, 'review');
 
-    expect(
-      find.byKey(const ValueKey<String>('section-reviewQueue')),
-      findsWidgets,
-    );
     expect(
       find.byKey(const ValueKey<String>('section-reviewQueue')),
       findsWidgets,
@@ -75,7 +76,7 @@ void main() {
 
     await openDashboardDestination(tester, 'settings');
 
-    expect(find.text('On this device'), findsOneWidget);
+    expect(find.text('On this device'), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('settings-quick-actions-panel')),
       findsOneWidget,
@@ -97,8 +98,19 @@ void main() {
     );
 
     expect(
-      find.byKey(const ValueKey<String>('snapshot-certificate-card')),
+      find.byKey(const ValueKey<String>('totals-summary-card')),
       findsOneWidget,
+    );
+    // home-renewals-zone only appears if there is data.
+    // In this empty state test, we expect it not to be found.
+    expect(
+      find.byKey(const ValueKey<String>('home-renewals-zone')),
+      findsNothing,
+    );
+
+    expect(
+      find.byKey(const ValueKey<String>('snapshot-certificate-card')),
+      findsNothing,
     );
     expect(find.text('Overview'), findsNothing);
     expect(

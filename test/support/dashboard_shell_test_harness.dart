@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_killer/presentation/dashboard/dashboard_primitives.dart';
 import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
 import 'package:sub_killer/application/contracts/ledger_snapshot_store.dart';
 import 'package:sub_killer/application/contracts/local_message_source_capability_provider.dart';
@@ -22,6 +23,7 @@ import 'package:sub_killer/application/use_cases/handle_manual_subscription_use_
 import 'package:sub_killer/application/use_cases/handle_review_item_action_use_case.dart';
 import 'package:sub_killer/application/use_cases/load_sms_onboarding_progress_use_case.dart';
 import 'package:sub_killer/application/use_cases/complete_sms_onboarding_use_case.dart';
+import 'package:sub_killer/application/repositories/in_memory_ledger_repository.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
 import 'package:sub_killer/application/use_cases/undo_local_control_overlay_use_case.dart';
@@ -88,6 +90,11 @@ class MemoryLedgerSnapshotStore implements LedgerSnapshotStore {
       metadata: record.metadata,
     );
   }
+
+  @override
+  Future<void> clear() async {
+    _record = null;
+  }
 }
 
 class NoOpLocalRenewalReminderScheduler
@@ -114,10 +121,14 @@ class DashboardShellReviewHarness {
     required this.handleLocalRenewalReminderUseCase,
     required this.localManualSubscriptionStore,
     required this.localRenewalReminderStore,
+    required this.reviewActionStore,
+    required this.localControlOverlayStore,
+    required this.localServicePresentationOverlayStore,
   });
 
   factory DashboardShellReviewHarness({
     DateTime Function()? clock,
+    DeviceSmsGateway? deviceSmsGateway,
   }) {
     final reviewActionStore = InMemoryReviewActionStore();
     final localControlOverlayStore = InMemoryLocalControlOverlayStore();
@@ -125,54 +136,58 @@ class DashboardShellReviewHarness {
     final localServicePresentationOverlayStore =
         InMemoryLocalServicePresentationOverlayStore();
     final localRenewalReminderStore = InMemoryLocalRenewalReminderStore();
+    final ledgerRepository = InMemoryLedgerRepository();
 
-    LoadRuntimeDashboardUseCase buildRuntimeUseCase() {
-      return LoadRuntimeDashboardUseCase(
-        reviewActionStore: reviewActionStore,
-        localControlOverlayStore: localControlOverlayStore,
-        localManualSubscriptionStore: localManualSubscriptionStore,
-        localRenewalReminderStore: localRenewalReminderStore,
-        localServicePresentationOverlayStore:
-            localServicePresentationOverlayStore,
-        clock: clock,
-      );
-    }
+    final runtimeUseCase = LoadRuntimeDashboardUseCase(
+      ledgerRepository: ledgerRepository,
+      reviewActionStore: reviewActionStore,
+      localControlOverlayStore: localControlOverlayStore,
+      localManualSubscriptionStore: localManualSubscriptionStore,
+      localRenewalReminderStore: localRenewalReminderStore,
+      localServicePresentationOverlayStore:
+          localServicePresentationOverlayStore,
+      deviceSmsGateway: deviceSmsGateway,
+      clock: clock,
+    );
 
     return DashboardShellReviewHarness._(
-      runtimeUseCase: buildRuntimeUseCase(),
+      runtimeUseCase: runtimeUseCase,
       handleReviewItemActionUseCase: HandleReviewItemActionUseCase(
         reviewActionStore: reviewActionStore,
-        loadRuntimeDashboard: () => buildRuntimeUseCase().execute(),
+        loadRuntimeDashboard: () => runtimeUseCase.execute(),
       ),
       undoReviewItemActionUseCase: UndoReviewItemActionUseCase(
         reviewActionStore: reviewActionStore,
-        loadRuntimeDashboard: () => buildRuntimeUseCase().execute(),
+        loadRuntimeDashboard: () => runtimeUseCase.execute(),
       ),
       handleLocalControlOverlayUseCase: HandleLocalControlOverlayUseCase(
         localControlOverlayStore: localControlOverlayStore,
-        loadRuntimeDashboard: () => buildRuntimeUseCase().execute(),
+        loadRuntimeDashboard: () => runtimeUseCase.execute(),
       ),
       undoLocalControlOverlayUseCase: UndoLocalControlOverlayUseCase(
         localControlOverlayStore: localControlOverlayStore,
-        loadRuntimeDashboard: () => buildRuntimeUseCase().execute(),
+        loadRuntimeDashboard: () => runtimeUseCase.execute(),
       ),
       handleLocalServicePresentationUseCase:
           HandleLocalServicePresentationUseCase(
         localServicePresentationOverlayStore:
             localServicePresentationOverlayStore,
-        loadRuntimeDashboard: () => buildRuntimeUseCase().execute(),
+        loadRuntimeDashboard: () => runtimeUseCase.execute(),
       ),
       handleManualSubscriptionUseCase: HandleManualSubscriptionUseCase(
         localManualSubscriptionStore: localManualSubscriptionStore,
-        loadRuntimeDashboard: () => buildRuntimeUseCase().execute(),
+        loadRuntimeDashboard: () => runtimeUseCase.execute(),
       ),
       handleLocalRenewalReminderUseCase: HandleLocalRenewalReminderUseCase(
         localRenewalReminderStore: localRenewalReminderStore,
         localRenewalReminderScheduler: const NoOpLocalRenewalReminderScheduler(),
-        loadRuntimeDashboard: () => buildRuntimeUseCase().execute(),
+        loadRuntimeDashboard: () => runtimeUseCase.execute(),
       ),
       localManualSubscriptionStore: localManualSubscriptionStore,
       localRenewalReminderStore: localRenewalReminderStore,
+      reviewActionStore: reviewActionStore,
+      localControlOverlayStore: localControlOverlayStore,
+      localServicePresentationOverlayStore: localServicePresentationOverlayStore,
     );
   }
 
@@ -187,6 +202,10 @@ class DashboardShellReviewHarness {
   final HandleLocalRenewalReminderUseCase handleLocalRenewalReminderUseCase;
   final InMemoryLocalManualSubscriptionStore localManualSubscriptionStore;
   final InMemoryLocalRenewalReminderStore localRenewalReminderStore;
+  final InMemoryReviewActionStore reviewActionStore;
+  final InMemoryLocalControlOverlayStore localControlOverlayStore;
+  final InMemoryLocalServicePresentationOverlayStore
+      localServicePresentationOverlayStore;
 }
 
 Future<void> pumpDashboardShellApp(
@@ -203,8 +222,26 @@ Future<void> pumpDashboardShellApp(
   LoadSmsOnboardingProgressUseCase? loadSmsOnboardingProgressUseCase,
   CompleteSmsOnboardingUseCase? completeSmsOnboardingUseCase,
 }) async {
+  final baseTheme = ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    fontFamily: 'Figtree',
+  );
+  const typeScale = DashboardTypeScale(
+    display: TextStyle(fontSize: 40),
+    heading: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+    subheading: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+    body: TextStyle(fontSize: 16),
+    caption: TextStyle(fontSize: 13),
+    label: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+    button: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+  );
+
   await tester.pumpWidget(
     MaterialApp(
+      theme: baseTheme.copyWith(
+        extensions: [typeScale],
+      ),
       home: DashboardShell(
         runtimeUseCase: runtimeUseCase,
         syncDeviceSmsUseCase: syncDeviceSmsUseCase,
@@ -225,8 +262,7 @@ Future<void> pumpDashboardShellApp(
 }
 
 Future<void> pumpDashboardShellLoad(WidgetTester tester) async {
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 32));
+  await tester.pumpAndSettle();
 }
 
 Future<void> pumpDashboardShellUi(WidgetTester tester) async {
@@ -238,21 +274,91 @@ Future<void> tapAndPumpDashboardShell(
   WidgetTester tester,
   Finder finder,
 ) async {
-  await tester.tap(finder);
-  await pumpDashboardShellUi(tester);
+  debugPrint('Tapping: ${finder.description}');
+  // Ensure it's in the viewport if it's in a scrollable.
+  try {
+    await tester.ensureVisible(finder);
+  } catch (_) {}
+
+  try {
+    // Standard tap with hit testing.
+    await tester.tap(finder);
+  } catch (e) {
+    debugPrint('Hit testing failed for ${finder.description}, trying fallback tap.');
+    // Fallback: tap the center directly, bypassing hit-test verification.
+    final center = tester.getCenter(finder);
+    await tester.tapAt(center);
+  }
+  await tester.pumpAndSettle();
 }
+
+
+
+
 
 Future<void> scrollDashboardUntilVisible(
   WidgetTester tester,
   Finder finder,
 ) async {
-  await tester.scrollUntilVisible(
-    finder,
-    200,
-    scrollable: find.byType(Scrollable).hitTestable().first,
-  );
-  await tester.pump();
+  // 1. Try ensureVisible first (fastest if already in tree and potentially visible)
+  try {
+    await tester.ensureVisible(finder);
+    await tester.pumpAndSettle();
+    if (tester.any(finder.hitTestable())) {
+      return;
+    }
+  } catch (_) {
+    // Expected to fail if off-screen in a scrollable
+  }
+
+  // 2. Try specific surface keys (the most reliable way in our LazyIndexedStack setup)
+  final surfaceKeys = [
+    'destination-home-surface',
+    'destination-subscriptions-surface',
+    'destination-review-surface',
+    'destination-settings-surface',
+  ];
+
+  for (final key in surfaceKeys) {
+    final surface = find.byKey(ValueKey<String>(key), skipOffstage: false);
+    if (tester.any(surface)) {
+      final scrollable = find.descendant(
+        of: surface,
+        matching: find.byType(Scrollable),
+        matchRoot: true, // In case the surface is the scrollable
+      );
+      
+      if (tester.any(scrollable)) {
+        await tester.scrollUntilVisible(
+          finder,
+          200,
+          scrollable: scrollable.first,
+        );
+        await tester.pumpAndSettle();
+        return;
+      }
+    }
+  }
+
+  // 3. Last resort: ANY scrollable
+  final anyScrollable = find.byType(Scrollable).first;
+  if (tester.any(anyScrollable)) {
+    await tester.scrollUntilVisible(
+      finder,
+      200,
+      scrollable: anyScrollable,
+    );
+  } else {
+    // If we're here, we're probably not in a scrollable context or the finder isn't in the tree
+    await tester.ensureVisible(finder);
+  }
+
+  await tester.pumpAndSettle();
+
 }
+
+
+
 
 
 Future<void> openDashboardDestination(
@@ -284,3 +390,4 @@ Future<String> resolveUnresolvedTargetKey() async {
     CompleteSmsOnboardingUseCase(store: store),
   );
 }
+

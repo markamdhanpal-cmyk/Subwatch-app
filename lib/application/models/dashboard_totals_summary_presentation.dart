@@ -50,7 +50,7 @@ class DashboardTotalsSummaryPresentation {
 
   String get monthlyTotalValueLabel => !hasEstimatedSpend
       ? 'Amount not available yet'
-      : 'Rs ${monthlyTotalAmount.toStringAsFixed(0)}';
+      : '\u20B9${monthlyTotalAmount.toStringAsFixed(0)}';
 
   String get estimateBadgeLabel {
     if (!hasEstimatedSpend) {
@@ -64,43 +64,43 @@ class DashboardTotalsSummaryPresentation {
 
   String get monthlyTotalCaption {
     if (!hasEstimatedSpend) {
-      return 'Shown when a billed or manual amount is available';
+      return 'Appears when an amount is visible';
     }
     if (isPartialEstimate) {
-      return 'Some subscriptions do not show an amount yet';
+      return 'Some services still need amounts';
     }
     if (hasCadenceConversions) {
-      return 'Annual or quarterly plans converted monthly';
+      return 'Yearly plans shown monthly';
     }
-    return 'Using visible subscription amounts';
+    return 'Using visible amounts';
   }
 
   String get summaryCopy {
     if (!hasEstimatedSpend) {
-      return 'Monthly spend appears here after SubWatch finds a visible billed amount or you add one manually.';
+      return 'Monthly spend appears after SubWatch finds an amount.';
     }
     if (isPartialEstimate && hasCadenceConversions) {
-      return 'Estimate excludes subscriptions without an amount and converts annual or quarterly plans to monthly equivalents.';
+      return 'Missing amounts are excluded. Yearly plans are shown monthly.';
     }
     if (isPartialEstimate) {
-      return 'Estimate excludes subscriptions without a visible amount.';
+      return 'Services without amounts are excluded.';
     }
     if (hasCadenceConversions) {
-      return 'Annual or quarterly plans are shown as monthly equivalents here.';
+      return 'Yearly plans are shown monthly.';
     }
     if (manualEntriesIncludedCount > 0) {
-      return 'Estimate includes confirmed billed amounts plus manual entries with amounts.';
+      return 'Includes visible amounts and manual entries with amounts.';
     }
-    return 'Estimate uses all visible confirmed subscription amounts.';
+    return 'Uses visible confirmed subscription amounts.';
   }
 
   String get explainerTitle => 'What totals include';
 
   List<String> get explainerBullets => <String>[
-        'Only confirmed paid subscriptions with visible amounts are counted automatically.',
-        'Manual entries with amounts are included when present on this device.',
-        'Annual and quarterly amounts are converted into monthly equivalents.',
-        'Review items, bundled benefits, and anything without a visible billed amount stay excluded.',
-        'This is an estimated subscription view, not an exact bank-spend dashboard.',
+        'Only confirmed subscriptions with visible amounts count automatically.',
+        'Manual entries with amounts count on this phone.',
+        'Yearly and quarterly plans are shown monthly.',
+        'Review, benefits, and missing amounts stay excluded.',
+        'This is an estimate, not exact spend.',
       ];
 }

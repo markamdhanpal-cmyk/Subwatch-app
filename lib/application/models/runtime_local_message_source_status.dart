@@ -50,9 +50,8 @@ class RuntimeLocalMessageSourceStatus {
       case LocalMessageSourceAccessState.sampleDemo:
         return RuntimeLocalMessageSourceStatus(
           tone: RuntimeLocalMessageSourceTone.demo,
-          title: 'Sample view',
-          description:
-              'This is a sample layout until you scan messages on this device.',
+          title: 'Preview',
+          description: 'Scan to see your subscriptions.',
           provenanceTitle: _provenanceTitle(provenance),
           hasLocalModifications: hasLocalModifications,
           localModificationsLabel: localModificationsLabel,
@@ -72,12 +71,12 @@ class RuntimeLocalMessageSourceStatus {
               : RuntimeLocalMessageSourceTone.fresh,
           title: provenance.kind ==
                   RuntimeSnapshotProvenanceKind.restoredLocalSnapshot
-              ? 'Saved view'
+              ? 'Last results'
               : 'From your messages',
           description: provenance.kind ==
                   RuntimeSnapshotProvenanceKind.restoredLocalSnapshot
-              ? 'Showing the last saved view on this device. It is not a new SMS check.'
-              : 'Showing what SubWatch found from messages on this device.',
+              ? 'Showing your last results.'
+              : 'Found from your messages.',
           provenanceTitle: _provenanceTitle(provenance),
           hasLocalModifications: hasLocalModifications,
           localModificationsLabel: localModificationsLabel,
@@ -93,10 +92,10 @@ class RuntimeLocalMessageSourceStatus {
           tone: keepsRestoredSnapshot
               ? RuntimeLocalMessageSourceTone.restored
               : RuntimeLocalMessageSourceTone.caution,
-          title: keepsRestoredSnapshot ? 'Saved view' : 'SMS access is off',
+          title: keepsRestoredSnapshot ? 'Last results' : 'Turn on SMS access',
           description: keepsRestoredSnapshot
-              ? 'Showing the last saved view on this device. It is not a new SMS check.'
-              : 'Without SMS access, SubWatch can only show a saved or limited local view.',
+              ? 'Showing your last results.'
+              : 'Turn on SMS access to scan.',
           provenanceTitle: _provenanceTitle(provenance),
           hasLocalModifications: hasLocalModifications,
           localModificationsLabel: localModificationsLabel,
@@ -114,18 +113,18 @@ class RuntimeLocalMessageSourceStatus {
               ? RuntimeLocalMessageSourceTone.restored
               : RuntimeLocalMessageSourceTone.unavailable,
           title: keepsRestoredSnapshot
-              ? 'Saved view'
-              : 'SMS refresh unavailable',
+              ? 'Last results'
+              : 'Can\'t scan here',
           description: keepsRestoredSnapshot
-              ? 'Showing the last saved view on this device. It is not a new SMS check.'
-              : 'This device cannot provide a fresh SMS check, so the current local view stays in place.',
+              ? 'Showing your last results.'
+              : 'This phone can\'t scan messages.',
           provenanceTitle: _provenanceTitle(provenance),
           hasLocalModifications: hasLocalModifications,
           localModificationsLabel: localModificationsLabel,
           provenanceDescription: _provenanceDescription(provenance),
           freshnessLabel: freshness.label,
           freshnessDescription: freshness.description,
-          actionLabel: 'SMS unavailable',
+          actionLabel: 'Unavailable here',
           isActionEnabled: false,
           permissionRationaleVariant: null,
         );
@@ -151,16 +150,16 @@ class RuntimeLocalMessageSourceStatus {
       case RuntimeSnapshotProvenanceKind.freshLoad:
         switch (provenance.sourceKind) {
           case RuntimeSnapshotSourceKind.sampleDemo:
-            return 'Sample view';
+            return 'Preview';
           case RuntimeSnapshotSourceKind.deviceSms:
-            return 'Checked';
+            return 'From your messages';
           case RuntimeSnapshotSourceKind.safeLocalFallback:
-            return 'Current view';
+            return 'Last results';
           case RuntimeSnapshotSourceKind.unknown:
-            return 'Current';
+            return 'Last results';
         }
       case RuntimeSnapshotProvenanceKind.restoredLocalSnapshot:
-        return 'Saved view';
+        return 'Last results';
     }
   }
 
@@ -169,22 +168,22 @@ class RuntimeLocalMessageSourceStatus {
       case RuntimeSnapshotProvenanceKind.freshLoad:
         return switch (provenance.sourceKind) {
           RuntimeSnapshotSourceKind.sampleDemo =>
-            'Showing the sample view prepared on ${_formatTimestamp(provenance.recordedAt)}.',
+            'Preview from ${_formatTimestamp(provenance.recordedAt)}.',
           RuntimeSnapshotSourceKind.deviceSms =>
-            'Checked your messages on ${_formatTimestamp(provenance.recordedAt)}.',
+            'Last scan ${_formatTimestamp(provenance.recordedAt)}.',
           RuntimeSnapshotSourceKind.safeLocalFallback =>
-            'Showing a local view prepared on ${_formatTimestamp(provenance.recordedAt)}.',
+            'Saved on ${_formatTimestamp(provenance.recordedAt)}.',
           RuntimeSnapshotSourceKind.unknown =>
-            'Showing a local snapshot from ${_formatTimestamp(provenance.recordedAt)}.',
+            'Saved on ${_formatTimestamp(provenance.recordedAt)}.',
         };
       case RuntimeSnapshotProvenanceKind.restoredLocalSnapshot:
         final refreshedAt = provenance.refreshedAt;
         if (refreshedAt == null) {
-          return 'Opened the saved view from ${_formatTimestamp(provenance.recordedAt)}.';
+          return 'Saved on ${_formatTimestamp(provenance.recordedAt)}.';
         }
 
-        return 'Opened the saved view from ${_formatTimestamp(provenance.recordedAt)}. '
-            'It was last checked on ${_formatTimestamp(refreshedAt)} from ${_sourceLabel(provenance.sourceKind)}.';
+        return 'Saved on ${_formatTimestamp(provenance.recordedAt)}. '
+            'Last scan ${_formatTimestamp(refreshedAt)} from ${_sourceLabel(provenance.sourceKind)}.';
     }
   }
 
@@ -196,29 +195,28 @@ class RuntimeLocalMessageSourceStatus {
       case RuntimeSnapshotProvenanceKind.freshLoad:
         return switch (provenance.sourceKind) {
           RuntimeSnapshotSourceKind.sampleDemo => (
-              label: 'Sample view',
-              description:
-                  'This sample stays fixed until you scan messages on this device.',
+              label: 'Preview',
+              description: 'Example only.',
             ),
           RuntimeSnapshotSourceKind.deviceSms => (
-              label: 'Checked recently',
-              description: 'Based on a recent message check on this device.',
+              label: _lastScanLabel(provenance.recordedAt, now),
+              description: 'From your messages.',
             ),
           RuntimeSnapshotSourceKind.safeLocalFallback => (
-              label: 'Local view',
-              description: 'This view did not come from a recent SMS check.',
+              label: 'Last scan unavailable',
+              description: 'Using saved results.',
             ),
           RuntimeSnapshotSourceKind.unknown => (
-              label: 'Timing unavailable',
-              description: 'Recent check details are not available.',
+              label: 'Last scan unavailable',
+              description: 'Last scan time is unavailable.',
             ),
         };
       case RuntimeSnapshotProvenanceKind.restoredLocalSnapshot:
         final refreshedAt = provenance.refreshedAt;
         if (refreshedAt == null) {
           return (
-            label: 'Timing unavailable',
-            description: 'This saved view does not include recent check timing.',
+            label: 'Last scan unavailable',
+            description: 'Last scan time is unavailable.',
           );
         }
 
@@ -227,19 +225,19 @@ class RuntimeLocalMessageSourceStatus {
             : Duration.zero;
         if (age < const Duration(hours: 24)) {
           return (
-            label: 'Still recent',
-            description: 'The last message check on this device is still recent.',
+            label: _lastScanLabel(refreshedAt, now),
+            description: 'From your last scan.',
           );
         }
         if (age < const Duration(hours: 72)) {
           return (
-            label: 'Check again soon',
-            description: 'This saved view is getting older.',
+            label: _lastScanLabel(refreshedAt, now),
+            description: 'From your last scan.',
           );
         }
         return (
-          label: 'May be out of date',
-          description: 'This saved view may be out of date.',
+          label: _lastScanLabel(refreshedAt, now),
+          description: 'From your last scan.',
         );
     }
   }
@@ -248,19 +246,52 @@ class RuntimeLocalMessageSourceStatus {
     if (!hasLocalModifications) {
       return null;
     }
-    return 'Adjusted on this device';
+    return 'Changed on this phone';
+  }
+
+  static String _lastScanLabel(DateTime timestamp, DateTime now) {
+    final scanDate = DateTime(timestamp.year, timestamp.month, timestamp.day);
+    final nowDate = DateTime(now.year, now.month, now.day);
+    final days = nowDate.difference(scanDate).inDays;
+
+    if (days <= 0) {
+      return 'Last scan: today';
+    }
+    if (days == 1) {
+      return 'Last scan: yesterday';
+    }
+
+    const months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final month = months[timestamp.month - 1];
+    if (timestamp.year == now.year) {
+      return 'Last scan: ${timestamp.day} $month';
+    }
+    return 'Last scan: ${timestamp.day} $month ${timestamp.year}';
   }
 
   static String _sourceLabel(RuntimeSnapshotSourceKind sourceKind) {
     switch (sourceKind) {
       case RuntimeSnapshotSourceKind.sampleDemo:
-        return 'the sample view';
+        return 'sample data';
       case RuntimeSnapshotSourceKind.deviceSms:
         return 'your messages';
       case RuntimeSnapshotSourceKind.safeLocalFallback:
-        return 'a local view on this device';
+        return 'a saved view';
       case RuntimeSnapshotSourceKind.unknown:
-        return 'this device';
+        return 'this phone';
     }
   }
 

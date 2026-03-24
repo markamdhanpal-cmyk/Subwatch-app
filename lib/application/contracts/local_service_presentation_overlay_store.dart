@@ -6,4 +6,6 @@ abstract interface class LocalServicePresentationOverlayStore {
   Future<void> save(LocalServicePresentationOverlay overlay);
 
   Future<bool> remove(String serviceKey);
+
+  Future<void> clear();
 }

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/local_control_overlay_models.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
@@ -16,7 +16,7 @@ import 'package:sub_killer/domain/value_objects/service_key.dart';
 import 'support/dashboard_shell_test_harness.dart';
 
 void main() {
-  testWidgets('restored local snapshot provenance renders honestly', (
+  testWidgets('restored local snapshot now surfaces a saved-view refresh action', (
     tester,
   ) async {
     final store = MemoryLedgerSnapshotStore();
@@ -52,29 +52,15 @@ void main() {
       ),
     );
 
-    final provenanceTitle = tester.widget<Text>(
-      find.byKey(const ValueKey<String>('runtime-provenance-title')),
-    );
-    expect(provenanceTitle.data, 'Saved view');
-    expect(
-      find.text(
-        'Opened the saved view from 13 Mar 2026, 10:00. It was last checked on 13 Mar 2026, 09:30 from your messages.',
-      ),
-      findsWidgets,
-    );
+    expect(find.byKey(const ValueKey<String>('home-action-strip')), findsOneWidget);
+    expect(find.text('Last results'), findsOneWidget);
+    expect(find.text('Check again'), findsWidgets);
 
-    final freshnessLabel = tester.widget<Text>(
-      find.byKey(const ValueKey<String>('runtime-freshness-label')),
-    );
-    const expectedFreshnessStates = <String>{
-      'Still recent',
-      'Check again soon',
-      'May be out of date',
-    };
-    expect(expectedFreshnessStates.contains(freshnessLabel.data), isTrue);
+    await openDashboardDestination(tester, 'settings');
+    expect(find.text('Scan again'), findsOneWidget);
   });
 
-  testWidgets('stale restored snapshot freshness renders honestly', (
+  testWidgets('stale restored snapshots still keep the saved-view action visible', (
     tester,
   ) async {
     final store = MemoryLedgerSnapshotStore();
@@ -101,18 +87,13 @@ void main() {
       ),
     );
 
-    final provenanceTitle = tester.widget<Text>(
-      find.byKey(const ValueKey<String>('runtime-provenance-title')),
-    );
-    expect(provenanceTitle.data, 'Saved view');
-    final freshnessLabel = tester.widget<Text>(
-      find.byKey(const ValueKey<String>('runtime-freshness-label')),
-    );
-    expect(freshnessLabel.data, 'May be out of date');
+    expect(find.byKey(const ValueKey<String>('home-action-strip')), findsOneWidget);
+    expect(find.text('Last results'), findsOneWidget);
+    expect(find.text('Check again'), findsWidgets);
   });
 
   testWidgets(
-    'restored snapshot with on-device adjustments shows a visible local-state badge',
+    'restored snapshots with on-device adjustments still keep settings actions available',
     (tester) async {
       final store = MemoryLedgerSnapshotStore();
       final localControlOverlayStore = InMemoryLocalControlOverlayStore();
@@ -142,7 +123,7 @@ void main() {
             serviceKey: ServiceKey('NETFLIX'),
             bucket: DashboardBucket.confirmedSubscriptions,
             title: 'Netflix',
-            subtitle: 'Confirmed paid subscription - Rs 499',
+            subtitle: 'Confirmed paid subscription - \u20B9499',
             state: ResolverState.activePaid,
           ),
           decidedAt: DateTime(2026, 3, 13, 9, 45),
@@ -162,15 +143,14 @@ void main() {
         ),
       );
 
-      final provenanceTitle = tester.widget<Text>(
-        find.byKey(const ValueKey<String>('runtime-provenance-title')),
+      await openDashboardDestination(tester, 'settings');
+      expect(
+        find.byKey(const ValueKey<String>('settings-source-action')),
+        findsOneWidget,
       );
-      expect(provenanceTitle.data, 'Saved view');
-
-      final localState = tester.widget<Text>(
-        find.byKey(const ValueKey<String>('runtime-local-state-label')),
-      );
-      expect(localState.data, 'Adjusted on this device');
+      expect(find.text('Scan again'), findsOneWidget);
     },
   );
 }
+
+

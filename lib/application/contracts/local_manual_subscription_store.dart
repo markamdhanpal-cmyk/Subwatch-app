@@ -6,4 +6,6 @@ abstract interface class LocalManualSubscriptionStore {
   Future<void> save(ManualSubscriptionEntry entry);
 
   Future<bool> remove(String id);
+
+  Future<void> clear();
 }

@@ -18,50 +18,46 @@ class ContextualExplanationPresentation {
     switch (card.bucket) {
       case DashboardBucket.confirmedSubscriptions:
         return const ContextualExplanationPresentation(
-          actionLabel: 'Why it is listed',
-          title: 'Why this is listed',
-          description:
-              'This service is counted as paid because the current message evidence is strong enough.',
+          actionLabel: 'Why it\'s here',
+          title: 'Why this is here',
+          description: 'This looks strong enough to count as paid.',
           bullets: <String>[
-            'Confirmed subscriptions need stronger proof than a setup, mandate, or one-time payment alone.',
-            'SubWatch keeps weaker signals in Review or separate access instead of inflating this list.',
-            'A later refresh can replace this snapshot cleanly if the device SMS picture changes.',
+            'Setup or one-time payments do not count.',
+            'Weaker signals stay in Review or Benefits.',
+            'A later scan can update this.',
           ],
         );
       case DashboardBucket.needsReview:
         return const ContextualExplanationPresentation(
-          actionLabel: 'Why it is separate',
+          actionLabel: 'Why it\'s separate',
           title: 'Why this stays separate',
-          description:
-              'This looked recurring, but SubWatch does not have enough proof to count it as paid.',
+          description: 'This looked recurring, but not proven enough yet.',
           bullets: <String>[
-            'Review keeps uncertain recurring signals visible without promoting them into confirmed subscriptions.',
-            'Payment-like, setup, or weak recurring messages stay out of active paid counts on purpose.',
-            'A later refresh or your review decision can clarify what belongs here.',
+            'It stays visible without counting as paid.',
+            'Weak billing stays out of your paid list.',
+            'A later scan or your choice can settle it.',
           ],
         );
       case DashboardBucket.trialsAndBenefits:
         return const ContextualExplanationPresentation(
-          actionLabel: 'Why it is separate',
+          actionLabel: 'Why it\'s separate',
           title: 'Why this stays separate',
-          description:
-              'This looks like bundled, free, or trial access rather than a direct paid subscription.',
+          description: 'This looks like bundled, free, or trial access.',
           bullets: <String>[
-            'Bundled or free access is not counted as an active paid subscription.',
-            'This section keeps telecom offers and trial-like access visible without inflating confirmed subscriptions.',
-            'A later refresh can replace this snapshot if stronger paid evidence appears.',
+            'Bundled access does not count as paid.',
+            'Benefits stay visible without inflating your paid list.',
+            'Later billing can move it.',
           ],
         );
       case DashboardBucket.hidden:
         return const ContextualExplanationPresentation(
-          actionLabel: 'Why it is hidden',
-          title: 'Why this item is hidden',
-          description:
-              'This item is hidden from the active dashboard because it is not part of the current visible subscription view.',
+          actionLabel: 'Why it\'s hidden',
+          title: 'Why this is hidden',
+          description: 'You hid this from the main view.',
           bullets: <String>[
-            'Hidden items do not count as active subscriptions.',
-            'They can be restored later if you change your mind.',
-            'This stays a local overlay decision and does not rewrite the underlying trust model.',
+            'Hidden items do not count toward totals.',
+            'You can restore them later.',
+            'Hiding only changes this phone view.',
           ],
         );
     }
@@ -74,12 +70,11 @@ class ContextualExplanationPresentation {
       return const ContextualExplanationPresentation(
         actionLabel: 'Why it needs review',
         title: 'Why this item is in review',
-        description:
-            'This looked recurring, but SubWatch is still waiting for proof strong enough to count it as paid.',
+        description: 'This looked recurring, but not strong enough yet.',
         bullets: <String>[
-          'It stays separate until you decide or stronger evidence appears in a later refresh.',
-          'Bundles, mandates, micro-charges, and weak recurring signals are treated carefully on purpose.',
-          'Any decision you make stays local to this device and can be undone later.',
+          'It stays separate until you decide.',
+          'Bundles, mandates, and tiny charges stay cautious.',
+          'Your choice stays on this phone and can be undone.',
         ],
       );
     }
@@ -87,12 +82,11 @@ class ContextualExplanationPresentation {
     return const ContextualExplanationPresentation(
       actionLabel: 'Why it needs review',
       title: 'Why this item still needs review',
-      description:
-          'This looked recurring, but the service details are still too unclear to confirm safely.',
+      description: 'This looked recurring, but the service is still unclear.',
       bullets: <String>[
-        'SubWatch does not guess the service when identity is still weak.',
-        'This item stays separate while the evidence remains unclear.',
-        'You can add it manually on this device, dismiss it, or wait for a later refresh.',
+        'SubWatch does not guess the service name.',
+        'It stays separate while the evidence is unclear.',
+        'Add it manually, dismiss it, or wait.',
       ],
     );
   }
@@ -103,62 +97,57 @@ class ContextualExplanationPresentation {
     switch (status.tone) {
       case RuntimeLocalMessageSourceTone.demo:
         return const ContextualExplanationPresentation(
-          actionLabel: 'About this view',
-          title: 'Why the sample view is showing',
-          description:
-              'This sample view lets you understand the layout before your first message scan.',
+          actionLabel: 'How this works',
+          title: 'Why you\'re seeing a preview',
+          description: 'This is a preview before your first scan.',
           bullets: <String>[
-            'The sample view does not come from your messages.',
-            'It stays visible until you choose a message scan.',
-            'Fresh and saved views stay labeled separately so the current state stays honest.',
+            'It does not come from your messages.',
+            'It stays until you choose a scan.',
+            'Fresh and saved views stay labeled.',
           ],
         );
       case RuntimeLocalMessageSourceTone.fresh:
         return const ContextualExplanationPresentation(
-          actionLabel: 'About this view',
-          title: 'What this refresh means',
-          description:
-              'This view came from a direct device SMS refresh on this device.',
+          actionLabel: 'How this works',
+          title: 'What you\'re seeing',
+          description: 'These results came from your last scan.',
           bullets: <String>[
-            'A fresh refresh recomputes the derived snapshot from device SMS when you ask for it.',
-            'The current snapshot replaces older derived state instead of appending duplicate results.',
-            'Restored snapshots and unavailable states stay labeled separately from a fresh read.',
+            'A scan runs only when you ask for it.',
+            'This view replaces the older one.',
+            'Saved and unavailable views stay labeled.',
           ],
         );
       case RuntimeLocalMessageSourceTone.restored:
         return const ContextualExplanationPresentation(
-          actionLabel: 'About this view',
-          title: 'What a saved view means',
-          description:
-              'This view was opened from a saved local snapshot and is not the same as a new message check.',
+          actionLabel: 'How this works',
+          title: 'Why you\'re seeing last results',
+          description: 'These are your last saved results.',
           bullets: <String>[
-            'Saved views stay clearly separate from fresh message checks.',
-            'The last known check timing stays visible so you can judge freshness.',
-            'Check your messages again when you want a fresh device-backed view.',
+            'Last results stay separate from new scans.',
+            'The last scan time stays visible.',
+            'Scan again when you want fresh results.',
           ],
         );
       case RuntimeLocalMessageSourceTone.caution:
         return const ContextualExplanationPresentation(
-          actionLabel: 'About this view',
-          title: 'Why this is not a fresh refresh',
-          description:
-              'SMS access is currently off, so this view is limited to a saved view or another local view already on this device.',
+          actionLabel: 'How this works',
+          title: 'Why this isn\'t updated',
+          description: 'SMS access is off, so this can\'t update.',
           bullets: <String>[
-            'SubWatch does not read device SMS unless access is allowed and you ask for a refresh.',
-            'Denied access never pretends a fresh device snapshot happened.',
-            'The current view stays separate from a fresh device-backed snapshot.',
+            'SubWatch reads messages only when you allow it.',
+            'It never claims a fresh scan without access.',
+            'Turn access on when you want a new result.',
           ],
         );
       case RuntimeLocalMessageSourceTone.unavailable:
         return const ContextualExplanationPresentation(
-          actionLabel: 'About this view',
-          title: 'Why device SMS refresh is unavailable',
-          description:
-              'This device cannot provide a direct local SMS refresh for the current snapshot.',
+          actionLabel: 'How this works',
+          title: 'Why scanning isn\'t available',
+          description: 'This phone can\'t scan messages here.',
           bullets: <String>[
-            'Unavailable access does not pretend a fresh device snapshot happened.',
-            'Keeping this local view visible does not mean SubWatch is reading SMS in the background.',
-            'Restored snapshots still stay labeled separately from fresh device-backed views.',
+            'SubWatch does not pretend a fresh scan happened.',
+            'This does not mean background reading is on.',
+            'Last results stay labeled.',
           ],
         );
     }

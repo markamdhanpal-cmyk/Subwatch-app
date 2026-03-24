@@ -89,7 +89,7 @@ class DeterministicDashboardProjection implements DashboardProjection {
         final billed = entry.totalBilled.toStringAsFixed(0);
         return billed == '0'
             ? 'Confirmed paid subscription'
-            : 'Confirmed paid subscription - Rs $billed';
+            : 'Confirmed paid subscription - \u20B9$billed';
       case ResolverState.pendingConversion:
         return 'Mandate or autopay setup detected';
       case ResolverState.verificationOnly:
@@ -97,7 +97,7 @@ class DeterministicDashboardProjection implements DashboardProjection {
       case ResolverState.possibleSubscription:
         return 'Needs confirmation';
       case ResolverState.activeBundled:
-        return 'Bundled benefit';
+        return 'Bundled with your plan';
       case ResolverState.ignored:
         return 'Ignored activity';
       case ResolverState.oneTimeOnly:
@@ -113,7 +113,7 @@ class DeterministicDashboardProjection implements DashboardProjection {
     }
 
     final wholeUnits = entry.totalBilled.toStringAsFixed(0);
-    return 'Rs $wholeUnits';
+    return '\u20B9$wholeUnits';
   }
 
   String? _frequencyLabelForEntry(ServiceLedgerEntry entry) {

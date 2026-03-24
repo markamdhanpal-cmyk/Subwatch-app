@@ -5,7 +5,8 @@ import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case
 import 'support/dashboard_shell_test_harness.dart';
 
 void main() {
-  testWidgets('subscription cards show amount renewal and frequency fallbacks',
+  testWidgets(
+      'subscription cards show a compact paid line and positive bundled summary',
       (tester) async {
     await pumpDashboardShellApp(
       tester,
@@ -15,10 +16,13 @@ void main() {
     );
 
     await openDashboardDestination(tester, 'subscriptions');
+    await pumpDashboardShellUi(tester);
     await scrollDashboardUntilVisible(
       tester,
-      find.text('Netflix'),
+      find.textContaining('Netflix'),
     );
+
+
 
     expect(
       tester
@@ -28,7 +32,7 @@ void main() {
             ),
           )
           .data,
-      'Rs 499',
+      '\u20B9499',
     );
     expect(
       tester
@@ -41,44 +45,53 @@ void main() {
       'Date not clear yet',
     );
     expect(
-      tester
-          .widget<Text>(
-            find.byKey(
-              const ValueKey<String>('subscription-meta-frequency-NETFLIX'),
-            ),
-          )
-          .data,
-      'Cycle not clear yet',
+      find.byKey(
+        const ValueKey<String>('subscription-meta-frequency-NETFLIX'),
+      ),
+      findsNothing,
     );
 
     await scrollDashboardUntilVisible(
       tester,
-      find.text('Google Gemini Pro'),
+      find.textContaining('Google Gemini Pro'),
     );
+
 
     expect(
       tester
           .widget<Text>(
             find.byKey(
               const ValueKey<String>(
-                'subscription-meta-amount-GOOGLE_GEMINI_PRO',
+                'subscription-meta-summary-GOOGLE_GEMINI_PRO',
               ),
             ),
           )
           .data,
-      'Not a paid charge',
+      'Bundled with another plan - no separate charge.',
     );
     expect(
-      tester
-          .widget<Text>(
-            find.byKey(
-              const ValueKey<String>(
-                'subscription-meta-frequency-GOOGLE_GEMINI_PRO',
-              ),
-            ),
-          )
-          .data,
-      'Benefit access',
+      find.byKey(
+        const ValueKey<String>(
+          'subscription-meta-amount-GOOGLE_GEMINI_PRO',
+        ),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byKey(
+        const ValueKey<String>(
+          'subscription-meta-renewal-GOOGLE_GEMINI_PRO',
+        ),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byKey(
+        const ValueKey<String>(
+          'subscription-meta-frequency-GOOGLE_GEMINI_PRO',
+        ),
+      ),
+      findsNothing,
     );
   });
 }

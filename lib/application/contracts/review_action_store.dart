@@ -6,4 +6,6 @@ abstract interface class ReviewActionStore {
   Future<void> save(ReviewItemDecision decision);
 
   Future<bool> remove(String targetKey);
+
+  Future<void> clear();
 }

@@ -119,6 +119,22 @@ class JsonFileLocalServicePresentationOverlayStore
     }
   }
 
+  @override
+  Future<void> clear() async {
+    try {
+      final file = await _dataFile(createDirectory: false);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } on MissingPluginException {
+      return;
+    } on MissingPlatformDirectoryException {
+      return;
+    } on FileSystemException {
+      return;
+    }
+  }
+
   Future<File> _dataFile({required bool createDirectory}) async {
     final directory = await _directoryProvider();
     if (createDirectory && !await directory.exists()) {

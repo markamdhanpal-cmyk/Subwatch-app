@@ -23,7 +23,7 @@ void main() {
           bucket: DashboardBucket.confirmedSubscriptions,
           state: ResolverState.activePaid,
           subtitle:
-              'Confirmed paid subscription - Renews on 20 Mar 2026 - Rs 499',
+              'Confirmed paid subscription - Renews on 20 Mar 2026 - \u20B9499',
         ),
         _card(
           key: 'YOUTUBE',
@@ -48,7 +48,34 @@ void main() {
     expect(result.items.first.renewalDateLabel, '16 Mar 2026');
     expect(result.items.first.amountLabel, isNull);
     expect(result.items.last.serviceTitle, 'Netflix');
-    expect(result.items.last.amountLabel, 'Rs 499');
+    expect(result.items.last.amountLabel, '\u20B9499');
+  });
+
+  test('upcoming renewals extract labels from Rs and INR subtitle amounts', () {
+    final result = useCase.execute(
+      cards: <DashboardCard>[
+        _card(
+          key: 'NETFLIX',
+          title: 'Netflix',
+          bucket: DashboardBucket.confirmedSubscriptions,
+          state: ResolverState.activePaid,
+          subtitle:
+              'Confirmed paid subscription - Renews on 16 Mar 2026 - Rs. 499',
+        ),
+        _card(
+          key: 'GOOGLE_ONE',
+          title: 'Google One',
+          bucket: DashboardBucket.confirmedSubscriptions,
+          state: ResolverState.activePaid,
+          subtitle:
+              'Confirmed paid subscription - Renews on 18 Mar 2026 - INR 299',
+        ),
+      ],
+    );
+
+    expect(result.items, hasLength(2));
+    expect(result.items.first.amountLabel, '\u20B9499');
+    expect(result.items.last.amountLabel, '\u20B9299');
   });
 
   test(
@@ -61,7 +88,7 @@ void main() {
           title: 'Netflix',
           bucket: DashboardBucket.confirmedSubscriptions,
           state: ResolverState.activePaid,
-          subtitle: 'Confirmed paid subscription - Rs 499',
+          subtitle: 'Confirmed paid subscription - \u20B9499',
         ),
         _card(
           key: 'JIOHOTSTAR',
@@ -75,7 +102,7 @@ void main() {
           title: 'Google Gemini Pro',
           bucket: DashboardBucket.trialsAndBenefits,
           state: ResolverState.activeBundled,
-          subtitle: 'Bundled benefit - Renews on 15 Mar 2026',
+          subtitle: 'Included access - Renews on 15 Mar 2026',
         ),
       ],
     );
@@ -96,29 +123,12 @@ void main() {
         clock: () => DateTime(2026, 3, 14, 9, 0),
       ),
     );
-
-    await scrollDashboardUntilVisible(
-      tester,
-      find.byKey(const ValueKey<String>('upcoming-renewals-card')),
-    );
-
-    final SemanticsHandle handle = tester.ensureSemantics();
     expect(
       find.byKey(const ValueKey<String>('upcoming-renewals-card')),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(find.text('Upcoming renewals'), findsOneWidget);
-    final semantics = tester.getSemantics(find.text('Upcoming renewals'));
-    expect(semantics.flagsCollection.isHeader, isTrue);
-    handle.dispose();
-
-    expect(find.text('No renewal dates yet'), findsOneWidget);
-    expect(
-      find.text(
-        'Renewals appear here when a confirmed subscription or manual entry has a clear date.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Upcoming renewals'), findsNothing);
+    expect(find.text('No renewal dates yet'), findsNothing);
   });
 }
 

@@ -38,7 +38,7 @@ void main() {
             serviceTitle: 'Netflix',
             renewalDate: DateTime(2026, 3, 20),
             renewalDateLabel: '20 Mar 2026',
-            amountLabel: 'Rs 499',
+            amountLabel: '\u20B9499',
           ),
           DashboardUpcomingRenewalItemPresentation(
             serviceKey: 'ADOBE',
@@ -73,7 +73,7 @@ void main() {
   });
 
   testWidgets(
-    'settings owns reminder controls while home stays summary-only for renewals',
+    'settings stays free of reminder content while subscription surfaces keep reminder controls',
     (tester) async {
       final reminderStore = InMemoryLocalRenewalReminderStore();
       await reminderStore.save(
@@ -90,7 +90,7 @@ void main() {
             bucket: DashboardBucket.confirmedSubscriptions,
             title: 'Netflix',
             subtitle:
-                'Confirmed paid subscription - Renews on 20 Mar 2026 - Rs 499',
+                'Confirmed paid subscription - Renews on 20 Mar 2026 - \u20B9499',
             state: ResolverState.activePaid,
           ),
         ],
@@ -126,7 +126,7 @@ void main() {
         find.byKey(const ValueKey<String>('upcoming-renewals-card')),
       );
 
-      expect(find.textContaining('3 days before'), findsWidgets);
+      expect(find.textContaining('3 days before'), findsNothing);
       expect(
         find
             .byKey(
@@ -137,26 +137,30 @@ void main() {
       );
 
       await openDashboardDestination(tester, 'settings');
+      expect(find.text('Renewal reminders'), findsNothing);
+      expect(find.text('Renewal notifications'), findsNothing);
+      expect(find.textContaining('3 days before'), findsNothing);
+
+      await openDashboardDestination(tester, 'subscriptions');
       await scrollDashboardUntilVisible(
         tester,
-        find.byKey(
-          const ValueKey<String>('settings-renewal-reminder-NETFLIX'),
-        ),
+        find.text('Netflix'),
       );
+      await tapAndPumpDashboardShell(tester, find.text('Netflix').first);
 
-      expect(find.text('Renewal reminders'), findsOneWidget);
       expect(
         find.byKey(
-          const ValueKey<String>('settings-renewal-reminder-NETFLIX'),
+          const ValueKey<String>('renewal-reminder-controls-sheet-NETFLIX'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
-      expect(find.textContaining('3 days before'), findsWidgets);
 
       await tapAndPumpDashboardShell(
         tester,
         find.byKey(
-          const ValueKey<String>('open-renewal-reminder-controls-NETFLIX'),
+          const ValueKey<String>(
+            'details-open-renewal-reminder-controls-NETFLIX',
+          ),
         ),
       );
 

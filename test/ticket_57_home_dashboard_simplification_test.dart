@@ -19,7 +19,7 @@ void main() {
     );
 
     expect(find.byKey(const ValueKey<String>('snapshot-certificate-card')),
-        findsOneWidget);
+        findsNothing);
     expect(
         find.byKey(const ValueKey<String>('registry-register')), findsNothing);
     expect(find.byKey(const ValueKey<String>('service-search-input')),
@@ -30,14 +30,13 @@ void main() {
         findsNothing);
     expect(find.byKey(const ValueKey<String>('totals-summary-card')),
         findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('home-focus-card')),
+    expect(find.text('Monthly spend'), findsOneWidget);
+    expect(find.text('How totals work'), findsNothing);
+    expect(find.byKey(const ValueKey<String>('home-action-strip')),
         findsOneWidget);
-
-    await scrollDashboardUntilVisible(
-      tester,
-      find.byKey(const ValueKey<String>('product-guidance-panel')),
-    );
     expect(find.byKey(const ValueKey<String>('product-guidance-panel')),
+        findsNothing);
+    expect(find.byKey(const ValueKey<String>('home-renewals-zone')),
         findsOneWidget);
 
     await scrollDashboardUntilVisible(
@@ -91,32 +90,28 @@ void main() {
 
     await scrollDashboardUntilVisible(
       tester,
-      find.byKey(const ValueKey<String>('home-focus-card')),
+      find.byKey(const ValueKey<String>('home-action-strip')),
     );
-    expect(find.byKey(const ValueKey<String>('home-focus-card')),
+    expect(find.byKey(const ValueKey<String>('home-action-strip')),
         findsOneWidget);
-    expect(find.text('What to do next'), findsOneWidget);
+    expect(find.text('1 item waiting'), findsWidgets);
     expect(
       find.text(
-        '1 item still needs your decision before it can move into confirmed subscriptions.',
+        '1 item needs your decision before they move into subscriptions.',
       ),
       findsOneWidget,
     );
-    final focusTop = tester
-        .getTopLeft(find.byKey(const ValueKey<String>('home-focus-card')))
-        .dy;
     final totalsTop = tester
         .getTopLeft(find.byKey(const ValueKey<String>('totals-summary-card')))
         .dy;
-    final statusTop = tester
-        .getTopLeft(find.byKey(const ValueKey<String>('snapshot-certificate-card')))
+    final focusTop = tester
+        .getTopLeft(find.byKey(const ValueKey<String>('home-action-strip')))
         .dy;
-    expect(focusTop, lessThan(totalsTop));
-    expect(totalsTop, lessThan(statusTop));
+    expect(totalsTop, lessThan(focusTop));
 
     await tapAndPumpDashboardShell(
       tester,
-      find.byKey(const ValueKey<String>('home-focus-primary-action')),
+      find.byKey(const ValueKey<String>('home-action-primary-action')),
     );
 
     expect(find.text('Items for your review'), findsOneWidget);
@@ -124,3 +119,5 @@ void main() {
         findsWidgets);
   });
 }
+
+

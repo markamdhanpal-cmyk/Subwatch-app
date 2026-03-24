@@ -35,7 +35,7 @@ void main() {
       await openDashboardDestination(tester, 'settings');
       await scrollDashboardUntilVisible(tester, find.text('Confirmed'));
       expect(find.text('Confirmed'), findsOneWidget);
-      expect(find.text('Confirmed by your review'), findsWidgets);
+      expect(find.text('You confirmed this'), findsWidgets);
       expect(
         find.byKey(const ValueKey<String>('undo-review-action-JIOHOTSTAR')),
         findsWidgets,
@@ -160,16 +160,16 @@ void main() {
       await openDashboardDestination(tester, 'review');
 
       expect(find.text('Needs attention'), findsOneWidget);
+
+      expect(
+        find.byKey(const ValueKey<String>('review-queue-summary-card')),
+        findsOneWidget,
+      );
+      expect(find.text('Nothing to review right now.'), findsOneWidget);
+      expect(find.text('Clear for now'), findsOneWidget);
       expect(
         find.byKey(const ValueKey<String>('section-reviewQueue')),
-        findsWidgets,
-      );
-      expect(find.text('Nothing to review right now'), findsOneWidget);
-      expect(
-        find.text(
-          'SubWatch only uses Review for items that still look uncertain. If later evidence still needs your decision, it will appear here again.',
-        ),
-        findsWidgets,
+        findsNothing,
       );
       expect(
         find.byKey(const ValueKey<String>('service-search-input')),
@@ -225,12 +225,13 @@ void main() {
       ),
     );
 
-    expect(find.text('Netflix hidden locally.'), findsOneWidget);
-    expect(find.text('Netflix'), findsNothing);
+    expect(find.textContaining('hidden on this phone'), findsOneWidget);
+    expect(find.textContaining('Netflix'), findsNothing);
+
 
     await openDashboardDestination(tester, 'settings');
     await scrollDashboardUntilVisible(tester, find.text('Hidden items'));
-    expect(find.text('Hidden on this device'), findsWidgets);
+    expect(find.text('Hidden on this phone'), findsWidgets);
 
     await tapAndPumpDashboardShell(
       tester,
@@ -242,10 +243,12 @@ void main() {
     );
 
     await openDashboardDestination(tester, 'subscriptions');
+    await pumpDashboardShellUi(tester);
     await scrollDashboardUntilVisible(
       tester,
       find.text('Netflix'),
     );
+
     expect(find.text('Netflix'), findsOneWidget);
   });
 
@@ -281,15 +284,16 @@ void main() {
       ),
     );
 
-    expect(find.text('Jiohotstar hidden on this device.'), findsOneWidget);
+    expect(find.textContaining('hidden on this phone'), findsOneWidget);
     expect(
+
       find.byKey(ValueKey<String>('review-item-$targetKey')),
       findsNothing,
     );
 
     await openDashboardDestination(tester, 'settings');
     await scrollDashboardUntilVisible(tester, find.text('Hidden items'));
-    expect(find.text('Hidden on this device'), findsWidgets);
+    expect(find.text('Hidden on this phone'), findsWidgets);
 
     await tapAndPumpDashboardShell(
       tester,
@@ -337,10 +341,13 @@ void main() {
         ),
         findsWidgets,
       );
-      expect(find.text('What SubWatch saw'), findsWidgets);
-      expect(find.text('What stood out'), findsOneWidget);
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(const ValueKey<String>('review-evidence-panel')),
+      );
+      expect(find.text('What we saw'), findsWidgets);
+      expect(find.text('Why it showed up'), findsOneWidget);
       expect(find.text('Why it stays separate'), findsOneWidget);
-      expect(find.text('Best next step'), findsOneWidget);
 
       await _scrollSheetUntilVisible(
         tester,
@@ -353,10 +360,17 @@ void main() {
       await tester.pumpAndSettle();
 
       await openDashboardDestination(tester, 'subscriptions');
-      await scrollDashboardUntilVisible(tester, find.text('Jiohotstar'));
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('toggle-section-trialsAndBenefits')),
+      );
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(const ValueKey<String>('toggle-section-trialsAndBenefits')),
+      );
       expect(find.text('Jiohotstar'), findsWidgets);
       expect(
-        find.text('Kept separate as a benefit by your review'),
+        find.text('You kept this separate'),
         findsWidgets,
       );
 
@@ -366,7 +380,7 @@ void main() {
         find.byKey(const ValueKey<String>('section-benefitsByYou')),
         findsWidgets,
       );
-      expect(find.text('Kept separate as a benefit'), findsWidgets);
+      expect(find.text('You kept this separate'), findsWidgets);
     },
   );
 
@@ -424,3 +438,6 @@ Future<void> _scrollSheetUntilVisible(
   );
   await tester.pump();
 }
+
+
+

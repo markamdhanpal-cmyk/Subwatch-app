@@ -13,18 +13,17 @@ class DashboardDueSoonPresentation {
 
   String get summaryCopy {
     if (!hasItems) {
-      return 'Nothing due in the next $windowInDays days.';
+      return 'Nothing due soon.';
     }
 
     final count = items.length;
-    final renewalLabel = count == 1 ? 'renewal is' : 'renewals are';
-    return '$count $renewalLabel due in the next $windowInDays days.';
+    return count == 1 ? '1 renewal due soon.' : '$count renewals due soon.';
   }
 
   String get emptyTitle => 'Nothing due soon';
 
   String get emptyMessage =>
-      'Only confirmed subscriptions or manual entries with a clear renewal date appear here.';
+      'Items with clear dates show up here.';
 }
 
 

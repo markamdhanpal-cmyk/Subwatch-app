@@ -74,7 +74,7 @@ class ApplyReviewItemActionsUseCase {
             targetKey: decision.targetKey,
             serviceKey: ServiceKey(decision.serviceKey),
             title: decision.title,
-            subtitle: 'Confirmed by your review',
+            subtitle: 'You confirmed this',
           ),
         );
       } else if (decision.action == ReviewItemAction.markAsBenefit &&
@@ -84,7 +84,7 @@ class ApplyReviewItemActionsUseCase {
             targetKey: decision.targetKey,
             serviceKey: ServiceKey(decision.serviceKey),
             title: decision.title,
-            subtitle: 'Marked as a benefit by your review',
+            subtitle: 'You kept this separate',
           ),
         );
         promotedBenefitCards.add(
@@ -92,7 +92,7 @@ class ApplyReviewItemActionsUseCase {
             serviceKey: ServiceKey(decision.serviceKey),
             bucket: DashboardBucket.trialsAndBenefits,
             title: decision.title,
-            subtitle: 'Kept separate as a benefit by your review',
+            subtitle: 'You kept this separate',
             state: ResolverState.activeBundled,
           ),
         );
@@ -101,7 +101,7 @@ class ApplyReviewItemActionsUseCase {
           UserDismissedReviewItem(
             targetKey: decision.targetKey,
             title: decision.title,
-            subtitle: 'Hidden by your review',
+            subtitle: 'You hid this',
           ),
         );
       }

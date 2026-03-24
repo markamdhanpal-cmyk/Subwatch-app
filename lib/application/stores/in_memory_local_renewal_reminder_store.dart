@@ -22,4 +22,9 @@ class InMemoryLocalRenewalReminderStore
   Future<bool> remove(String serviceKey) async {
     return _preferencesByServiceKey.remove(serviceKey) != null;
   }
+
+  @override
+  Future<void> clear() async {
+    _preferencesByServiceKey.clear();
+  }
 }

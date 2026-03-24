@@ -21,4 +21,9 @@ class InMemoryLocalControlOverlayStore implements LocalControlOverlayStore {
   Future<bool> remove(String targetKey) async {
     return _decisionsByTargetKey.remove(targetKey) != null;
   }
+
+  @override
+  Future<void> clear() async {
+    _decisionsByTargetKey.clear();
+  }
 }

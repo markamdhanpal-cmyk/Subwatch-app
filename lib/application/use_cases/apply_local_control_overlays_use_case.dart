@@ -107,8 +107,8 @@ class ApplyLocalControlOverlaysUseCase {
             targetKey: decision.targetKey,
             title: decision.title,
             subtitle: decision.targetKind == LocalControlTargetKind.service
-                ? 'Ignored locally across the dashboard on this device'
-                : 'Ignored locally in review on this device',
+                ? 'Hidden on this phone'
+                : 'Hidden from Review on this phone',
           ),
         )
         .toList(growable: false)
@@ -139,10 +139,10 @@ class ApplyLocalControlOverlaysUseCase {
 
   String _hiddenSubtitle(String? bucketName) {
     return switch (bucketName) {
-      'confirmedSubscriptions' => 'Hidden locally from confirmed subscriptions',
-      'needsReview' => 'Hidden locally from observed signals',
-      'trialsAndBenefits' => 'Hidden locally from trials and benefits',
-      _ => 'Hidden locally on this device',
+      'confirmedSubscriptions' => 'Hidden from subscriptions on this phone',
+      'needsReview' => 'Hidden from Review on this phone',
+      'trialsAndBenefits' => 'Hidden from extras on this phone',
+      _ => 'Hidden on this phone',
     };
   }
 }

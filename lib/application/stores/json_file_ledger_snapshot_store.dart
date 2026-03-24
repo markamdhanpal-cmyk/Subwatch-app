@@ -136,6 +136,22 @@ class JsonFileLedgerSnapshotStore implements LedgerSnapshotStore {
     }
   }
 
+  @override
+  Future<void> clear() async {
+    try {
+      final file = await _snapshotFile(createDirectory: false);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } on MissingPluginException {
+      return;
+    } on MissingPlatformDirectoryException {
+      return;
+    } on FileSystemException {
+      return;
+    }
+  }
+
   Future<File> _snapshotFile({required bool createDirectory}) async {
     final directory = await _directoryProvider();
     if (createDirectory && !await directory.exists()) {

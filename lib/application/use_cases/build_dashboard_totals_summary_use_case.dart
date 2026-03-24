@@ -8,7 +8,7 @@ class BuildDashboardTotalsSummaryUseCase {
   const BuildDashboardTotalsSummaryUseCase();
 
   static final RegExp _rupeeAmountPattern = RegExp(
-    r'\bRs\s+([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
+    '(?:\u20B9\s*|Rs\.?\s*|INR\s*|Rupees\s*)([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
     caseSensitive: false,
   );
   static final RegExp _yearlyPattern = RegExp(

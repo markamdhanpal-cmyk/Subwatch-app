@@ -222,23 +222,36 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.byKey(const ValueKey<String>('service-sort-menu')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('service-filter-menu')),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(const ValueKey<String>('section-reviewQueue')),
       findsNothing,
     );
     await scrollDashboardUntilVisible(
       tester,
-      find.byKey(const ValueKey<String>('service-filter-dropdown')),
+      find.byKey(const ValueKey<String>('service-filter-menu')),
     );
     await tapAndPumpDashboardShell(
       tester,
-      find.byKey(const ValueKey<String>('service-filter-dropdown')),
+      find.byKey(const ValueKey<String>('service-filter-menu')),
     );
     expect(find.text('All').last, findsOneWidget);
     expect(find.text('Subscriptions').last, findsOneWidget);
-    await tapAndPumpDashboardShell(
-      tester,
-      find.text('Trials & benefits').last,
+    await tester.tap(
+      find
+          .widgetWithText(
+            CheckedPopupMenuItem<DashboardServiceFilterMode>,
+            'Trials & benefits',
+          )
+          .last,
     );
+    await pumpDashboardShellUi(tester);
 
     expect(
       find.byKey(const ValueKey<String>('section-trialsAndBenefits')),
@@ -252,6 +265,36 @@ void main() {
       find.byKey(const ValueKey<String>('section-reviewQueue')),
       findsNothing,
     );
+  });
+
+  testWidgets('trials and benefits stay collapsed until opened', (
+    tester,
+  ) async {
+    await pumpDashboardShellApp(
+      tester,
+      runtimeUseCase: LoadRuntimeDashboardUseCase(
+        clock: () => DateTime(2026, 3, 14, 9, 0),
+      ),
+    );
+
+    await openDashboardDestination(tester, 'subscriptions');
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('toggle-section-trialsAndBenefits')),
+    );
+
+    expect(
+      find.byKey(const ValueKey<String>('section-trialsAndBenefits')),
+      findsWidgets,
+    );
+    expect(find.text('Google Gemini Pro'), findsNothing);
+
+    await tapAndPumpDashboardShell(
+      tester,
+      find.byKey(const ValueKey<String>('toggle-section-trialsAndBenefits')),
+    );
+
+    expect(find.text('Google Gemini Pro'), findsOneWidget);
   });
 }
 

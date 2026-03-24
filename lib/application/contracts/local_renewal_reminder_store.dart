@@ -6,4 +6,6 @@ abstract interface class LocalRenewalReminderStore {
   Future<void> save(LocalRenewalReminderPreference preference);
 
   Future<bool> remove(String serviceKey);
+
+  Future<void> clear();
 }

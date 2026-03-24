@@ -12,10 +12,12 @@ void main() {
       await pumpDashboardShellApp(
         tester,
         runtimeUseCase: harness.runtimeUseCase,
-        handleManualSubscriptionUseCase: harness.handleManualSubscriptionUseCase,
+        handleManualSubscriptionUseCase:
+            harness.handleManualSubscriptionUseCase,
         handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
         undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
-        handleLocalControlOverlayUseCase: harness.handleLocalControlOverlayUseCase,
+        handleLocalControlOverlayUseCase:
+            harness.handleLocalControlOverlayUseCase,
         undoLocalControlOverlayUseCase: harness.undoLocalControlOverlayUseCase,
         handleLocalServicePresentationUseCase:
             harness.handleLocalServicePresentationUseCase,
@@ -33,10 +35,6 @@ void main() {
         find.byKey(const ValueKey<String>('manual-subscription-editor-new')),
         findsOneWidget,
       );
-      expect(
-        find.text('Added by you on this device. Use this when a scan is limited or you want something tracked right away without changing detected results.'),
-        findsOneWidget,
-      );
 
       await _fillManualEditor(
         tester,
@@ -46,16 +44,13 @@ void main() {
       );
       await _saveManualEditor(tester);
 
+      await scrollDashboardUntilVisible(tester, find.text('Gym Club'));
       expect(
         find.byKey(const ValueKey<String>('section-manualSubscriptions')),
         findsWidgets,
       );
       expect(find.text('Added by you'), findsWidgets);
       expect(find.text('Gym Club'), findsOneWidget);
-      expect(
-        find.text('Added by you on this device. Use this when a scan is limited or you want something tracked right away without changing detected results.'),
-        findsOneWidget,
-      );
 
       await _openManualEditor(tester);
       await _fillManualEditor(
@@ -66,18 +61,24 @@ void main() {
       );
       await _saveManualEditor(tester);
 
+      await scrollDashboardUntilVisible(tester, find.text('Disney+ Hotstar'));
       expect(find.text('Disney+ Hotstar'), findsOneWidget);
       expect(find.text('Yearly'), findsWidgets);
 
-      final gymClubCard = find.ancestor(
-        of: find.text('Gym Club').first,
-        matching: find.byType(InkWell),
-      ).first;
+      final gymClubCard = find
+          .ancestor(
+            of: find.text('Gym Club').first,
+            matching: find.byType(InkWell),
+          )
+          .first;
       final gymClubRow = tester.widget<InkWell>(gymClubCard);
       expect(gymClubRow.onTap, isNotNull);
       gymClubRow.onTap!.call();
       await pumpDashboardShellUi(tester);
-      expect(find.text('Added by you on this device. It stays separate from detected subscriptions and gives you a fallback when a scan is limited.'), findsOneWidget);
+      expect(
+          find.text(
+              'Saved on this phone and kept separate from scans.'),
+          findsOneWidget);
       expect(find.text('Added by you'), findsWidgets);
       expect(find.text('Billing'), findsOneWidget);
       expect(find.text('Plan label'), findsOneWidget);
@@ -103,10 +104,12 @@ void main() {
       expect(find.text('Gym Club Plus'), findsOneWidget);
       expect(find.text('Gym Club'), findsNothing);
 
-      final disneyCard = find.ancestor(
-        of: find.text('Disney+ Hotstar').first,
-        matching: find.byType(InkWell),
-      ).first;
+      final disneyCard = find
+          .ancestor(
+            of: find.text('Disney+ Hotstar').first,
+            matching: find.byType(InkWell),
+          )
+          .first;
       final disneyRow = tester.widget<InkWell>(disneyCard);
       expect(disneyRow.onTap, isNotNull);
       disneyRow.onTap!.call();
@@ -128,6 +131,10 @@ void main() {
 }
 
 Future<void> _openManualEditor(WidgetTester tester) async {
+  await scrollDashboardUntilVisible(
+    tester,
+    find.byKey(const ValueKey<String>('open-manual-subscription-form')),
+  );
   await tapAndPumpDashboardShell(
     tester,
     find.byKey(const ValueKey<String>('open-manual-subscription-form')),
@@ -181,3 +188,4 @@ Future<void> _saveManualEditor(WidgetTester tester) async {
   await tester.ensureVisible(saveButton);
   await tapAndPumpDashboardShell(tester, saveButton);
 }
+

@@ -15,6 +15,7 @@ import 'package:sub_killer/application/use_cases/request_device_sms_access_use_c
 import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
 import 'package:sub_killer/application/use_cases/undo_local_control_overlay_use_case.dart';
 import 'package:sub_killer/application/use_cases/undo_review_item_action_use_case.dart';
+import 'package:sub_killer/presentation/dashboard/dashboard_primitives.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_shell.dart';
 
 import 'support/dashboard_shell_test_harness.dart';
@@ -75,11 +76,10 @@ void main() {
         find.byKey(const ValueKey<String>('sms-permission-onboarding-sheet')),
         findsOneWidget,
       );
-      expect(
-          find.text('Why SubWatch asks before checking SMS'), findsOneWidget);
+      expect(find.text('Find subscriptions in your messages'), findsOneWidget);
       await tester.ensureVisible(
         find.byKey(
-          const ValueKey<String>('sms-permission-onboarding-next-action'),
+          const ValueKey<String>('sms-permission-onboarding-continue-action'),
         ),
       );
       await tester.ensureVisible(
@@ -130,7 +130,7 @@ void main() {
       );
 
       expect(
-        find.text('Turn on SMS access only when you are ready'),
+        find.text('SMS access is off'),
         findsOneWidget,
       );
       await tester.ensureVisible(find.text('Open Settings'));
@@ -210,19 +210,19 @@ void main() {
 
       await scrollDashboardUntilVisible(
         tester,
-        find.byKey(const ValueKey<String>('product-guidance-panel')),
+        find.byKey(const ValueKey<String>('home-action-strip')),
       );
 
-      expect(find.text('Your first scan replaces this preview'), findsOneWidget);
-      expect(find.text('What this preview shows'), findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('snapshot-certificate-card')),
+          findsNothing);
+      expect(find.text('Scan your messages'), findsWidgets);
+      expect(
+        find.text('No scan yet'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey<String>('product-guidance-panel')),
+          findsNothing);
       expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
-    'manual editor stays scrollable and save feedback stays readable on a narrow handset',
-    (tester) async {
-      await _setSmallHandsetViewport(tester, const Size(320, 640));
 
       final harness = DashboardShellReviewHarness();
       await _pumpConstrainedDashboardShell(
@@ -285,7 +285,11 @@ void main() {
         find.byKey(const ValueKey<String>('save-manual-subscription')),
       );
 
-      expect(find.text('Gym Club added to your list. It can now contribute to your estimate.'), findsOneWidget);
+      expect(
+          find.text(
+              'Gym Club added to your list. It now shows in spend.'),
+          findsOneWidget);
+      await scrollDashboardUntilVisible(tester, find.text('Gym Club'));
       expect(find.text('Gym Club'), findsOneWidget);
       expect(find.text('Added by you'), findsWidgets);
       expect(tester.takeException(), isNull);
@@ -310,7 +314,7 @@ void main() {
         find.byKey(const ValueKey<String>('open-manual-subscription-form')),
       );
 
-      expect(find.text('Add manually'), findsWidgets);
+      expect(find.byTooltip('Add manually'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -329,10 +333,10 @@ void main() {
       );
 
       final confirmedMetric = find.byKey(
-        const ValueKey<String>('totals-summary-confirmed-metric'),
+        const ValueKey<String>('spend-hero-confirmed-chip'),
       );
       final reviewMetric = find.byKey(
-        const ValueKey<String>('totals-summary-review-metric'),
+        const ValueKey<String>('home-action-strip'),
       );
 
       expect(confirmedMetric, findsOneWidget);
@@ -360,6 +364,8 @@ void main() {
         handleManualSubscriptionUseCase:
             harness.handleManualSubscriptionUseCase,
       );
+      
+      debugDumpApp();
 
       await openDashboardDestination(tester, 'review');
       await scrollDashboardUntilVisible(
@@ -380,8 +386,9 @@ void main() {
       await tester.ensureVisible(
         find.byKey(const ValueKey<String>('review-details-edit-JIOHOTSTAR')),
       );
-      expect(find.text('What SubWatch saw'), findsWidgets);
-      expect(find.text('Best next step'), findsOneWidget);
+      await tapAndPumpDashboardShell(
+          tester, find.byKey(const ValueKey<String>('review-evidence-panel')));
+      expect(find.text('What we saw'), findsWidgets);
       expect(tester.takeException(), isNull);
     },
   );
@@ -410,6 +417,19 @@ Future<void> _pumpConstrainedDashboardShell(
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      theme: ThemeData(
+        extensions: const <ThemeExtension<dynamic>>[
+          DashboardTypeScale(
+            display: TextStyle(fontSize: 40),
+            heading: TextStyle(fontSize: 22),
+            subheading: TextStyle(fontSize: 18),
+            body: TextStyle(fontSize: 16),
+            caption: TextStyle(fontSize: 13),
+            label: TextStyle(fontSize: 13),
+            button: TextStyle(fontSize: 14),
+          ),
+        ],
+      ),
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         return MediaQuery(
@@ -436,3 +456,4 @@ Future<void> _pumpConstrainedDashboardShell(
   );
   await pumpDashboardShellLoad(tester);
 }
+

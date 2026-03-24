@@ -11,4 +11,6 @@ abstract interface class LedgerSnapshotStore {
   Future<List<ServiceLedgerEntry>> load();
 
   Future<void> save(List<ServiceLedgerEntry> entries);
+
+  Future<void> clear();
 }

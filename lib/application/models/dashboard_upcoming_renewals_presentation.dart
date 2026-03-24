@@ -30,18 +30,16 @@ class DashboardUpcomingRenewalsPresentation {
 
     final next = items.first;
     if (items.length == 1) {
-      return 'Next up: ${next.serviceTitle} on ${next.renewalDateLabel}.';
+      return '${next.serviceTitle} is next.';
     }
 
     final remaining = items.length - 1;
-    final renewalLabel = remaining == 1 ? 'renewal date' : 'renewal dates';
-    return 'Next up: ${next.serviceTitle} on ${next.renewalDateLabel}. '
-        '$remaining more $renewalLabel follow.';
+    return '${next.serviceTitle} is next. $remaining more follow.';
   }
 
   String get emptyTitle => 'No renewal dates yet';
 
   String get emptyMessage =>
-      'Renewals appear here when a confirmed subscription or manual entry has a clear date.';
+      'Renewals appear here once dates are clear.';
 }
 

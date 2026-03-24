@@ -3,6 +3,7 @@ package app.subscriptionkiller
 import app.subscriptionkiller.platform.DeviceSmsGatewayChannelHandler
 import app.subscriptionkiller.platform.LocalMessageSourceCapabilityChannelHandler
 import app.subscriptionkiller.platform.LocalRenewalReminderChannelHandler
+import app.subscriptionkiller.platform.ProblemReportChannelHandler
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -17,6 +18,7 @@ class MainActivity : FlutterActivity() {
         this.capabilityHandler = capabilityHandler
         val deviceSmsHandler = DeviceSmsGatewayChannelHandler(applicationContext)
         val localRenewalReminderHandler = LocalRenewalReminderChannelHandler(applicationContext)
+        val problemReportHandler = ProblemReportChannelHandler(applicationContext)
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -46,6 +48,15 @@ class MainActivity : FlutterActivity() {
             LocalRenewalReminderChannelHandler.CHANNEL_NAME,
         ).setMethodCallHandler { call, result ->
             if (!localRenewalReminderHandler.handle(call, result)) {
+                result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            ProblemReportChannelHandler.CHANNEL_NAME,
+        ).setMethodCallHandler { call, result ->
+            if (!problemReportHandler.handle(call, result)) {
                 result.notImplemented()
             }
         }

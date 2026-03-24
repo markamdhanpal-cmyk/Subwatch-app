@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/contracts/local_renewal_reminder_scheduler.dart';
 import 'package:sub_killer/application/message_sources/sample_local_message_source.dart';
 import 'package:sub_killer/application/models/dashboard_renewal_reminder_presentation.dart';
@@ -122,7 +122,7 @@ DashboardRenewalReminderItemPresentation _item({
       serviceTitle: 'Netflix',
       renewalDate: renewalDate,
       renewalDateLabel: '20 Mar 2026',
-      amountLabel: 'Rs 499',
+      amountLabel: '\u20B9499',
     ),
     availablePresets: availablePresets,
     selectedPreset: selectedPreset,
@@ -175,3 +175,5 @@ class _FakeLocalRenewalReminderScheduler
     return true;
   }
 }
+
+

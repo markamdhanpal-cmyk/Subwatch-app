@@ -31,11 +31,24 @@ void main() {
         expect(
           find.bySemanticsLabel(
             RegExp(
-              r'Netflix\. Confirmed\..*Amount Rs 499\..*Next renewal Date not clear yet\..*Frequency Cycle not clear yet\.',
+              'Netflix\\. Confirmed\\. Amount \\u20B9499\\. Cycle not clear yet\\. Double tap for details\\.',
             ),
           ),
           findsOneWidget,
         );
+
+
+        await scrollDashboardUntilVisible(
+            tester, find.text('Google Gemini Pro'));
+        expect(
+          find.bySemanticsLabel(
+            RegExp(
+              r'Google Gemini Pro\. Separate access\. Bundled with another plan - no separate charge\. Double tap for details\.',
+            ),
+          ),
+          findsOneWidget,
+        );
+
 
         await openDashboardDestination(tester, 'review');
         await scrollDashboardUntilVisible(tester, find.text('Jiohotstar'));
@@ -44,11 +57,12 @@ void main() {
         expect(
           find.bySemanticsLabel(
             RegExp(
-              r'Jiohotstar\. Needs your review\..*SubWatch is waiting for stronger proof before it counts it as paid.*',
+              r'Jiohotstar\. Needs your review\. Looks recurring, but not confirmed yet\. Double tap for details\.',
             ),
           ),
           findsOneWidget,
         );
+
       } finally {
         handle.dispose();
       }
@@ -92,9 +106,12 @@ void main() {
               ValueKey<String>('manual-row-semantics-${manualEntry.id}')),
         );
         expect(rowSemantics.label, contains(manualServiceName));
+
         expect(rowSemantics.label, contains('Added by you'));
-        expect(rowSemantics.label, contains('Premium yearly'));
-        expect(rowSemantics.label, isNot(contains('â€¢')));
+        expect(rowSemantics.label, contains('Amount \u20B91,499'));
+        expect(rowSemantics.label, contains('Yearly'));
+        expect(rowSemantics.label, contains('Double tap for details'));
+
 
         await tapAndPumpDashboardShell(
           tester,
@@ -119,7 +136,7 @@ void main() {
     },
   );
 
-  testWidgets('source metadata semantics read as one clean summary', (
+  testWidgets('home action button exposes a clean semantics label', (
     tester,
   ) async {
     final handle = tester.ensureSemantics();
@@ -132,11 +149,10 @@ void main() {
       );
 
       final semantics = tester.getSemantics(
-        find.byKey(const ValueKey<String>('runtime-source-metadata-semantics')),
+        find.byKey(const ValueKey<String>('sync-with-sms-button')),
       );
 
-      expect(semantics.label, contains('Current view Sample view'));
-      expect(semantics.label, isNot(contains('Freshness Sample view')));
+      expect(semantics.label, contains('Scan your messages'));
     } finally {
       handle.dispose();
     }
@@ -160,13 +176,14 @@ void main() {
       );
 
       expect(
-        find.bySemanticsLabel('Try again to open the current local view'),
+        find.bySemanticsLabel('Try again to open your saved view'),
         findsOneWidget,
       );
     } finally {
       handle.dispose();
     }
   });
+
   testWidgets('settings rows expose merged support semantics', (tester) async {
     final handle = tester.ensureSemantics();
     try {
@@ -181,13 +198,13 @@ void main() {
 
       expect(
         find.bySemanticsLabel(
-          'How SubWatch works. Why SubWatch stays careful.',
+          'Help & privacy. What stays local. How scans work..',
         ),
         findsOneWidget,
       );
       expect(
         find.bySemanticsLabel(
-          'Privacy & local data. What stays on this device and when SMS is read.',
+          'About SubWatch. What SubWatch tracks..',
         ),
         findsOneWidget,
       );
@@ -231,3 +248,10 @@ class _AlwaysThrowingGateway implements DeviceSmsGateway {
     throw Exception('still broken');
   }
 }
+
+
+
+
+
+
+

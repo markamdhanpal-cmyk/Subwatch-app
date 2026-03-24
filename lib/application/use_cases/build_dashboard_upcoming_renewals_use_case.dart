@@ -13,7 +13,7 @@ class BuildDashboardUpcomingRenewalsUseCase {
     r'\bRenews on ([0-9]{1,2}) ([A-Z][a-z]{2}) ([0-9]{4})\b',
   );
   static final RegExp _rupeeAmountPattern = RegExp(
-    r'\bRs\s+([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
+    '(?:\u20B9\s*|Rs\.?\s*|INR\s*|Rupees\s*)([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
     caseSensitive: false,
   );
 
@@ -65,7 +65,7 @@ class BuildDashboardUpcomingRenewalsUseCase {
       return null;
     }
     final wholeUnits = amountInMinorUnits ~/ 100;
-    return 'Rs $wholeUnits';
+    return '\u20B9$wholeUnits';
   }
 
   DashboardUpcomingRenewalItemPresentation? _toItem(DashboardCard card) {
@@ -105,7 +105,7 @@ class BuildDashboardUpcomingRenewalsUseCase {
       return null;
     }
 
-    return 'Rs ${match.group(1)!}';
+    return '\u20B9${match.group(1)!}';
   }
 
   int? _monthIndex(String month) {

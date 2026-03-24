@@ -32,58 +32,54 @@ class ReviewQueueItemPresentation {
     if (descriptor.canConfirm) {
       return ReviewQueueItemPresentation(
         explanationTitle: 'Needs your review',
-        explanationDescription:
-            'This may be recurring, but SubWatch is waiting for stronger proof before it counts it as paid.',
-        stampLabel: 'Still separate for now',
+        explanationDescription: 'Looks recurring, but still needs review.',
+        stampLabel: 'You decide',
         cardRationale: _shortRationale(reviewItem.rationale),
-        rationaleLabel: 'What SubWatch saw',
+        rationaleLabel: 'What we saw',
         rationale: reviewItem.rationale,
-        whyFlaggedTitle: 'What stood out',
+        whyFlaggedTitle: 'Why it showed up',
         whyFlagged: _whyFlagged(reviewItem.rationale),
         whyNotConfirmedTitle: 'Why it stays separate',
         whyNotConfirmed: _whyNotConfirmed(reviewItem.rationale),
-        actionHintTitle: 'Best next step',
+        actionHintTitle: 'How to decide',
         actionHint:
-            'Confirm it as paid only if you know you pay for it directly. Keep it as a benefit if access comes from a bundle or free access. Otherwise choose Not a subscription.',
-        confirmLabel: 'Confirm as paid',
-        benefitLabel: 'Keep as benefit',
-        editLabel: 'Add manually instead',
-        dismissLabel: 'Not a subscription',
+            'Confirm if you pay. Bundle if included. Otherwise choose Not mine.',
+        confirmLabel: 'Confirm',
+        benefitLabel: 'Bundle',
+        editLabel: 'Add manually',
+        dismissLabel: 'Not mine',
         cardSemanticsLabel:
             'Subscription needs review: ${reviewItem.rationale}',
         confirmSemantics: 'Confirm as a paid subscription',
-        benefitSemantics: 'Keep separate as a bundled or free benefit',
+        benefitSemantics: 'Keep as bundled or included access',
         editSemantics: 'Edit subscription details',
-        dismissSemantics: 'Dismiss as not a subscription',
+        dismissSemantics: 'Mark as not yours',
       );
     }
 
     return ReviewQueueItemPresentation(
       explanationTitle: 'Needs a clearer service',
-      explanationDescription:
-          'This may be recurring, but the service details are still too unclear to confirm safely.',
-      stampLabel: 'Service still unclear',
+      explanationDescription: 'Looks recurring, but the service isn\'t clear yet.',
+      stampLabel: 'Service unclear',
       cardRationale: _shortRationale(reviewItem.rationale),
-      rationaleLabel: 'What SubWatch saw',
+      rationaleLabel: 'What we saw',
       rationale: reviewItem.rationale,
-      whyFlaggedTitle: 'What stood out',
+      whyFlaggedTitle: 'Why it showed up',
       whyFlagged:
-          'The message looked recurring, but SubWatch could not identify the service clearly enough.',
+          'The message looked recurring, but the service name stayed unclear.',
       whyNotConfirmedTitle: 'Why it stays separate',
-      whyNotConfirmed:
-          'SubWatch does not auto-confirm when the service name or billing proof is still unclear.',
-      actionHintTitle: 'Best next step',
-      actionHint:
-          'If you recognise it, add it manually on this device. Otherwise choose Not a subscription.',
+      whyNotConfirmed: 'SubWatch does not confirm unclear services or billing.',
+      actionHintTitle: 'How to decide',
+      actionHint: 'If you recognise it, add it. Otherwise choose Not mine.',
       confirmLabel: null,
       benefitLabel: null,
       editLabel: 'Add manually',
-      dismissLabel: 'Not a subscription',
+      dismissLabel: 'Not mine',
       cardSemanticsLabel: 'Review item needs details: ${reviewItem.rationale}',
       confirmSemantics: null,
       benefitSemantics: null,
       editSemantics: 'Edit subscription details',
-      dismissSemantics: 'Dismiss as not a subscription',
+      dismissSemantics: 'Mark as not yours',
     );
   }
 
@@ -97,23 +93,23 @@ class ReviewQueueItemPresentation {
   static String _whyFlagged(String rationale) {
     final lower = rationale.toLowerCase();
     if (lower.contains('setup intent') || lower.contains('mandate')) {
-      return 'SubWatch saw setup or mandate signals that can lead to recurring billing.';
+      return 'It looked like recurring billing setup.';
     }
     if (lower.contains('micro verification')) {
-      return 'SubWatch saw a small verification-style charge that often appears near subscription setup.';
+      return 'It looked like a small verification charge.';
     }
-    return 'The message looked more recurring than a one-off payment, so SubWatch kept it visible for review.';
+    return 'It looked more recurring than a one-off payment.';
   }
 
   static String _whyNotConfirmed(String rationale) {
     final lower = rationale.toLowerCase();
     if (lower.contains('setup intent') || lower.contains('mandate')) {
-      return 'Setup messages alone do not prove that a paid subscription is already active.';
+      return 'Setup messages alone do not prove a paid subscription.';
     }
     if (lower.contains('micro verification')) {
-      return 'A tiny verification charge is not strong enough proof of a paid subscription by itself.';
+      return 'A tiny verification charge is not enough alone.';
     }
-    return 'A payment-like or recurring-looking message alone is not enough to confirm an active paid subscription.';
+    return 'One recurring-looking message is not enough to confirm it.';
   }
 
   final String explanationTitle;

@@ -30,7 +30,7 @@ void main() {
             key: 'NETFLIX',
             bucket: DashboardBucket.confirmedSubscriptions,
             state: ResolverState.activePaid,
-            subtitle: 'Confirmed paid subscription - Rs 499',
+            subtitle: 'Confirmed paid subscription - \u20B9499',
           ),
           _card(
             key: 'YOUTUBE',
@@ -106,6 +106,35 @@ void main() {
     );
   });
 
+  test('totals extract visible amounts from rupee symbol, Rs, and INR labels',
+      () {
+    final summary = useCase.execute(
+      cards: <DashboardCard>[
+        _card(
+          key: 'NETFLIX',
+          bucket: DashboardBucket.confirmedSubscriptions,
+          state: ResolverState.activePaid,
+          subtitle: 'Confirmed paid subscription - \u20B9 499',
+        ),
+        _card(
+          key: 'SPOTIFY',
+          bucket: DashboardBucket.confirmedSubscriptions,
+          state: ResolverState.activePaid,
+          subtitle: 'Confirmed paid subscription - Rs. 149',
+        ),
+        _card(
+          key: 'GOOGLE_ONE',
+          bucket: DashboardBucket.confirmedSubscriptions,
+          state: ResolverState.activePaid,
+          subtitle: 'Confirmed paid subscription - INR 299',
+        ),
+      ],
+    );
+
+    expect(summary.includedInMonthlyTotalCount, 3);
+    expect(summary.monthlyTotalAmount, 947);
+  });
+
   test('totals stay honest when no trusted billed amount is visible', () {
     final summary = useCase.execute(
       cards: <DashboardCard>[
@@ -144,7 +173,7 @@ void main() {
             key: 'AIRTEL_GEMINI',
             bucket: DashboardBucket.trialsAndBenefits,
             state: ResolverState.activeBundled,
-            subtitle: 'Bundled benefit',
+            subtitle: 'Included access',
           ),
         ],
         reviewCount: 0,
@@ -155,7 +184,9 @@ void main() {
     },
   );
 
-  testWidgets('dashboard renders the top home spend summary and explainer', (
+  testWidgets(
+      'dashboard renders the top home spend hero without the old explainer stack',
+      (
     tester,
   ) async {
     final runtimeUseCase = LoadRuntimeDashboardUseCase(
@@ -187,52 +218,16 @@ void main() {
       find.byKey(const ValueKey<String>('totals-summary-card')),
       findsOneWidget,
     );
-    expect(find.text('What SubWatch found'), findsOneWidget);
-    expect(find.text('Monthly spend estimate'), findsOneWidget);
-    expect(find.text('Rs 499'), findsOneWidget);
+    expect(find.text('Monthly spend'), findsOneWidget);
+    expect(find.text('\u20B9499'), findsOneWidget);
     expect(find.text('Confirmed'), findsOneWidget);
-    expect(find.text('Needs review'), findsWidgets);
-    expect(find.text('Current view'), findsOneWidget);
-    expect(find.text('How totals work'), findsOneWidget);
-
-    // Accessibility: Verify information button has a descriptive semantics label
-    final infoButton =
-        find.byKey(const ValueKey<String>('open-totals-explanation-button'));
-    expect(infoButton, findsOneWidget);
-
-    final SemanticsHandle handle = tester.ensureSemantics();
-    // Ensure the button is accessible to screen readers with a clear purpose
-    expect(find.bySemanticsLabel('Open spend estimate explanation'),
-        findsOneWidget);
-
-    await tapAndPumpDashboardShell(
-      tester,
-      infoButton,
-    );
-    handle.dispose();
-
+    expect(find.text('Review'), findsWidgets);
+    expect(find.text('What SubWatch found'), findsNothing);
+    expect(find.text('Current view'), findsNothing);
+    expect(find.text('How totals work'), findsNothing);
     expect(
-      find.byKey(const ValueKey<String>('totals-explanation-sheet')),
-      findsOneWidget,
-    );
-    expect(find.text('What totals include'), findsOneWidget);
-    expect(
-      find.text(
-        'Only confirmed paid subscriptions with visible amounts are counted automatically.',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.text(
-        'Annual and quarterly amounts are converted into monthly equivalents.',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.text(
-        'This is an estimated subscription view, not an exact bank-spend dashboard.',
-      ),
-      findsOneWidget,
+      find.byKey(const ValueKey<String>('open-totals-explanation-button')),
+      findsNothing,
     );
   });
 
@@ -251,7 +246,7 @@ void main() {
             key: 'AIRTEL_GEMINI',
             bucket: DashboardBucket.trialsAndBenefits,
             state: ResolverState.activeBundled,
-            subtitle: 'Bundled benefit',
+            subtitle: 'Included access',
           ),
         ],
         reviewQueue: const [],
@@ -272,18 +267,20 @@ void main() {
         ignoredLocalItems: const [],
         hiddenLocalItems: const [],
         manualSubscriptions: const [],
-        localServicePresentationStates: const <String, LocalServicePresentationState>{},
-        localRenewalReminderPreferences: const <String, LocalRenewalReminderPreference>{},
+        localServicePresentationStates: const <String,
+            LocalServicePresentationState>{},
+        localRenewalReminderPreferences: const <String,
+            LocalRenewalReminderPreference>{},
       );
 
       final presentation = DashboardCompletionPresentation.fromSnapshot(
         snapshot,
       );
 
-      expect(presentation.title, 'No paid subscriptions confirmed yet');
+      expect(presentation.title, 'No subscriptions found yet');
       expect(
         presentation.description,
-        'SubWatch found access or benefit signals, but nothing strong enough to confirm as a paid subscription yet.',
+        'This looks bundled or trial-based, not paid.',
       );
     },
   );
@@ -303,3 +300,4 @@ DashboardCard _card({
     state: state,
   );
 }
+

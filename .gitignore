@@ -19,3 +19,12 @@ android/.kotlin/
 ticket*.txt
 
 _tmp_device_screen.png
+
+# Test logs and results
+test_log*.txt
+test_out.txt
+full_test_log.txt
+full_test_log_utf8.txt
+single_test_dump.txt
+test_results.json
+dump.txt

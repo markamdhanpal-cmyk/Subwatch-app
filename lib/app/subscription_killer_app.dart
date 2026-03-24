@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../application/contracts/problem_report_launcher.dart';
 import '../application/use_cases/handle_local_control_overlay_use_case.dart';
 import '../application/use_cases/handle_manual_subscription_use_case.dart';
 import '../application/use_cases/handle_local_renewal_reminder_use_case.dart';
@@ -25,6 +26,7 @@ class SubKillerApp extends StatelessWidget {
     HandleManualSubscriptionUseCase? handleManualSubscriptionUseCase,
     HandleLocalServicePresentationUseCase?
         handleLocalServicePresentationUseCase,
+    ProblemReportLauncher? problemReportLauncher,
   })  : _runtimeUseCase = runtimeUseCase,
         _syncDeviceSmsUseCase = syncDeviceSmsUseCase,
         _handleReviewItemActionUseCase = handleReviewItemActionUseCase,
@@ -34,7 +36,8 @@ class SubKillerApp extends StatelessWidget {
         _handleLocalRenewalReminderUseCase = handleLocalRenewalReminderUseCase,
         _handleManualSubscriptionUseCase = handleManualSubscriptionUseCase,
         _handleLocalServicePresentationUseCase =
-            handleLocalServicePresentationUseCase;
+            handleLocalServicePresentationUseCase,
+        _problemReportLauncher = problemReportLauncher;
 
   final LoadRuntimeDashboardUseCase? _runtimeUseCase;
   final SyncDeviceSmsUseCase? _syncDeviceSmsUseCase;
@@ -46,12 +49,78 @@ class SubKillerApp extends StatelessWidget {
   final HandleManualSubscriptionUseCase? _handleManualSubscriptionUseCase;
   final HandleLocalServicePresentationUseCase?
       _handleLocalServicePresentationUseCase;
+  final ProblemReportLauncher? _problemReportLauncher;
 
   @override
   Widget build(BuildContext context) {
     final baseTheme = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      fontFamily: 'Figtree',
+    );
+    const displayStyle = TextStyle(
+      fontFamily: 'Instrument Serif',
+      color: DashboardShellPalette.ink,
+      fontSize: 40,
+      fontWeight: FontWeight.w400,
+      height: 0.95,
+      letterSpacing: -1.1,
+    );
+    const headingStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: DashboardShellPalette.ink,
+      fontSize: 22,
+      fontWeight: FontWeight.w700,
+      height: 1.12,
+      letterSpacing: -0.28,
+    );
+    const subheadingStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: DashboardShellPalette.ink,
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      height: 1.2,
+      letterSpacing: -0.16,
+    );
+    const bodyStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: DashboardShellPalette.ink,
+      fontSize: 16,
+      fontWeight: FontWeight.w400,
+      height: 1.4,
+    );
+    const captionStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: DashboardShellPalette.mutedInk,
+      fontSize: 13,
+      fontWeight: FontWeight.w400,
+      height: 1.28,
+      letterSpacing: 0.04,
+    );
+    const labelStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: DashboardShellPalette.ink,
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      height: 1.16,
+      letterSpacing: 0.12,
+    );
+    const buttonStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: DashboardShellPalette.ink,
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+      height: 1.1,
+      letterSpacing: 0.08,
+    );
+    const typeScale = DashboardTypeScale(
+      display: displayStyle,
+      heading: headingStyle,
+      subheading: subheadingStyle,
+      body: bodyStyle,
+      caption: captionStyle,
+      label: labelStyle,
+      button: buttonStyle,
     );
     final colorScheme = ColorScheme.fromSeed(
       seedColor: DashboardShellPalette.accent,
@@ -99,9 +168,12 @@ class SubKillerApp extends StatelessWidget {
             foregroundColor: DashboardShellPalette.ink,
             disabledForegroundColor:
                 DashboardShellPalette.mutedInk.withValues(alpha: 0.72),
-            overlayColor: const Color(0x14E1A55A),
-            highlightColor: const Color(0x10E1A55A),
-            hoverColor: const Color(0x0DE1A55A),
+            overlayColor:
+                DashboardShellPalette.statusBlue.withValues(alpha: 0.14),
+            highlightColor:
+                DashboardShellPalette.statusBlue.withValues(alpha: 0.1),
+            hoverColor:
+                DashboardShellPalette.statusBlue.withValues(alpha: 0.08),
             animationDuration: const Duration(milliseconds: 140),
             padding: const EdgeInsets.all(10),
             shape: RoundedRectangleBorder(
@@ -119,15 +191,15 @@ class SubKillerApp extends StatelessWidget {
           labelPadding: const EdgeInsets.only(top: 4),
           overlayColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.pressed)
-                ? const Color(0x14E1A55A)
+                ? DashboardShellPalette.mutedInk.withValues(alpha: 0.1)
                 : states.contains(WidgetState.hovered)
-                    ? const Color(0x0DE1A55A)
+                    ? DashboardShellPalette.mutedInk.withValues(alpha: 0.06)
                     : null,
           ),
           labelTextStyle: WidgetStateProperty.resolveWith(
             (states) => baseTheme.textTheme.labelMedium?.copyWith(
               color: states.contains(WidgetState.selected)
-                  ? DashboardShellPalette.ink
+                  ? DashboardShellPalette.accent
                   : DashboardShellPalette.mutedInk,
               fontWeight: states.contains(WidgetState.selected)
                   ? FontWeight.w800
@@ -138,7 +210,7 @@ class SubKillerApp extends StatelessWidget {
           iconTheme: WidgetStateProperty.resolveWith(
             (states) => IconThemeData(
               color: states.contains(WidgetState.selected)
-                  ? DashboardShellPalette.ink
+                  ? DashboardShellPalette.accent
                   : DashboardShellPalette.mutedInk,
               size: 24,
             ),
@@ -166,7 +238,7 @@ class SubKillerApp extends StatelessWidget {
             color: DashboardShellPalette.ink,
             height: 1.35,
           ),
-          actionTextColor: DashboardShellPalette.accent,
+          actionTextColor: DashboardShellPalette.statusBlue,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -185,11 +257,7 @@ class SubKillerApp extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
-            textStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.08,
-            ),
+            textStyle: typeScale.button,
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
@@ -203,83 +271,88 @@ class SubKillerApp extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
-            textStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
+            textStyle: typeScale.button,
           ),
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: DashboardShellPalette.accent,
-            overlayColor: const Color(0x14E1A55A),
+            foregroundColor: DashboardShellPalette.statusBlue,
+            overlayColor:
+                DashboardShellPalette.statusBlue.withValues(alpha: 0.14),
             animationDuration: const Duration(milliseconds: 140),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            textStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
+            textStyle: typeScale.button,
           ),
         ),
         progressIndicatorTheme: const ProgressIndicatorThemeData(
-          color: DashboardShellPalette.accent,
+          color: DashboardShellPalette.statusBlue,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: DashboardShellPalette.nestedPaper,
+          hintStyle: baseTheme.textTheme.bodyMedium?.copyWith(
+            color: DashboardShellPalette.mutedInk.withValues(alpha: 0.84),
+          ),
+          helperStyle: baseTheme.textTheme.bodySmall?.copyWith(
+            color: DashboardShellPalette.mutedInk,
+            height: 1.22,
+          ),
+          labelStyle: baseTheme.textTheme.labelMedium?.copyWith(
+            color: DashboardShellPalette.mutedInk,
+          ),
+          prefixIconColor: DashboardShellPalette.mutedInk,
+          suffixIconColor: DashboardShellPalette.mutedInk,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: const BorderSide(color: DashboardShellPalette.outline),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: const BorderSide(color: DashboardShellPalette.outline),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: const BorderSide(
+              color: DashboardShellPalette.statusBlue,
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: const BorderSide(color: DashboardShellPalette.caution),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: const BorderSide(color: DashboardShellPalette.caution),
+          ),
         ),
         textTheme: baseTheme.textTheme.copyWith(
-          headlineMedium: baseTheme.textTheme.headlineMedium?.copyWith(
-            color: DashboardShellPalette.ink,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.9,
-          ),
-          headlineSmall: baseTheme.textTheme.headlineSmall?.copyWith(
-            color: DashboardShellPalette.ink,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.55,
-          ),
-          titleLarge: baseTheme.textTheme.titleLarge?.copyWith(
-            color: DashboardShellPalette.ink,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.25,
-          ),
-          titleMedium: baseTheme.textTheme.titleMedium?.copyWith(
-            color: DashboardShellPalette.ink,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.12,
-          ),
-          titleSmall: baseTheme.textTheme.titleSmall?.copyWith(
-            color: DashboardShellPalette.ink,
-            fontWeight: FontWeight.w700,
-          ),
-          bodyLarge: baseTheme.textTheme.bodyLarge?.copyWith(
-            color: DashboardShellPalette.ink,
-            height: 1.4,
-          ),
-          bodyMedium: baseTheme.textTheme.bodyMedium?.copyWith(
-            color: DashboardShellPalette.ink,
-            height: 1.38,
-          ),
-          bodySmall: baseTheme.textTheme.bodySmall?.copyWith(
+          displayLarge: displayStyle,
+          displayMedium: headingStyle,
+          displaySmall: headingStyle,
+          headlineLarge: headingStyle,
+          headlineMedium: subheadingStyle,
+          headlineSmall: headingStyle,
+          titleLarge: headingStyle,
+          titleMedium: subheadingStyle,
+          titleSmall: subheadingStyle,
+          bodyLarge: bodyStyle,
+          bodyMedium: bodyStyle,
+          bodySmall: captionStyle,
+          labelLarge: labelStyle,
+          labelMedium: labelStyle.copyWith(
             color: DashboardShellPalette.mutedInk,
-            height: 1.34,
           ),
-          labelLarge: baseTheme.textTheme.labelLarge?.copyWith(
-            color: DashboardShellPalette.ink,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.18,
-          ),
-          labelMedium: baseTheme.textTheme.labelMedium?.copyWith(
-            color: DashboardShellPalette.mutedInk,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.18,
-          ),
-          labelSmall: baseTheme.textTheme.labelSmall?.copyWith(
-            color: DashboardShellPalette.mutedInk,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.18,
+          labelSmall: captionStyle.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.14,
           ),
         ),
+        extensions: const <ThemeExtension<dynamic>>[
+          typeScale,
+        ],
       ),
       home: DashboardShell(
         runtimeUseCase:
@@ -304,6 +377,7 @@ class SubKillerApp extends StatelessWidget {
         handleLocalServicePresentationUseCase:
             _handleLocalServicePresentationUseCase ??
                 HandleLocalServicePresentationUseCase.persistent(),
+        problemReportLauncher: _problemReportLauncher,
       ),
     );
   }

@@ -10,4 +10,9 @@ class InMemorySmsOnboardingProgressStore implements SmsOnboardingProgressStore {
   Future<void> writeCompleted(bool completed) async {
     _completed = completed;
   }
+
+  @override
+  Future<void> clear() async {
+    _completed = false;
+  }
 }

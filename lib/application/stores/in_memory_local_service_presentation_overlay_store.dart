@@ -22,4 +22,9 @@ class InMemoryLocalServicePresentationOverlayStore
   Future<bool> remove(String serviceKey) async {
     return _overlaysByServiceKey.remove(serviceKey) != null;
   }
+
+  @override
+  Future<void> clear() async {
+    _overlaysByServiceKey.clear();
+  }
 }

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'service_icon_registry.dart';
 
-const Duration _dashboardMotionDuration = Duration(milliseconds: 180);
-const Duration _dashboardEntranceDuration = Duration(milliseconds: 220);
+const Duration dashboardMotionDuration = Duration(milliseconds: 180);
+const Duration dashboardEntranceDuration = Duration(milliseconds: 220);
 
 class DashboardShellPalette {
   static const Color canvas = Color(0xFF120E0C);
@@ -12,9 +12,13 @@ class DashboardShellPalette {
   static const Color nestedPaper = Color(0xFF2A211D);
   static const Color registerPaper = Color(0xFF1C1512);
   static const Color ink = Color(0xFFF7ECDD);
-  static const Color mutedInk = Color(0xFFC9BBAE);
+  static const Color mutedInk = Color(0xFFC8BFB2);
   static const Color accent = Color(0xFFE1A55A);
   static const Color accentSoft = Color(0xFF3A281B);
+  static const Color statusBlue = Color(0xFF6295E2);
+  static const Color statusBlueSoft = Color(0xFF1B2738);
+  static const Color benefitGold = Color(0xFFC89B40);
+  static const Color benefitGoldSoft = Color(0xFF342714);
   static const Color success = Color(0xFF7AB49D);
   static const Color successSoft = Color(0xFF1A2722);
   static const Color caution = Color(0xFFD88C4B);
@@ -24,6 +28,73 @@ class DashboardShellPalette {
   static const Color outline = Color(0xFF3A2F2A);
   static const Color outlineStrong = Color(0xFF51423A);
   static const Color shadow = Color(0x66060302);
+}
+
+@immutable
+class DashboardTypeScale extends ThemeExtension<DashboardTypeScale> {
+  const DashboardTypeScale({
+    required this.display,
+    required this.heading,
+    required this.subheading,
+    required this.body,
+    required this.caption,
+    required this.label,
+    required this.button,
+  });
+
+  final TextStyle display;
+  final TextStyle heading;
+  final TextStyle subheading;
+  final TextStyle body;
+  final TextStyle caption;
+  final TextStyle label;
+  final TextStyle button;
+
+  @override
+  DashboardTypeScale copyWith({
+    TextStyle? display,
+    TextStyle? heading,
+    TextStyle? subheading,
+    TextStyle? body,
+    TextStyle? caption,
+    TextStyle? label,
+    TextStyle? button,
+  }) {
+    return DashboardTypeScale(
+      display: display ?? this.display,
+      heading: heading ?? this.heading,
+      subheading: subheading ?? this.subheading,
+      body: body ?? this.body,
+      caption: caption ?? this.caption,
+      label: label ?? this.label,
+      button: button ?? this.button,
+    );
+  }
+
+  @override
+  DashboardTypeScale lerp(
+    covariant ThemeExtension<DashboardTypeScale>? other,
+    double t,
+  ) {
+    if (other is! DashboardTypeScale) {
+      return this;
+    }
+
+    return DashboardTypeScale(
+      display: TextStyle.lerp(display, other.display, t) ?? display,
+      heading: TextStyle.lerp(heading, other.heading, t) ?? heading,
+      subheading: TextStyle.lerp(subheading, other.subheading, t) ?? subheading,
+      body: TextStyle.lerp(body, other.body, t) ?? body,
+      caption: TextStyle.lerp(caption, other.caption, t) ?? caption,
+      label: TextStyle.lerp(label, other.label, t) ?? label,
+      button: TextStyle.lerp(button, other.button, t) ?? button,
+    );
+  }
+}
+
+extension DashboardTypeScaleContext on BuildContext {
+  DashboardTypeScale get dashboardType =>
+      Theme.of(this).extension<DashboardTypeScale>()!;
 }
 
 class DashboardBackdrop extends StatelessWidget {
@@ -102,9 +173,9 @@ class DashboardPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = _shouldReduceMotion(context);
+    final reduceMotion = shouldReduceMotion(context);
     return AnimatedContainer(
-      duration: reduceMotion ? Duration.zero : _dashboardMotionDuration,
+      duration: reduceMotion ? Duration.zero : dashboardMotionDuration,
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         color: gradient == null
@@ -138,8 +209,8 @@ class DashboardBadge extends StatelessWidget {
     super.key,
     required this.label,
     this.icon,
-    this.backgroundColor = DashboardShellPalette.elevatedPaper,
-    this.foregroundColor = DashboardShellPalette.ink,
+    this.backgroundColor = DashboardShellPalette.statusBlueSoft,
+    this.foregroundColor = DashboardShellPalette.statusBlue,
   });
 
   final String label;
@@ -149,11 +220,12 @@ class DashboardBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final type = context.dashboardType;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: foregroundColor.withValues(alpha: 0.12),
         ),
@@ -167,7 +239,7 @@ class DashboardBadge extends StatelessWidget {
             Icon(icon, size: 13, color: foregroundColor),
           Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            style: type.label.copyWith(
                   color: foregroundColor,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.12,
@@ -201,6 +273,7 @@ class DashboardServiceAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final type = context.dashboardType;
     final brandEntry =
         serviceKey == null ? null : ServiceIconRegistry.lookup(serviceKey!);
 
@@ -259,7 +332,7 @@ class DashboardServiceAvatar extends StatelessWidget {
             Center(
               child: Text(
                 effectiveMonogram,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: type.subheading.copyWith(
                       color: effectiveForeground,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.35,
@@ -291,13 +364,14 @@ class DashboardSectionFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = _shouldReduceMotion(context);
+    final type = context.dashboardType;
+    final reduceMotion = shouldReduceMotion(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0.0, end: 1.0),
-          duration: reduceMotion ? Duration.zero : _dashboardEntranceDuration,
+          duration: reduceMotion ? Duration.zero : dashboardEntranceDuration,
           curve: Curves.easeOutCubic,
           builder: (context, value, child) {
             return Opacity(
@@ -318,31 +392,31 @@ class DashboardSectionFrame extends StatelessWidget {
                     if (eyebrow != null) ...<Widget>[
                       Text(
                         eyebrow!,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              letterSpacing: 0.8,
+                        style: type.label.copyWith(
+                              letterSpacing: 0.42,
                               color: DashboardShellPalette.mutedInk,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
-                      const SizedBox(height: 1),
+                      const SizedBox(height: 4),
                     ],
                     Semantics(
                       header: true,
                       child: Text(
                         title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: type.subheading.copyWith(
                               fontWeight: FontWeight.w800,
                               color: DashboardShellPalette.ink,
                             ),
                       ),
                     ),
                     if (caption != null) ...<Widget>[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
                         caption!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: type.caption.copyWith(
                               color: DashboardShellPalette.mutedInk,
-                              height: 1.24,
+                              height: 1.28,
                             ),
                       ),
                     ],
@@ -351,11 +425,11 @@ class DashboardSectionFrame extends StatelessWidget {
               ),
               if (countLabel != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.only(top: 3),
                   child: AnimatedSwitcher(
                     duration: reduceMotion
                         ? Duration.zero
-                        : _dashboardMotionDuration,
+                        : dashboardMotionDuration,
                     switchInCurve: Curves.easeOutCubic,
                     switchOutCurve: Curves.easeOutCubic,
                     transitionBuilder: (child, animation) => FadeTransition(
@@ -365,7 +439,7 @@ class DashboardSectionFrame extends StatelessWidget {
                     child: Text(
                       countLabel!,
                       key: ValueKey<String>(countLabel!),
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      style: type.label.copyWith(
                             color: DashboardShellPalette.mutedInk,
                             fontWeight: FontWeight.w700,
                           ),
@@ -375,7 +449,7 @@ class DashboardSectionFrame extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         ...children,
       ],
     );
@@ -400,7 +474,8 @@ class DashboardRegisterEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = _shouldReduceMotion(context);
+    final type = context.dashboardType;
+    final reduceMotion = shouldReduceMotion(context);
     return SizedBox(
       width: 122,
       child: DashboardPanel(
@@ -427,9 +502,9 @@ class DashboardRegisterEntry extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    style: type.label.copyWith(
                           color: accent,
-                          letterSpacing: 1.08,
+                          letterSpacing: 0.38,
                           fontWeight: FontWeight.w800,
                         ),
                   ),
@@ -439,7 +514,7 @@ class DashboardRegisterEntry extends StatelessWidget {
             const SizedBox(height: 8),
             AnimatedSwitcher(
               duration:
-                  reduceMotion ? Duration.zero : _dashboardMotionDuration,
+                  reduceMotion ? Duration.zero : dashboardMotionDuration,
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeOutCubic,
               transitionBuilder: (child, animation) {
@@ -458,17 +533,16 @@ class DashboardRegisterEntry extends StatelessWidget {
               child: Text(
                 value,
                 key: ValueKey<String>('register-value-$label-$value'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                style: type.heading.copyWith(
                       color: DashboardShellPalette.ink,
                       fontWeight: FontWeight.w800,
-                      height: 1,
                     ),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               caption,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: type.caption.copyWith(
                     color: DashboardShellPalette.mutedInk,
                     height: 1.28,
                   ),
@@ -494,10 +568,11 @@ class DashboardEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = _shouldReduceMotion(context);
+    final type = context.dashboardType;
+    final reduceMotion = shouldReduceMotion(context);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: reduceMotion ? Duration.zero : _dashboardEntranceDuration,
+      duration: reduceMotion ? Duration.zero : dashboardEntranceDuration,
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         return Opacity(
@@ -509,37 +584,41 @@ class DashboardEmptyState extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.fromLTRB(2, 2, 2, 2),
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Container(
-              width: 22,
-              height: 22,
+              width: 24,
+              height: 24,
               decoration: BoxDecoration(
                 color: DashboardShellPalette.paper.withValues(alpha: 0.75),
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: DashboardShellPalette.accent, size: 12),
+              child: Icon(
+                icon,
+                color: DashboardShellPalette.statusBlue,
+                size: 13,
+              ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    style: type.body.copyWith(
                           color: DashboardShellPalette.ink,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
-                  const SizedBox(height: 1),
+                  const SizedBox(height: 3),
                   Text(
                     message,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    style: type.caption.copyWith(
                           color: DashboardShellPalette.mutedInk,
-                          height: 1.16,
+                          height: 1.28,
                         ),
                   ),
                 ],
@@ -552,7 +631,7 @@ class DashboardEmptyState extends StatelessWidget {
   }
 }
 
-bool _shouldReduceMotion(BuildContext context) {
+bool shouldReduceMotion(BuildContext context) {
   final mediaQuery = MediaQuery.maybeOf(context);
   if (mediaQuery == null) {
     return false;

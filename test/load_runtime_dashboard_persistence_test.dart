@@ -387,14 +387,14 @@ void main() {
               serviceKey: ServiceKey('NETFLIX'),
               bucket: DashboardBucket.confirmedSubscriptions,
               title: 'Netflix',
-              subtitle: 'Confirmed paid subscription - Rs 499',
+              subtitle: 'Confirmed paid subscription - \u20B9499',
               state: ResolverState.activePaid,
             ),
             DashboardCard(
               serviceKey: ServiceKey('YOUTUBE_PREMIUM'),
               bucket: DashboardBucket.confirmedSubscriptions,
               title: 'YouTube Premium',
-              subtitle: 'Confirmed paid subscription - Rs 129',
+              subtitle: 'Confirmed paid subscription - \u20B9129',
               state: ResolverState.activePaid,
             ),
           ],
@@ -505,7 +505,7 @@ void main() {
               serviceKey: const ServiceKey('NETFLIX'),
               bucket: DashboardBucket.confirmedSubscriptions,
               title: 'Netflix',
-              subtitle: 'Confirmed paid subscription - Rs 499',
+              subtitle: 'Confirmed paid subscription - \u20B9499',
               state: ResolverState.activePaid,
             ),
             decidedAt: DateTime(2026, 3, 14, 10, 0),
@@ -560,3 +560,6 @@ class _CountingDeviceSmsGateway implements DeviceSmsGateway {
     return messages;
   }
 }
+
+
+
