@@ -18,6 +18,14 @@ class DashboardSheetCloseButton extends StatelessWidget {
         tooltip: 'Close',
         padding: EdgeInsets.zero,
         splashRadius: 24,
+        style: IconButton.styleFrom(
+          backgroundColor: DashboardShellPalette.nestedPaper,
+          foregroundColor: DashboardShellPalette.softInk,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
+            side: const BorderSide(color: DashboardShellPalette.outline),
+          ),
+        ),
         onPressed: onPressed,
         icon: const Icon(Icons.close_rounded),
       ),
@@ -34,10 +42,10 @@ class DashboardSheetHandle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       child: Container(
-        width: 42,
-        height: 4,
+        width: 46,
+        height: 5,
         decoration: BoxDecoration(
-          color: DashboardShellPalette.mutedInk.withValues(alpha: 0.45),
+          color: DashboardShellPalette.outlineStrong,
           borderRadius: BorderRadius.circular(999),
         ),
       ),
@@ -59,38 +67,39 @@ class DashboardTrustSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = context.dashboardType;
     return DashboardPanel(
-      backgroundColor: DashboardShellPalette.elevatedPaper,
-      borderColor: DashboardShellPalette.outline,
-      radius: 20,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      backgroundColor: DashboardShellPalette.paper,
+      borderColor: DashboardShellPalette.outlineStrong,
+      radius: DashboardRadii.card,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            title,
-            style: type.body.copyWith(fontWeight: FontWeight.w700),
+          DashboardBadge(
+            label: title,
+            backgroundColor: DashboardShellPalette.nestedPaper,
+            foregroundColor: DashboardShellPalette.softInk,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: DashboardSpacing.small),
           ...items.map(
             (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: DashboardSpacing.xSmall),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   const Padding(
                     padding: EdgeInsets.only(top: 3),
                     child: Icon(
-                      Icons.check_circle_outline_rounded,
+                      Icons.shield_outlined,
                       size: 16,
-                      color: DashboardShellPalette.statusBlue,
+                      color: DashboardShellPalette.accent,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       item,
-                      style: type.caption.copyWith(
-                            color: DashboardShellPalette.ink,
+                      style: type.supporting.copyWith(
+                            color: DashboardShellPalette.softInk,
                             height: 1.28,
                           ),
                     ),
@@ -125,13 +134,13 @@ class DashboardDetailSheet extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 24, 12, 12),
+        padding: const EdgeInsets.fromLTRB(14, 18, 14, 12),
         child: DashboardPanel(
           key: sheetKey,
           backgroundColor: DashboardShellPalette.paper,
           borderColor: DashboardShellPalette.outlineStrong,
-          radius: 28,
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          radius: DashboardRadii.sheet,
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,6 +148,13 @@ class DashboardDetailSheet extends StatelessWidget {
               children: <Widget>[
                 const DashboardSheetHandle(),
                 const SizedBox(height: 10),
+                const DashboardBadge(
+                  label: 'Trust details',
+                  icon: Icons.lock_outline_rounded,
+                  backgroundColor: DashboardShellPalette.nestedPaper,
+                  foregroundColor: DashboardShellPalette.softInk,
+                ),
+                const SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -148,12 +164,12 @@ class DashboardDetailSheet extends StatelessWidget {
                         children: <Widget>[
                           Text(
                             title,
-                            style: type.heading,
+                            style: type.screenTitle.copyWith(fontSize: 24),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             subtitle,
-                            style: type.caption.copyWith(
+                            style: type.supporting.copyWith(
                               color: DashboardShellPalette.mutedInk,
                             ),
                           ),

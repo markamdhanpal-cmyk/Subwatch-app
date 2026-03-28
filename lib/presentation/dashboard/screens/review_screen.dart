@@ -26,30 +26,33 @@ Widget _buildDashboardReviewScreen({
   required _DashboardShellState shell,
   required RuntimeDashboardSnapshot data,
 }) {
-  final isEmpty = data.reviewQueue.isEmpty;
+  final reviewRows = shell._buildReviewRows(
+    data.reviewQueue,
+    emptyTitle: 'Nothing to review right now',
+    emptyMessage: '',
+  );
+  final reviewCount = data.reviewQueue.length;
 
   return ListView(
     key: const ValueKey<String>('destination-review-surface'),
-    padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-
-    children: <Widget>[
-      _ReviewQueueSummaryCard(
-        reviewCount: data.reviewQueue.length,
-      ),
-      const SizedBox(height: 12),
-      if (!isEmpty)
-        _DashboardSection(
-          key: const ValueKey<String>('section-reviewQueue'),
-          title: 'Items for your review',
-          countLabel: shell._reviewItemCountLabel(data.reviewQueue.length),
-          caption: 'Decide these now. Undo later if needed.',
-          children: shell._buildReviewRows(
-            data.reviewQueue,
-            emptyTitle: 'Nothing to review right now',
-            emptyMessage: 'New uncertain items show up here.',
-          ),
-        ),
-
-    ],
+    padding: DashboardSpacing.secondaryScreenInset,
+    children: reviewCount == 0
+        ? <Widget>[
+            const _ReviewDecisionDeskHeader(reviewCount: 0),
+            const SizedBox(height: DashboardSpacing.screenBlockGap),
+            const _ReviewDeskEmptyState(),
+          ]
+        : <Widget>[
+            _ReviewDecisionDeskHeader(reviewCount: reviewCount),
+            const SizedBox(height: DashboardSpacing.screenBlockGap),
+            _DashboardSection(
+              key: const ValueKey<String>('section-reviewQueue'),
+              title: 'Needs your review',
+              countLabel: reviewCount == 1 ? '1 item' : '$reviewCount items',
+              caption:
+                  'Kept separate so your confirmed list stays careful until you decide.',
+              children: reviewRows,
+            ),
+          ],
   );
 }

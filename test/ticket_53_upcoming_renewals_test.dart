@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/build_dashboard_upcoming_renewals_use_case.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
@@ -117,7 +117,7 @@ void main() {
   testWidgets('dashboard shows honest empty upcoming renewals state', (
     tester,
   ) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 14, 9, 0),

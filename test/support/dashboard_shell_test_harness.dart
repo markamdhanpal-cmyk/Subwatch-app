@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_primitives.dart';
+import 'package:sub_killer/app/subscription_killer_app.dart';
 import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
 import 'package:sub_killer/application/contracts/ledger_snapshot_store.dart';
 import 'package:sub_killer/application/contracts/local_message_source_capability_provider.dart';
@@ -18,18 +22,30 @@ import 'package:sub_killer/application/stores/in_memory_sms_onboarding_progress_
 import 'package:sub_killer/application/stores/in_memory_local_renewal_reminder_store.dart';
 import 'package:sub_killer/application/use_cases/handle_local_control_overlay_use_case.dart';
 import 'package:sub_killer/application/use_cases/handle_local_renewal_reminder_use_case.dart';
-import 'package:sub_killer/application/use_cases/handle_local_service_presentation_use_case.dart';
-import 'package:sub_killer/application/use_cases/handle_manual_subscription_use_case.dart';
-import 'package:sub_killer/application/use_cases/handle_review_item_action_use_case.dart';
-import 'package:sub_killer/application/use_cases/load_sms_onboarding_progress_use_case.dart';
-import 'package:sub_killer/application/use_cases/complete_sms_onboarding_use_case.dart';
-import 'package:sub_killer/application/repositories/in_memory_ledger_repository.dart';
-import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
-import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
+import 'package:sub_killer/application/contracts/local_manual_subscription_store.dart';
+import 'package:sub_killer/application/contracts/local_renewal_reminder_store.dart';
+import 'package:sub_killer/application/contracts/review_action_store.dart';
+import 'package:sub_killer/application/contracts/local_control_overlay_store.dart';
+import 'package:sub_killer/application/contracts/local_service_presentation_overlay_store.dart';
 import 'package:sub_killer/application/use_cases/undo_local_control_overlay_use_case.dart';
 import 'package:sub_killer/application/use_cases/undo_review_item_action_use_case.dart';
 import 'package:sub_killer/domain/entities/service_ledger_entry.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_shell.dart';
+import 'package:sub_killer/presentation/dashboard/dashboard_shell_providers.dart';
+import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
+import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
+import 'package:sub_killer/application/use_cases/handle_review_item_action_use_case.dart';
+import 'package:sub_killer/application/use_cases/handle_manual_subscription_use_case.dart';
+import 'package:sub_killer/application/use_cases/handle_local_service_presentation_use_case.dart';
+import 'package:sub_killer/application/use_cases/load_sms_onboarding_progress_use_case.dart';
+import 'package:sub_killer/application/use_cases/complete_sms_onboarding_use_case.dart';
+import 'package:sub_killer/application/providers/stub_local_message_source_capability_provider.dart';
+import 'package:sub_killer/application/models/local_message_source_platform_binding.dart';
+import 'package:sub_killer/application/models/local_message_source_access_state.dart';
+import 'package:sub_killer/application/repositories/in_memory_ledger_repository.dart';
+import 'package:sub_killer/application/use_cases/request_device_sms_access_use_case.dart';
+import 'package:sub_killer/application/contracts/problem_report_launcher.dart';
+import 'package:sub_killer/domain/contracts/ledger_repository.dart';
 
 class MutableCapabilityProvider
     implements LocalMessageSourceCapabilityProvider {
@@ -44,14 +60,17 @@ class MutableCapabilityProvider
   LocalMessageSourceAccessState _state;
   int requestCount = 0;
 
+  Completer<LocalMessageSourceAccessRequestResult>? delayRequest;
+
   @override
   Future<LocalMessageSourceAccessState> getAccessState() async => _state;
 
   @override
   Future<LocalMessageSourceAccessRequestResult> requestAccess() async {
     requestCount += 1;
+    final result = await (delayRequest?.future ?? Future.value(requestResult));
     _state = refreshedState;
-    return requestResult;
+    return result;
   }
 }
 
@@ -119,11 +138,14 @@ class DashboardShellReviewHarness {
     required this.handleLocalServicePresentationUseCase,
     required this.handleManualSubscriptionUseCase,
     required this.handleLocalRenewalReminderUseCase,
+    required this.loadSmsOnboardingProgressUseCase,
+    required this.completeSmsOnboardingUseCase,
     required this.localManualSubscriptionStore,
     required this.localRenewalReminderStore,
     required this.reviewActionStore,
     required this.localControlOverlayStore,
     required this.localServicePresentationOverlayStore,
+    required this.onboardingStore,
   });
 
   factory DashboardShellReviewHarness({
@@ -137,6 +159,8 @@ class DashboardShellReviewHarness {
         InMemoryLocalServicePresentationOverlayStore();
     final localRenewalReminderStore = InMemoryLocalRenewalReminderStore();
     final ledgerRepository = InMemoryLedgerRepository();
+    final onboardingStore = InMemorySmsOnboardingProgressStore()
+      ..writeCompleted(true);
 
     final runtimeUseCase = LoadRuntimeDashboardUseCase(
       ledgerRepository: ledgerRepository,
@@ -147,6 +171,10 @@ class DashboardShellReviewHarness {
       localServicePresentationOverlayStore:
           localServicePresentationOverlayStore,
       deviceSmsGateway: deviceSmsGateway,
+      unavailableDeviceSmsGateway: deviceSmsGateway,
+      capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+        accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+      ),
       clock: clock,
     );
 
@@ -180,14 +208,23 @@ class DashboardShellReviewHarness {
       ),
       handleLocalRenewalReminderUseCase: HandleLocalRenewalReminderUseCase(
         localRenewalReminderStore: localRenewalReminderStore,
-        localRenewalReminderScheduler: const NoOpLocalRenewalReminderScheduler(),
+        localRenewalReminderScheduler:
+            const NoOpLocalRenewalReminderScheduler(),
         loadRuntimeDashboard: () => runtimeUseCase.execute(),
+      ),
+      loadSmsOnboardingProgressUseCase: LoadSmsOnboardingProgressUseCase(
+        store: onboardingStore,
+      ),
+      completeSmsOnboardingUseCase: CompleteSmsOnboardingUseCase(
+        store: onboardingStore,
       ),
       localManualSubscriptionStore: localManualSubscriptionStore,
       localRenewalReminderStore: localRenewalReminderStore,
       reviewActionStore: reviewActionStore,
       localControlOverlayStore: localControlOverlayStore,
-      localServicePresentationOverlayStore: localServicePresentationOverlayStore,
+      localServicePresentationOverlayStore:
+          localServicePresentationOverlayStore,
+      onboardingStore: onboardingStore,
     );
   }
 
@@ -200,16 +237,22 @@ class DashboardShellReviewHarness {
       handleLocalServicePresentationUseCase;
   final HandleManualSubscriptionUseCase handleManualSubscriptionUseCase;
   final HandleLocalRenewalReminderUseCase handleLocalRenewalReminderUseCase;
-  final InMemoryLocalManualSubscriptionStore localManualSubscriptionStore;
-  final InMemoryLocalRenewalReminderStore localRenewalReminderStore;
-  final InMemoryReviewActionStore reviewActionStore;
-  final InMemoryLocalControlOverlayStore localControlOverlayStore;
-  final InMemoryLocalServicePresentationOverlayStore
+  final LoadSmsOnboardingProgressUseCase loadSmsOnboardingProgressUseCase;
+  final CompleteSmsOnboardingUseCase completeSmsOnboardingUseCase;
+
+  final LocalManualSubscriptionStore localManualSubscriptionStore;
+  final LocalRenewalReminderStore localRenewalReminderStore;
+  final ReviewActionStore reviewActionStore;
+  final LocalControlOverlayStore localControlOverlayStore;
+  final LocalServicePresentationOverlayStore
       localServicePresentationOverlayStore;
+  final InMemorySmsOnboardingProgressStore onboardingStore;
 }
 
-Future<void> pumpDashboardShellApp(
+Future<void> pumpConstrainedDashboardShell(
   WidgetTester tester, {
+  double textScale = 1.0,
+  bool skipGate = true,
   LoadRuntimeDashboardUseCase? runtimeUseCase,
   SyncDeviceSmsUseCase? syncDeviceSmsUseCase,
   HandleReviewItemActionUseCase? handleReviewItemActionUseCase,
@@ -222,168 +265,235 @@ Future<void> pumpDashboardShellApp(
   LoadSmsOnboardingProgressUseCase? loadSmsOnboardingProgressUseCase,
   CompleteSmsOnboardingUseCase? completeSmsOnboardingUseCase,
 }) async {
-  final baseTheme = ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.dark,
-    fontFamily: 'Figtree',
-  );
-  const typeScale = DashboardTypeScale(
-    display: TextStyle(fontSize: 40),
-    heading: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-    subheading: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-    body: TextStyle(fontSize: 16),
-    caption: TextStyle(fontSize: 13),
-    label: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-    button: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-  );
+  final fallbackStore = InMemorySmsOnboardingProgressStore()
+    ..writeCompleted(true);
+  final actualLoadSmsOnboarding = loadSmsOnboardingProgressUseCase ??
+      LoadSmsOnboardingProgressUseCase(store: fallbackStore);
+  final actualCompleteSmsOnboarding = completeSmsOnboardingUseCase ??
+      CompleteSmsOnboardingUseCase(store: fallbackStore);
+  // Increase surface size to ensure bottom navigation is hit-testable.
+  await tester.binding.setSurfaceSize(const Size(800, 1000));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
 
   await tester.pumpWidget(
-    MaterialApp(
-      theme: baseTheme.copyWith(
-        extensions: [typeScale],
-      ),
-      home: DashboardShell(
-        runtimeUseCase: runtimeUseCase,
-        syncDeviceSmsUseCase: syncDeviceSmsUseCase,
-        handleReviewItemActionUseCase: handleReviewItemActionUseCase,
-        undoReviewItemActionUseCase: undoReviewItemActionUseCase,
-        handleLocalControlOverlayUseCase: handleLocalControlOverlayUseCase,
-        undoLocalControlOverlayUseCase: undoLocalControlOverlayUseCase,
-        handleLocalRenewalReminderUseCase: handleLocalRenewalReminderUseCase,
-        handleManualSubscriptionUseCase: handleManualSubscriptionUseCase,
-        handleLocalServicePresentationUseCase:
-            handleLocalServicePresentationUseCase,
-        loadSmsOnboardingProgressUseCase: loadSmsOnboardingProgressUseCase,
-        completeSmsOnboardingUseCase: completeSmsOnboardingUseCase,
-      ),
+    SubKillerApp(
+      runtimeUseCase: runtimeUseCase,
+      syncDeviceSmsUseCase: syncDeviceSmsUseCase,
+      handleReviewItemActionUseCase: handleReviewItemActionUseCase,
+      undoReviewItemActionUseCase: undoReviewItemActionUseCase,
+      handleLocalControlOverlayUseCase: handleLocalControlOverlayUseCase,
+      undoLocalControlOverlayUseCase: undoLocalControlOverlayUseCase,
+      handleLocalRenewalReminderUseCase: handleLocalRenewalReminderUseCase,
+      handleManualSubscriptionUseCase: handleManualSubscriptionUseCase,
+      handleLocalServicePresentationUseCase:
+          handleLocalServicePresentationUseCase,
+      loadSmsOnboardingProgressUseCase: actualLoadSmsOnboarding,
+      completeSmsOnboardingUseCase: actualCompleteSmsOnboarding,
+      textScaler: TextScaler.linear(textScale),
     ),
   );
-  await pumpDashboardShellLoad(tester);
+  await pumpDashboardShellLoad(tester, skipGate: skipGate);
 }
 
-Future<void> pumpDashboardShellLoad(WidgetTester tester) async {
-  await tester.pumpAndSettle();
+Future<void> pumpDashboardShellLoad(
+  WidgetTester tester, {
+  bool skipGate = true,
+}) async {
+  // 1. Wait for FirstRunController.initialize() and snapshot loading to finish.
+  // We pump in a loop because pumpAndSettle might return pre-emptively if
+  // animations are disabled or if the future isn't tracked by the microtask queue.
+  int retries = 0;
+  while (retries < 50) {
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Check if we've reached a stable state (either gate or home)
+    final getStartedFinder =
+        find.byKey(const ValueKey<String>('first-run-get-started-button'));
+    final isGate = getStartedFinder.evaluate().isNotEmpty;
+
+    final isHome = find
+        .byKey(const ValueKey<String>('totals-summary-card'))
+        .evaluate()
+        .isNotEmpty;
+    final isScanning =
+        find.text('Looking for subscriptions').evaluate().isNotEmpty;
+    final isSnapshotLoading =
+        find.text('Preparing your view...').evaluate().isNotEmpty;
+
+    final container = findProviderContainer(tester);
+    final phase = container.read(dashboardFirstRunProvider).phase;
+    final isDenied = phase == FirstRunPhase.denied;
+    final isPermanentlyDenied = phase == FirstRunPhase.permanentlyDenied;
+    final isFirstResult = phase == FirstRunPhase.firstResult;
+
+    final isSyncing = container.read(dashboardSyncStateProvider).isSyncing;
+    debugPrint(
+        'pumpDashboardShellLoad [it=$retries]: phase=$phase isSyncing=$isSyncing isGate=$isGate isHome=$isHome isScanning=$isScanning isSnapshotLoading=$isSnapshotLoading');
+
+    if (isGate && skipGate && !isSyncing) {
+      debugPrint('pumpDashboardShellLoad: Clicking Get Started gate...');
+      await tester.tap(getStartedFinder);
+      await tester.pump();
+
+      final rationalePrimaryActionFinder = find.byKey(
+        const ValueKey<String>('sms-permission-rationale-primary-action'),
+      );
+      if (rationalePrimaryActionFinder.evaluate().isNotEmpty) {
+        debugPrint(
+            'pumpDashboardShellLoad: Clicking Rationale primary action...');
+        await tester.tap(rationalePrimaryActionFinder);
+        await tester.pump();
+      }
+    }
+
+    if (isFirstResult && skipGate && !isSyncing) {
+      debugPrint('pumpDashboardShellLoad: Clicking First Result done...');
+      final doneFinder =
+          find.byKey(const ValueKey<String>('first-run-done-button'));
+      await tester.dragUntilVisible(
+        doneFinder,
+        find.byType(SingleChildScrollView),
+        const Offset(0, -300),
+      );
+      await tapAndPumpDashboardShell(tester, doneFinder);
+    }
+
+    final canBreak = isHome ||
+        isDenied ||
+        isPermanentlyDenied ||
+        (isScanning && !skipGate) ||
+        (isFirstResult && !skipGate);
+    if (canBreak && !isSnapshotLoading) {
+      debugPrint(
+          'pumpDashboardShellLoad: Breaking on phase=$phase (isHome=$isHome, isDenied=$isDenied, isPermanentlyDenied=$isPermanentlyDenied, isScanning=$isScanning, isFirstResult=$isFirstResult)');
+      break;
+    }
+    retries++;
+  }
+
+  // Final settle
+  await settleDashboard(tester);
+}
+
+/// Bounded settle: pumps frames until no more frames are scheduled, or up to
+/// [maxIterations] × 50 ms.  Avoids the infinite hang that bare
+/// `pumpAndSettle` causes when internal Flutter widgets keep animating.
+Future<void> settleDashboard(WidgetTester tester,
+    {int maxIterations = 10}) async {
+  for (int i = 0; i < maxIterations; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  final scrollables = find.byType(Scrollable).evaluate().length;
+  debugPrint('settleDashboard: finished. Found $scrollables Scrollables.');
+}
+
+ProviderContainer findProviderContainer(WidgetTester tester) {
+  for (final element in tester.allElements) {
+    if (element is StatefulElement && element.widget is ProviderScope) {
+      return (element.state as dynamic).container as ProviderContainer;
+    }
+  }
+  throw StateError('No ProviderScope found in the entire element tree.');
 }
 
 Future<void> pumpDashboardShellUi(WidgetTester tester) async {
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 250));
+  debugPrint('pumpDashboardShellUi: Waiting for UI to settle...');
+  await settleDashboard(tester);
+  final container = findProviderContainer(tester);
+  while (container.read(dashboardShellLoadStateProvider).showLoading) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  await settleDashboard(tester);
+}
+
+Future<void> pumpDashboardUntilSyncIdle(WidgetTester tester) async {
+  debugPrint('pumpDashboardUntilSyncIdle: Waiting for sync to complete...');
+  await settleDashboard(tester);
+  final container = findProviderContainer(tester);
+  while (container.read(dashboardSyncStateProvider).isSyncing) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  await settleDashboard(tester);
+}
+
+Future<void> openDashboardDestination(
+    WidgetTester tester, String destination) async {
+  final label = switch (destination) {
+    'home' => 'Home',
+    'subscriptions' => 'Subscriptions',
+    'review' => 'Review',
+    'settings' => 'Settings',
+    _ => destination,
+  };
+
+  final keyFinder = find.byKey(ValueKey<String>("destination-$destination"));
+  final textFinder = find.descendant(
+    of: find.byType(NavigationBar),
+    matching: find.text(label),
+  );
+
+  if (keyFinder.evaluate().isNotEmpty) {
+    await tester.tap(keyFinder, warnIfMissed: false);
+  } else if (textFinder.evaluate().isNotEmpty) {
+    await tester.tap(textFinder, warnIfMissed: false);
+  }
+
+  await settleDashboard(tester);
 }
 
 Future<void> tapAndPumpDashboardShell(
-  WidgetTester tester,
-  Finder finder,
-) async {
-  debugPrint('Tapping: ${finder.description}');
-  // Ensure it's in the viewport if it's in a scrollable.
-  try {
-    await tester.ensureVisible(finder);
-  } catch (_) {}
-
-  try {
-    // Standard tap with hit testing.
-    await tester.tap(finder);
-  } catch (e) {
-    debugPrint('Hit testing failed for ${finder.description}, trying fallback tap.');
-    // Fallback: tap the center directly, bypassing hit-test verification.
-    final center = tester.getCenter(finder);
-    await tester.tapAt(center);
+    WidgetTester tester, Finder finder) async {
+  final element = finder.evaluate();
+  if (element.isEmpty) {
+    debugPrint(
+        'Warning: tapAndPumpDashboardShell called for missing finder: $finder');
+    return;
   }
-  await tester.pumpAndSettle();
+  debugPrint('Tapping: $finder');
+  await tester.ensureVisible(finder.first);
+  await tester.tap(finder.first, warnIfMissed: false);
+  await settleDashboard(tester);
 }
-
-
-
-
 
 Future<void> scrollDashboardUntilVisible(
   WidgetTester tester,
-  Finder finder,
-) async {
-  // 1. Try ensureVisible first (fastest if already in tree and potentially visible)
-  try {
-    await tester.ensureVisible(finder);
-    await tester.pumpAndSettle();
-    if (tester.any(finder.hitTestable())) {
-      return;
-    }
-  } catch (_) {
-    // Expected to fail if off-screen in a scrollable
+  Finder finder, {
+  double delta = 100.0,
+}) async {
+  await settleDashboard(tester);
+  final scrollableFinder = find.byType(Scrollable);
+  final allScrollables = scrollableFinder.evaluate();
+  debugPrint('SCROLL: found ${allScrollables.length} scrollables');
+
+  if (allScrollables.isEmpty) {
+    debugPrint(
+        'Widgets types in tree: ${tester.allWidgets.map((w) => w.runtimeType).toSet().toList()}');
+    return;
   }
-
-  // 2. Try specific surface keys (the most reliable way in our LazyIndexedStack setup)
-  final surfaceKeys = [
-    'destination-home-surface',
-    'destination-subscriptions-surface',
-    'destination-review-surface',
-    'destination-settings-surface',
-  ];
-
-  for (final key in surfaceKeys) {
-    final surface = find.byKey(ValueKey<String>(key), skipOffstage: false);
-    if (tester.any(surface)) {
-      final scrollable = find.descendant(
-        of: surface,
-        matching: find.byType(Scrollable),
-        matchRoot: true, // In case the surface is the scrollable
-      );
-      
-      if (tester.any(scrollable)) {
-        await tester.scrollUntilVisible(
-          finder,
-          200,
-          scrollable: scrollable.first,
-        );
-        await tester.pumpAndSettle();
-        return;
+  final int retriesLimit = 30;
+  int retries = 0;
+  while (retries < retriesLimit) {
+    if (finder.evaluate().isNotEmpty) {
+      if (tester.any(finder)) {
+        try {
+          await tester.ensureVisible(finder);
+          return;
+        } catch (_) {
+          // Keep scrolling
+        }
       }
     }
+
+    final scrollable = find.byType(Scrollable).hitTestable().first;
+    await tester.drag(scrollable, Offset(0, -delta * 2));
+    await tester.pump(const Duration(milliseconds: 50));
+    retries++;
   }
-
-  // 3. Last resort: ANY scrollable
-  final anyScrollable = find.byType(Scrollable).first;
-  if (tester.any(anyScrollable)) {
-    await tester.scrollUntilVisible(
-      finder,
-      200,
-      scrollable: anyScrollable,
-    );
-  } else {
-    // If we're here, we're probably not in a scrollable context or the finder isn't in the tree
-    await tester.ensureVisible(finder);
-  }
-
-  await tester.pumpAndSettle();
-
+  await settleDashboard(tester);
 }
 
-
-
-
-
-Future<void> openDashboardDestination(
-  WidgetTester tester,
-  String destination,
-) async {
-  await tapAndPumpDashboardShell(
-    tester,
-    find.byKey(ValueKey<String>('destination-' + destination)),
-  );
-}
-
-Future<String> resolveUnresolvedTargetKey() async {
-  final snapshot = await LoadRuntimeDashboardUseCase().execute();
-  final item = snapshot.reviewQueue.firstWhere(
-    (item) => item.serviceKey.value == 'UNRESOLVED',
-    orElse: () => snapshot.reviewQueue.first,
-  );
-  return ReviewItemActionDescriptor.fromReviewItem(item).targetKey;
-}
-
-(
-  LoadSmsOnboardingProgressUseCase,
-  CompleteSmsOnboardingUseCase,
-) buildMemorySmsOnboardingUseCases() {
+(LoadSmsOnboardingProgressUseCase, CompleteSmsOnboardingUseCase)
+    buildMemorySmsOnboardingUseCases() {
   final store = InMemorySmsOnboardingProgressStore();
   return (
     LoadSmsOnboardingProgressUseCase(store: store),
@@ -391,3 +501,19 @@ Future<String> resolveUnresolvedTargetKey() async {
   );
 }
 
+Future<void> debug_dump_app(WidgetTester tester) async {
+  // ignore: avoid_print
+  print('--- WIDGET DUMP START ---');
+  for (final w in tester.allWidgets) {
+    String extra = '';
+    if (w is Text) {
+      extra = ' text="${w.data}"';
+    } else if (w is RichText) {
+      extra = ' text="${w.text.toPlainText()}"';
+    }
+    // ignore: avoid_print
+    print('WIDGET: ${w.runtimeType} key=${w.key}$extra');
+  }
+  // ignore: avoid_print
+  print('--- WIDGET DUMP END ---');
+}

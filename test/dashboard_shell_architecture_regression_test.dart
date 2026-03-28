@@ -8,7 +8,7 @@ void main() {
   testWidgets(
     'tabs lazy-load on first visit and keep visited destinations mounted',
     (tester) async {
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
           clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -39,7 +39,7 @@ void main() {
   testWidgets(
     'subscriptions search state survives tab switching after first build',
     (tester) async {
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
           clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -73,7 +73,7 @@ void main() {
     (tester) async {
       final harness = DashboardShellReviewHarness();
 
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: harness.runtimeUseCase,
         handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
@@ -92,7 +92,7 @@ void main() {
         tester,
         find.byKey(const ValueKey<String>('confirm-review-action-JIOHOTSTAR')),
       );
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
 
       expect(_destinationSurface('review'), findsOneWidget);
       expect(
@@ -120,7 +120,7 @@ void main() {
         tester,
         find.byKey(const ValueKey<String>('undo-review-action-JIOHOTSTAR')),
       );
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
 
       await openDashboardDestination(tester, 'review');
       await scrollDashboardUntilVisible(

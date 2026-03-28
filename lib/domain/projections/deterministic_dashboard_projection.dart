@@ -33,8 +33,7 @@ class DeterministicDashboardProjection implements DashboardProjection {
   List<ReviewItem> buildReviewQueue(Iterable<ServiceLedgerEntry> entries) {
     final reviewEntries = entries
         .where((entry) =>
-            isReviewEligible(entry.state) &&
-            entry.serviceKey.value != 'UNRESOLVED')
+            isReviewEligible(entry.state))
         .toList(growable: false)
       ..sort((left, right) =>
           left.serviceKey.value.compareTo(right.serviceKey.value));

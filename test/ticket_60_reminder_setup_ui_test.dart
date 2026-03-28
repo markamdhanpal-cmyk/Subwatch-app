@@ -24,7 +24,7 @@ void main() {
       );
       await harness.localManualSubscriptionStore.save(entry);
 
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: harness.runtimeUseCase,
         handleManualSubscriptionUseCase:
@@ -34,7 +34,7 @@ void main() {
       );
 
       await tester.pump(const Duration(seconds: 1));
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
 
       await scrollDashboardUntilVisible(
         tester,
@@ -59,15 +59,15 @@ void main() {
       await tapAndPumpDashboardShell(tester, find.text('Reminder'));
 
       await tester.pump(const Duration(seconds: 1));
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
 
       expect(find.text('Local reminder'), findsOneWidget);
       expect(find.text('1 day before'), findsOneWidget);
 
       await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
 
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
       await tapAndPumpDashboardShell(tester, find.text('Manual Gym').first);
       expect(find.text('Set reminder'), findsOneWidget);
 

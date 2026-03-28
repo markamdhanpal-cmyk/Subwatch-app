@@ -7,6 +7,9 @@ import '../application/use_cases/handle_local_renewal_reminder_use_case.dart';
 import '../application/use_cases/handle_local_service_presentation_use_case.dart';
 import '../application/use_cases/handle_review_item_action_use_case.dart';
 import '../application/use_cases/load_runtime_dashboard_use_case.dart';
+import '../application/use_cases/load_sms_onboarding_progress_use_case.dart';
+import '../application/use_cases/complete_sms_onboarding_use_case.dart';
+import '../application/use_cases/clear_all_local_data_use_case.dart';
 import '../application/use_cases/sync_device_sms_use_case.dart';
 import '../application/use_cases/undo_local_control_overlay_use_case.dart';
 import '../application/use_cases/undo_review_item_action_use_case.dart';
@@ -26,7 +29,11 @@ class SubKillerApp extends StatelessWidget {
     HandleManualSubscriptionUseCase? handleManualSubscriptionUseCase,
     HandleLocalServicePresentationUseCase?
         handleLocalServicePresentationUseCase,
+    LoadSmsOnboardingProgressUseCase? loadSmsOnboardingProgressUseCase,
+    CompleteSmsOnboardingUseCase? completeSmsOnboardingUseCase,
+    ClearAllLocalDataUseCase? clearAllLocalDataUseCase,
     ProblemReportLauncher? problemReportLauncher,
+    TextScaler? textScaler,
   })  : _runtimeUseCase = runtimeUseCase,
         _syncDeviceSmsUseCase = syncDeviceSmsUseCase,
         _handleReviewItemActionUseCase = handleReviewItemActionUseCase,
@@ -37,7 +44,11 @@ class SubKillerApp extends StatelessWidget {
         _handleManualSubscriptionUseCase = handleManualSubscriptionUseCase,
         _handleLocalServicePresentationUseCase =
             handleLocalServicePresentationUseCase,
-        _problemReportLauncher = problemReportLauncher;
+        _loadSmsOnboardingProgressUseCase = loadSmsOnboardingProgressUseCase,
+        _completeSmsOnboardingUseCase = completeSmsOnboardingUseCase,
+        _clearAllLocalDataUseCase = clearAllLocalDataUseCase,
+        _problemReportLauncher = problemReportLauncher,
+        _textScaler = textScaler;
 
   final LoadRuntimeDashboardUseCase? _runtimeUseCase;
   final SyncDeviceSmsUseCase? _syncDeviceSmsUseCase;
@@ -49,7 +60,11 @@ class SubKillerApp extends StatelessWidget {
   final HandleManualSubscriptionUseCase? _handleManualSubscriptionUseCase;
   final HandleLocalServicePresentationUseCase?
       _handleLocalServicePresentationUseCase;
+  final LoadSmsOnboardingProgressUseCase? _loadSmsOnboardingProgressUseCase;
+  final CompleteSmsOnboardingUseCase? _completeSmsOnboardingUseCase;
+  final ClearAllLocalDataUseCase? _clearAllLocalDataUseCase;
   final ProblemReportLauncher? _problemReportLauncher;
+  final TextScaler? _textScaler;
 
   @override
   Widget build(BuildContext context) {
@@ -58,87 +73,123 @@ class SubKillerApp extends StatelessWidget {
       brightness: Brightness.dark,
       fontFamily: 'Figtree',
     );
-    const displayStyle = TextStyle(
+    const heroStyle = TextStyle(
       fontFamily: 'Instrument Serif',
       color: DashboardShellPalette.ink,
-      fontSize: 40,
+      fontSize: 46,
       fontWeight: FontWeight.w400,
-      height: 0.95,
-      letterSpacing: -1.1,
+      height: 0.92,
+      letterSpacing: -1.35,
+    );
+    const metricStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: DashboardShellPalette.ink,
+      fontSize: 40,
+      fontWeight: FontWeight.w800,
+      height: 0.94,
+      letterSpacing: -1.05,
     );
     const headingStyle = TextStyle(
       fontFamily: 'Figtree',
       color: DashboardShellPalette.ink,
-      fontSize: 22,
+      fontSize: 29,
       fontWeight: FontWeight.w700,
-      height: 1.12,
-      letterSpacing: -0.28,
+      height: 1.06,
+      letterSpacing: -0.6,
     );
     const subheadingStyle = TextStyle(
       fontFamily: 'Figtree',
       color: DashboardShellPalette.ink,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-      height: 1.2,
-      letterSpacing: -0.16,
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
+      height: 1.14,
+      letterSpacing: -0.26,
     );
-    const bodyStyle = TextStyle(
+    const rowTitleStyle = TextStyle(
       fontFamily: 'Figtree',
       color: DashboardShellPalette.ink,
       fontSize: 16,
-      fontWeight: FontWeight.w400,
-      height: 1.4,
+      fontWeight: FontWeight.w700,
+      height: 1.18,
+      letterSpacing: -0.12,
     );
-    const captionStyle = TextStyle(
+    const bodyStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: DashboardShellPalette.softInk,
+      fontSize: 15,
+      fontWeight: FontWeight.w500,
+      height: 1.38,
+      letterSpacing: -0.02,
+    );
+    const supportingStyle = TextStyle(
       fontFamily: 'Figtree',
       color: DashboardShellPalette.mutedInk,
       fontSize: 13,
       fontWeight: FontWeight.w400,
-      height: 1.28,
-      letterSpacing: 0.04,
+      height: 1.32,
+      letterSpacing: 0.02,
     );
     const labelStyle = TextStyle(
       fontFamily: 'Figtree',
-      color: DashboardShellPalette.ink,
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
-      height: 1.16,
-      letterSpacing: 0.12,
+      color: DashboardShellPalette.mutedInk,
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      height: 1.12,
+      letterSpacing: 0.3,
     );
     const buttonStyle = TextStyle(
       fontFamily: 'Figtree',
-      color: DashboardShellPalette.ink,
+      color: DashboardShellPalette.paper,
       fontSize: 14,
       fontWeight: FontWeight.w700,
       height: 1.1,
-      letterSpacing: 0.08,
+      letterSpacing: 0.16,
     );
     const typeScale = DashboardTypeScale(
-      display: displayStyle,
+      display: heroStyle,
       heading: headingStyle,
       subheading: subheadingStyle,
       body: bodyStyle,
-      caption: captionStyle,
+      caption: supportingStyle,
       label: labelStyle,
       button: buttonStyle,
     );
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: DashboardShellPalette.accent,
-      brightness: Brightness.dark,
-    ).copyWith(
+    final colorScheme = const ColorScheme.dark(
       primary: DashboardShellPalette.accent,
-      onPrimary: const Color(0xFF1A130F),
-      secondary: DashboardShellPalette.success,
+      onPrimary: Color(0xFF1A120C),
+      secondary: DashboardShellPalette.statusBlue,
       onSecondary: DashboardShellPalette.paper,
+      error: DashboardShellPalette.caution,
+      onError: DashboardShellPalette.paper,
       surface: DashboardShellPalette.paper,
       onSurface: DashboardShellPalette.ink,
+    ).copyWith(
+      primaryContainer: DashboardShellPalette.accentSoft,
+      onPrimaryContainer: DashboardShellPalette.accent,
+      secondaryContainer: DashboardShellPalette.nestedPaper,
+      onSecondaryContainer: DashboardShellPalette.softInk,
+      tertiary: DashboardShellPalette.success,
+      onTertiary: DashboardShellPalette.paper,
+      tertiaryContainer: DashboardShellPalette.successSoft,
+      onTertiaryContainer: DashboardShellPalette.success,
       outline: DashboardShellPalette.outline,
-      outlineVariant: DashboardShellPalette.outlineStrong,
+      outlineVariant: DashboardShellPalette.divider,
+      shadow: DashboardShellPalette.shadow,
+      scrim: DashboardShellPalette.scrim,
     );
 
     return MaterialApp(
       title: 'SubWatch',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        if (_textScaler == null) return child!;
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: _textScaler,
+          ),
+          child: child!,
+        );
+      },
       theme: baseTheme.copyWith(
         colorScheme: colorScheme,
         scaffoldBackgroundColor: DashboardShellPalette.canvas,
@@ -149,36 +200,74 @@ class SubKillerApp extends StatelessWidget {
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: false,
+          surfaceTintColor: Colors.transparent,
+          toolbarHeight: 68,
         ),
         iconTheme: const IconThemeData(
-          color: DashboardShellPalette.ink,
+          color: DashboardShellPalette.softInk,
+          size: 22,
         ),
         cardTheme: const CardThemeData(
           elevation: 0,
           margin: EdgeInsets.zero,
           color: Colors.transparent,
         ),
-        dividerColor: DashboardShellPalette.outline,
+        dividerColor: DashboardShellPalette.divider,
+        dividerTheme: const DividerThemeData(
+          color: DashboardShellPalette.divider,
+          thickness: 1,
+          space: 1,
+        ),
         bottomSheetTheme: const BottomSheetThemeData(
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
         ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: DashboardShellPalette.elevatedPaper,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: DashboardShellPalette.shadow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.card),
+            side: const BorderSide(color: DashboardShellPalette.outlineStrong),
+          ),
+          titleTextStyle: subheadingStyle.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
+          contentTextStyle: bodyStyle.copyWith(
+            color: DashboardShellPalette.softInk,
+            height: 1.42,
+          ),
+        ),
         iconButtonTheme: IconButtonThemeData(
           style: IconButton.styleFrom(
-            foregroundColor: DashboardShellPalette.ink,
+            foregroundColor: DashboardShellPalette.softInk,
+            backgroundColor: DashboardShellPalette.paper.withValues(alpha: 0.28),
             disabledForegroundColor:
                 DashboardShellPalette.mutedInk.withValues(alpha: 0.72),
-            overlayColor:
-                DashboardShellPalette.statusBlue.withValues(alpha: 0.14),
+            overlayColor: DashboardShellPalette.accent.withValues(alpha: 0.12),
             highlightColor:
-                DashboardShellPalette.statusBlue.withValues(alpha: 0.1),
-            hoverColor:
-                DashboardShellPalette.statusBlue.withValues(alpha: 0.08),
-            animationDuration: const Duration(milliseconds: 140),
+                DashboardShellPalette.accent.withValues(alpha: 0.08),
+            hoverColor: DashboardShellPalette.accent.withValues(alpha: 0.06),
+            animationDuration: dashboardMotionDuration,
             padding: const EdgeInsets.all(10),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(DashboardRadii.button),
+              side: const BorderSide(color: DashboardShellPalette.outline),
             ),
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: DashboardShellPalette.accent,
+          foregroundColor: const Color(0xFF1A120C),
+          elevation: 0,
+          hoverElevation: 0,
+          focusElevation: 0,
+          highlightElevation: 0,
+          splashColor: DashboardShellPalette.accentGlow.withValues(alpha: 0.14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: const BorderSide(color: Color(0x33FFF1DE)),
           ),
         ),
         navigationBarTheme: NavigationBarThemeData(
@@ -186,33 +275,33 @@ class SubKillerApp extends StatelessWidget {
           indicatorColor: DashboardShellPalette.accentSoft,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
-          height: 74,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          height: 72,
+          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
           labelPadding: const EdgeInsets.only(top: 4),
           overlayColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.pressed)
-                ? DashboardShellPalette.mutedInk.withValues(alpha: 0.1)
+                ? DashboardShellPalette.accent.withValues(alpha: 0.1)
                 : states.contains(WidgetState.hovered)
-                    ? DashboardShellPalette.mutedInk.withValues(alpha: 0.06)
+                    ? DashboardShellPalette.accent.withValues(alpha: 0.06)
                     : null,
           ),
           labelTextStyle: WidgetStateProperty.resolveWith(
-            (states) => baseTheme.textTheme.labelMedium?.copyWith(
+            (states) => labelStyle.copyWith(
               color: states.contains(WidgetState.selected)
                   ? DashboardShellPalette.accent
-                  : DashboardShellPalette.mutedInk,
+                  : DashboardShellPalette.faintInk,
               fontWeight: states.contains(WidgetState.selected)
                   ? FontWeight.w800
                   : FontWeight.w700,
-              letterSpacing: 0.18,
+              letterSpacing: 0.26,
             ),
           ),
           iconTheme: WidgetStateProperty.resolveWith(
             (states) => IconThemeData(
               color: states.contains(WidgetState.selected)
                   ? DashboardShellPalette.accent
-                  : DashboardShellPalette.mutedInk,
-              size: 24,
+                  : DashboardShellPalette.faintInk,
+              size: 22,
             ),
           ),
         ),
@@ -224,130 +313,162 @@ class SubKillerApp extends StatelessWidget {
           position: PopupMenuPosition.under,
           menuPadding: const EdgeInsets.symmetric(vertical: 6),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(DashboardRadii.nested),
             side: const BorderSide(color: DashboardShellPalette.outlineStrong),
           ),
-          textStyle: baseTheme.textTheme.bodyMedium?.copyWith(
-            color: DashboardShellPalette.ink,
+          textStyle: bodyStyle.copyWith(
+            color: DashboardShellPalette.softInk,
           ),
         ),
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: DashboardShellPalette.elevatedPaper,
-          contentTextStyle: baseTheme.textTheme.bodyMedium?.copyWith(
+          backgroundColor: DashboardShellPalette.paper,
+          contentTextStyle: bodyStyle.copyWith(
             color: DashboardShellPalette.ink,
-            height: 1.35,
+            height: 1.36,
+            fontWeight: FontWeight.w600,
           ),
-          actionTextColor: DashboardShellPalette.statusBlue,
+          actionTextColor: DashboardShellPalette.accent,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
             side: const BorderSide(color: DashboardShellPalette.outlineStrong),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             backgroundColor: DashboardShellPalette.accent,
-            foregroundColor: const Color(0xFF1B140F),
+            foregroundColor: const Color(0xFF1A120C),
             disabledBackgroundColor: DashboardShellPalette.outline,
             disabledForegroundColor: DashboardShellPalette.mutedInk,
-            overlayColor: const Color(0x1FF7ECDD),
-            animationDuration: const Duration(milliseconds: 140),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            overlayColor: DashboardShellPalette.accentGlow.withValues(alpha: 0.1),
+            animationDuration: dashboardMotionDuration,
+            minimumSize: const Size(0, 52),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(DashboardRadii.button),
             ),
             textStyle: typeScale.button,
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: DashboardShellPalette.ink,
+            foregroundColor: DashboardShellPalette.softInk,
             side: const BorderSide(color: DashboardShellPalette.outlineStrong),
-            backgroundColor: DashboardShellPalette.elevatedPaper,
-            overlayColor: const Color(0x14F7ECDD),
-            animationDuration: const Duration(milliseconds: 140),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+            backgroundColor: DashboardShellPalette.nestedPaper.withValues(
+              alpha: 0.88,
             ),
-            textStyle: typeScale.button,
+            overlayColor: DashboardShellPalette.accent.withValues(alpha: 0.08),
+            animationDuration: dashboardMotionDuration,
+            minimumSize: const Size(0, 52),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DashboardRadii.button),
+            ),
+            textStyle: typeScale.button.copyWith(
+              color: DashboardShellPalette.softInk,
+            ),
           ),
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: DashboardShellPalette.statusBlue,
-            overlayColor:
-                DashboardShellPalette.statusBlue.withValues(alpha: 0.14),
-            animationDuration: const Duration(milliseconds: 140),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            foregroundColor: DashboardShellPalette.softInk,
+            overlayColor: DashboardShellPalette.accent.withValues(alpha: 0.08),
+            animationDuration: dashboardMotionDuration,
+            minimumSize: const Size(0, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(DashboardRadii.button),
             ),
-            textStyle: typeScale.button,
+            textStyle: typeScale.button.copyWith(
+              color: DashboardShellPalette.softInk,
+              fontSize: 13,
+            ),
           ),
         ),
+        chipTheme: ChipThemeData(
+          backgroundColor: DashboardShellPalette.nestedPaper,
+          selectedColor: DashboardShellPalette.accentSoft,
+          disabledColor: DashboardShellPalette.outline,
+          secondarySelectedColor: DashboardShellPalette.accentSoft,
+          side: const BorderSide(color: DashboardShellPalette.outline),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.chip),
+          ),
+          labelStyle: labelStyle.copyWith(color: DashboardShellPalette.mutedInk),
+          secondaryLabelStyle:
+              labelStyle.copyWith(color: DashboardShellPalette.accent),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        ),
         progressIndicatorTheme: const ProgressIndicatorThemeData(
-          color: DashboardShellPalette.statusBlue,
+          color: DashboardShellPalette.accent,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: DashboardShellPalette.nestedPaper,
-          hintStyle: baseTheme.textTheme.bodyMedium?.copyWith(
-            color: DashboardShellPalette.mutedInk.withValues(alpha: 0.84),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          hintStyle: bodyStyle.copyWith(
+            color: DashboardShellPalette.faintInk,
           ),
-          helperStyle: baseTheme.textTheme.bodySmall?.copyWith(
+          helperStyle: supportingStyle.copyWith(
             color: DashboardShellPalette.mutedInk,
             height: 1.22,
           ),
-          labelStyle: baseTheme.textTheme.labelMedium?.copyWith(
+          labelStyle: labelStyle.copyWith(
             color: DashboardShellPalette.mutedInk,
           ),
-          prefixIconColor: DashboardShellPalette.mutedInk,
-          suffixIconColor: DashboardShellPalette.mutedInk,
+          prefixIconColor: DashboardShellPalette.faintInk,
+          suffixIconColor: DashboardShellPalette.faintInk,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
             borderSide: const BorderSide(color: DashboardShellPalette.outline),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
             borderSide: const BorderSide(color: DashboardShellPalette.outline),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(
-              color: DashboardShellPalette.statusBlue,
-            ),
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
+            borderSide: const BorderSide(color: DashboardShellPalette.accent),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
             borderSide: const BorderSide(color: DashboardShellPalette.caution),
           ),
           focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
             borderSide: const BorderSide(color: DashboardShellPalette.caution),
           ),
         ),
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: DashboardShellPalette.accent,
+          selectionColor: DashboardShellPalette.accentSoft,
+          selectionHandleColor: DashboardShellPalette.accent,
+        ),
         textTheme: baseTheme.textTheme.copyWith(
-          displayLarge: displayStyle,
-          displayMedium: headingStyle,
+          displayLarge: heroStyle,
+          displayMedium: metricStyle,
           displaySmall: headingStyle,
           headlineLarge: headingStyle,
           headlineMedium: subheadingStyle,
           headlineSmall: headingStyle,
-          titleLarge: headingStyle,
-          titleMedium: subheadingStyle,
-          titleSmall: subheadingStyle,
+          titleLarge: subheadingStyle,
+          titleMedium: rowTitleStyle,
+          titleSmall: labelStyle.copyWith(
+            color: DashboardShellPalette.softInk,
+            fontSize: 13,
+          ),
           bodyLarge: bodyStyle,
           bodyMedium: bodyStyle,
-          bodySmall: captionStyle,
-          labelLarge: labelStyle,
+          bodySmall: supportingStyle,
+          labelLarge: buttonStyle.copyWith(color: DashboardShellPalette.paper),
           labelMedium: labelStyle.copyWith(
             color: DashboardShellPalette.mutedInk,
           ),
-          labelSmall: captionStyle.copyWith(
+          labelSmall: supportingStyle.copyWith(
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.14,
+            letterSpacing: 0.1,
           ),
         ),
         extensions: const <ThemeExtension<dynamic>>[
@@ -377,6 +498,9 @@ class SubKillerApp extends StatelessWidget {
         handleLocalServicePresentationUseCase:
             _handleLocalServicePresentationUseCase ??
                 HandleLocalServicePresentationUseCase.persistent(),
+        loadSmsOnboardingProgressUseCase: _loadSmsOnboardingProgressUseCase,
+        completeSmsOnboardingUseCase: _completeSmsOnboardingUseCase,
+        clearAllLocalDataUseCase: _clearAllLocalDataUseCase,
         problemReportLauncher: _problemReportLauncher,
       ),
     );

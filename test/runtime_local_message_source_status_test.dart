@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/message_sources/sample_local_message_source.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
 import 'package:sub_killer/application/models/runtime_local_message_source_status.dart';

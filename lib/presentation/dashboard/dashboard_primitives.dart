@@ -2,32 +2,70 @@ import 'package:flutter/material.dart';
 
 import 'service_icon_registry.dart';
 
-const Duration dashboardMotionDuration = Duration(milliseconds: 180);
-const Duration dashboardEntranceDuration = Duration(milliseconds: 220);
+const Duration dashboardMotionDuration = Duration(milliseconds: 160);
+const Duration dashboardEntranceDuration = Duration(milliseconds: 240);
+const Duration dashboardSheetMotionDuration = Duration(milliseconds: 280);
+const Duration dashboardSheetReverseDuration = Duration(milliseconds: 220);
+
+class DashboardSpacing {
+  static const double micro = 4;
+  static const double xSmall = 8;
+  static const double small = 12;
+  static const double medium = 16;
+  static const double large = 20;
+  static const double xLarge = 24;
+  static const double xxLarge = 32;
+  static const double screenBlockGap = 18;
+  static const double compactSectionGap = 20;
+  static const double sectionGap = 28;
+  static const double rowGap = 14;
+
+  static const EdgeInsets screenInset = EdgeInsets.fromLTRB(20, 16, 20, 28);
+  static const EdgeInsets secondaryScreenInset =
+      EdgeInsets.fromLTRB(16, 12, 16, 32);
+  static const EdgeInsets secondaryScreenInsetWithBottomNav =
+      EdgeInsets.fromLTRB(16, 12, 16, 120);
+}
+
+class DashboardRadii {
+  static const double chip = 14;
+  static const double button = 18;
+  static const double nested = 20;
+  static const double card = 26;
+  static const double prominentCard = 30;
+  static const double sheet = 32;
+  static const double avatar = 16;
+}
 
 class DashboardShellPalette {
-  static const Color canvas = Color(0xFF120E0C);
-  static const Color paper = Color(0xFF191311);
-  static const Color elevatedPaper = Color(0xFF211916);
-  static const Color nestedPaper = Color(0xFF2A211D);
-  static const Color registerPaper = Color(0xFF1C1512);
-  static const Color ink = Color(0xFFF7ECDD);
-  static const Color mutedInk = Color(0xFFC8BFB2);
-  static const Color accent = Color(0xFFE1A55A);
-  static const Color accentSoft = Color(0xFF3A281B);
-  static const Color statusBlue = Color(0xFF6295E2);
-  static const Color statusBlueSoft = Color(0xFF1B2738);
-  static const Color benefitGold = Color(0xFFC89B40);
-  static const Color benefitGoldSoft = Color(0xFF342714);
-  static const Color success = Color(0xFF7AB49D);
-  static const Color successSoft = Color(0xFF1A2722);
-  static const Color caution = Color(0xFFD88C4B);
-  static const Color cautionSoft = Color(0xFF322218);
-  static const Color recovery = Color(0xFFA4B1C5);
-  static const Color recoverySoft = Color(0xFF1C232D);
-  static const Color outline = Color(0xFF3A2F2A);
-  static const Color outlineStrong = Color(0xFF51423A);
-  static const Color shadow = Color(0x66060302);
+  static const Color canvas = Color(0xFF100C0A);
+  static const Color canvasRaised = Color(0xFF16110E);
+  static const Color paper = Color(0xFF17110F);
+  static const Color elevatedPaper = Color(0xFF1E1714);
+  static const Color nestedPaper = Color(0xFF261D19);
+  static const Color registerPaper = Color(0xFF14100D);
+  static const Color ink = Color(0xFFF5EBDD);
+  static const Color softInk = Color(0xFFE2D8CA);
+  static const Color mutedInk = Color(0xFFB3A79A);
+  static const Color faintInk = Color(0xFF877B71);
+  static const Color accent = Color(0xFFE0A258);
+  static const Color accentSoft = Color(0xFF352416);
+  static const Color accentGlow = Color(0xFFF1C07C);
+  static const Color statusBlue = Color(0xFF89A2CC);
+  static const Color statusBlueSoft = Color(0xFF192332);
+  static const Color benefitGold = Color(0xFFD1AF67);
+  static const Color benefitGoldSoft = Color(0xFF302315);
+  static const Color success = Color(0xFF86B39F);
+  static const Color successSoft = Color(0xFF16231D);
+  static const Color caution = Color(0xFFD29156);
+  static const Color cautionSoft = Color(0xFF312016);
+  static const Color recovery = Color(0xFFABB8CB);
+  static const Color recoverySoft = Color(0xFF17202A);
+  static const Color outline = Color(0xFF362C27);
+  static const Color outlineStrong = Color(0xFF4C3C34);
+  static const Color divider = Color(0xFF2A221E);
+  static const Color scrim = Color(0x99080504);
+  static const Color shadow = Color(0x66040201);
 }
 
 @immutable
@@ -97,6 +135,29 @@ extension DashboardTypeScaleContext on BuildContext {
       Theme.of(this).extension<DashboardTypeScale>()!;
 }
 
+extension DashboardSemanticTypeScale on DashboardTypeScale {
+  TextStyle get hero => display;
+  TextStyle get screenTitle => heading;
+  TextStyle get sectionTitle => subheading;
+  TextStyle get rowTitle => body.copyWith(
+        color: DashboardShellPalette.ink,
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        height: 1.18,
+        letterSpacing: -0.14,
+      );
+  TextStyle get supporting => caption.copyWith(
+        color: DashboardShellPalette.mutedInk,
+      );
+  TextStyle get meta => label.copyWith(
+        color: DashboardShellPalette.mutedInk,
+        fontWeight: FontWeight.w700,
+      );
+  TextStyle get badge => label.copyWith(
+        fontWeight: FontWeight.w700,
+      );
+}
+
 class DashboardBackdrop extends StatelessWidget {
   const DashboardBackdrop({
     super.key,
@@ -113,11 +174,12 @@ class DashboardBackdrop extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[
-            Color(0xFF18110F),
+            Color(0xFF18110E),
+            DashboardShellPalette.canvasRaised,
             DashboardShellPalette.canvas,
-            Color(0xFF0E0B09),
+            Color(0xFF0B0908),
           ],
-          stops: <double>[0, 0.42, 1],
+          stops: <double>[0, 0.16, 0.56, 1],
         ),
       ),
       child: Stack(
@@ -126,8 +188,8 @@ class DashboardBackdrop extends StatelessWidget {
             top: -120,
             right: -90,
             child: _BackdropGlow(
-              size: 220,
-              color: Color(0xFF9F6937),
+              size: 240,
+              color: Color(0xFF8D5E34),
             ),
           ),
           const Positioned(
@@ -135,7 +197,7 @@ class DashboardBackdrop extends StatelessWidget {
             left: -90,
             child: _BackdropGlow(
               size: 180,
-              color: Color(0xFF4D3629),
+              color: Color(0xFF3F2D21),
             ),
           ),
           const Positioned(
@@ -143,7 +205,7 @@ class DashboardBackdrop extends StatelessWidget {
             left: 30,
             child: _BackdropGlow(
               size: 210,
-              color: Color(0xFF1C322D),
+              color: Color(0xFF1D2D28),
             ),
           ),
           child,
@@ -157,11 +219,11 @@ class DashboardPanel extends StatelessWidget {
   const DashboardPanel({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(18),
+    this.padding = const EdgeInsets.all(DashboardSpacing.large),
     this.backgroundColor,
     this.gradient,
     this.borderColor,
-    this.radius = 28,
+    this.radius = DashboardRadii.card,
   });
 
   final Widget child;
@@ -185,14 +247,19 @@ class DashboardPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(
           color: (borderColor ?? DashboardShellPalette.outline)
-              .withValues(alpha: 0.78),
+              .withValues(alpha: 0.9),
         ),
-        boxShadow: const <BoxShadow>[
+        boxShadow: <BoxShadow>[
           BoxShadow(
-            color: DashboardShellPalette.shadow,
-            blurRadius: 10,
-            spreadRadius: -8,
-            offset: Offset(0, 6),
+            color: DashboardShellPalette.shadow.withValues(alpha: 0.78),
+            blurRadius: 28,
+            spreadRadius: -18,
+            offset: const Offset(0, 14),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 1,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -222,27 +289,30 @@ class DashboardBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = context.dashboardType;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DashboardSpacing.xSmall + 2,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DashboardRadii.chip),
         border: Border.all(
-          color: foregroundColor.withValues(alpha: 0.12),
+          color: foregroundColor.withValues(alpha: 0.18),
         ),
       ),
       child: Wrap(
-        spacing: 5,
+        spacing: 6,
         runSpacing: 2,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
           if (icon != null)
-            Icon(icon, size: 13, color: foregroundColor),
+            Icon(icon, size: 12, color: foregroundColor),
           Text(
             label,
-            style: type.label.copyWith(
+            style: type.badge.copyWith(
                   color: foregroundColor,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.12,
+                  letterSpacing: 0.18,
                 ),
           ),
         ],
@@ -305,7 +375,7 @@ class DashboardServiceAvatar extends StatelessWidget {
               ),
             ],
           ),
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(DashboardRadii.avatar),
           border: Border.all(color: effectiveBorder),
         ),
         child: Stack(
@@ -332,7 +402,7 @@ class DashboardServiceAvatar extends StatelessWidget {
             Center(
               child: Text(
                 effectiveMonogram,
-                style: type.subheading.copyWith(
+                style: type.sectionTitle.copyWith(
                       color: effectiveForeground,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.35,
@@ -392,9 +462,9 @@ class DashboardSectionFrame extends StatelessWidget {
                     if (eyebrow != null) ...<Widget>[
                       Text(
                         eyebrow!,
-                        style: type.label.copyWith(
+                        style: type.meta.copyWith(
                               letterSpacing: 0.42,
-                              color: DashboardShellPalette.mutedInk,
+                              color: DashboardShellPalette.faintInk,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
@@ -404,7 +474,7 @@ class DashboardSectionFrame extends StatelessWidget {
                       header: true,
                       child: Text(
                         title,
-                        style: type.subheading.copyWith(
+                        style: type.sectionTitle.copyWith(
                               fontWeight: FontWeight.w800,
                               color: DashboardShellPalette.ink,
                             ),
@@ -414,7 +484,7 @@ class DashboardSectionFrame extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         caption!,
-                        style: type.caption.copyWith(
+                        style: type.supporting.copyWith(
                               color: DashboardShellPalette.mutedInk,
                               height: 1.28,
                             ),
@@ -436,20 +506,33 @@ class DashboardSectionFrame extends StatelessWidget {
                       opacity: animation,
                       child: child,
                     ),
-                    child: Text(
-                      countLabel!,
+                    child: Container(
                       key: ValueKey<String>(countLabel!),
-                      style: type.label.copyWith(
-                            color: DashboardShellPalette.mutedInk,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DashboardSpacing.xSmall + 2,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DashboardShellPalette.nestedPaper,
+                        borderRadius:
+                            BorderRadius.circular(DashboardRadii.chip),
+                        border: Border.all(
+                          color: DashboardShellPalette.outline,
+                        ),
+                      ),
+                      child: Text(
+                        countLabel!,
+                        style: type.meta.copyWith(
+                          color: DashboardShellPalette.softInk,
+                        ),
+                      ),
                     ),
                   ),
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: DashboardSpacing.small),
         ...children,
       ],
     );
@@ -480,9 +563,9 @@ class DashboardRegisterEntry extends StatelessWidget {
       width: 122,
       child: DashboardPanel(
         backgroundColor: DashboardShellPalette.registerPaper,
-        borderColor: accent.withValues(alpha: 0.24),
-        padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
-        radius: 16,
+        borderColor: accent.withValues(alpha: 0.28),
+        padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+        radius: DashboardRadii.nested,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -502,7 +585,7 @@ class DashboardRegisterEntry extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: type.label.copyWith(
+                    style: type.meta.copyWith(
                           color: accent,
                           letterSpacing: 0.38,
                           fontWeight: FontWeight.w800,
@@ -533,16 +616,17 @@ class DashboardRegisterEntry extends StatelessWidget {
               child: Text(
                 value,
                 key: ValueKey<String>('register-value-$label-$value'),
-                style: type.heading.copyWith(
+                style: type.screenTitle.copyWith(
                       color: DashboardShellPalette.ink,
                       fontWeight: FontWeight.w800,
+                      fontSize: 24,
                     ),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               caption,
-              style: type.caption.copyWith(
+              style: type.supporting.copyWith(
                     color: DashboardShellPalette.mutedInk,
                     height: 1.28,
                   ),
@@ -583,44 +667,51 @@ class DashboardEmptyState extends StatelessWidget {
           ),
         );
       },
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+      child: DashboardPanel(
+        backgroundColor: DashboardShellPalette.paper,
+        borderColor: DashboardShellPalette.outlineStrong,
+        radius: DashboardRadii.card,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Container(
-              width: 24,
-              height: 24,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: DashboardShellPalette.paper.withValues(alpha: 0.75),
-                borderRadius: BorderRadius.circular(8),
+                color: DashboardShellPalette.nestedPaper,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: DashboardShellPalette.outlineStrong,
+                ),
               ),
               child: Icon(
                 icon,
                 color: DashboardShellPalette.statusBlue,
-                size: 13,
+                size: 16,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: DashboardSpacing.small),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
                     title,
-                    style: type.body.copyWith(
-                          color: DashboardShellPalette.ink,
-                          fontWeight: FontWeight.w700,
+                    style: type.rowTitle.copyWith(
+                          color: DashboardShellPalette.softInk,
                         ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    message,
-                    style: type.caption.copyWith(
-                          color: DashboardShellPalette.mutedInk,
-                          height: 1.28,
-                        ),
-                  ),
+                  if (message.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: DashboardSpacing.micro),
+                    Text(
+                      message,
+                      style: type.supporting.copyWith(
+                            color: DashboardShellPalette.mutedInk,
+                            height: 1.28,
+                          ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -633,10 +724,8 @@ class DashboardEmptyState extends StatelessWidget {
 
 bool shouldReduceMotion(BuildContext context) {
   final mediaQuery = MediaQuery.maybeOf(context);
-  if (mediaQuery == null) {
-    return false;
-  }
-  return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
+  return mediaQuery != null &&
+      (mediaQuery.disableAnimations || mediaQuery.accessibleNavigation);
 }
 
 class SubWatchBrandMark extends StatelessWidget {

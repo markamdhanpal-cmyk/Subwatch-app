@@ -68,22 +68,29 @@ Widget _buildDashboardSubscriptionsScreen({
   final emptyBucket = shell._emptyStateBucketForFilter(
     serviceView.controls.filterMode,
   );
+  final visibleCount =
+      serviceView.totalVisibleCount + visibleManualSubscriptions.length;
 
   return ListView(
     key: const ValueKey<String>('destination-subscriptions-surface'),
-    padding: const EdgeInsets.fromLTRB(16, 6, 16, 120),
+    padding: DashboardSpacing.secondaryScreenInsetWithBottomNav,
 
     children: <Widget>[
+      _SubscriptionsBrowseHeader(
+        visibleCount: visibleCount,
+        controls: serviceView.controls,
+        hasManualEntries: visibleManualSubscriptions.isNotEmpty,
+      ),
+      const SizedBox(height: DashboardSpacing.screenBlockGap),
       _ServiceViewControlsPanel(
         searchController: shell._serviceSearchController,
         controls: serviceView.controls,
         availableFilterModes: _DashboardShellState._subscriptionsFilterModes,
-        onAddManual: shell._showCreateManualSubscriptionForm,
         onSortChanged: shell._setServiceSortMode,
         onFilterChanged: shell._setServiceFilterMode,
         onClear: shell._clearServiceViewControls,
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: DashboardSpacing.screenBlockGap),
       if (serviceView.controls.restrictsResults &&
           !serviceView.hasMatches &&
           visibleManualSubscriptions.isEmpty) ...<Widget>[
@@ -93,7 +100,9 @@ Widget _buildDashboardSubscriptionsScreen({
       ] else ...<Widget>[
         ...orderedServiceSections.map(
           (section) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(
+              bottom: DashboardSpacing.compactSectionGap,
+            ),
             child: shell._buildSubscriptionsSection(
               section: section,
               data: data,
@@ -107,6 +116,7 @@ Widget _buildDashboardSubscriptionsScreen({
           _DashboardSection(
             key: ValueKey<String>('section-${emptyBucket.name}'),
             title: shell._serviceSectionTitle(emptyBucket),
+            caption: 'Nothing visible in this view yet.',
             children: <Widget>[
               _EmptySectionText(
                 title: shell._serviceSectionEmptyTitle(emptyBucket),
@@ -117,10 +127,16 @@ Widget _buildDashboardSubscriptionsScreen({
           ),
         if (showManualSection)
           Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 12),
+            padding: const EdgeInsets.only(
+              top: 2,
+              bottom: DashboardSpacing.compactSectionGap,
+            ),
             child: _DashboardSection(
               key: const ValueKey<String>('section-manualSubscriptions'),
               title: 'Added by you',
+              caption: visibleManualSubscriptions.length == 1
+                  ? '1 subscription you added on this phone.'
+                  : '${visibleManualSubscriptions.length} subscriptions you added on this phone.',
               children: shell._buildManualSubscriptionRows(
                 visibleManualSubscriptions,
                 upcomingRenewals,

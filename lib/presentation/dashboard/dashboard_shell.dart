@@ -119,7 +119,8 @@ class _DashboardShellScopeState extends State<DashboardShell> {
           widget._runtimeUseCase ?? LoadRuntimeDashboardUseCase.persistent(),
         ),
         dashboardSyncUseCaseProvider.overrideWithValue(
-          widget._syncDeviceSmsUseCase ?? SyncDeviceSmsUseCase.persistentAndroid(),
+          widget._syncDeviceSmsUseCase ??
+              SyncDeviceSmsUseCase.persistentAndroid(),
         ),
         dashboardHandleReviewActionUseCaseProvider.overrideWithValue(
           widget._handleReviewItemActionUseCase ??
@@ -145,7 +146,8 @@ class _DashboardShellScopeState extends State<DashboardShell> {
           widget._handleManualSubscriptionUseCase ??
               HandleManualSubscriptionUseCase.persistent(),
         ),
-        dashboardHandleLocalServicePresentationUseCaseProvider.overrideWithValue(
+        dashboardHandleLocalServicePresentationUseCaseProvider
+            .overrideWithValue(
           widget._handleLocalServicePresentationUseCase ??
               HandleLocalServicePresentationUseCase.persistent(),
         ),
@@ -189,12 +191,17 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
   late final TextEditingController _serviceSearchController;
   _DashboardDestination _selectedDestination = _DashboardDestination.home;
 
+  bool _selectedDestinationInitialized = false;
+
   @override
   void initState() {
     super.initState();
+    debugPrint('DashboardShell: initState');
     _homeScrollController = ScrollController();
     _serviceSearchController = TextEditingController()
       ..addListener(_handleServiceSearchChanged);
+
+    ref.read(dashboardFirstRunProvider.notifier).initialize();
   }
 
   @override
@@ -220,11 +227,13 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
   Set<String> get _localControlTargetsInFlight =>
       ref.read(dashboardLocalControlsProvider).localControlTargetsInFlight;
 
-  Set<String> get _localRenewalReminderTargetsInFlight =>
-      ref.read(dashboardLocalControlsProvider).localRenewalReminderTargetsInFlight;
+  Set<String> get _localRenewalReminderTargetsInFlight => ref
+      .read(dashboardLocalControlsProvider)
+      .localRenewalReminderTargetsInFlight;
 
-  Set<String> get _manualSubscriptionTargetsInFlight =>
-      ref.read(dashboardLocalControlsProvider).manualSubscriptionTargetsInFlight;
+  Set<String> get _manualSubscriptionTargetsInFlight => ref
+      .read(dashboardLocalControlsProvider)
+      .manualSubscriptionTargetsInFlight;
 
   Set<String> get _localServicePresentationTargetsInFlight => ref
       .read(dashboardLocalControlsProvider)
@@ -232,11 +241,18 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
 
   @override
   Widget build(BuildContext context) {
-    final type = context.dashboardType;
     final loadState = ref.watch(dashboardShellLoadStateProvider);
-    final destinationTitle = _destinationTitle(_selectedDestination);
-    final destinationSubtitle = _destinationSubtitle(_selectedDestination);
+    final firstRunState = ref.watch(dashboardFirstRunProvider);
     final reduceMotion = shouldReduceMotion(context);
+
+    final bool isInFirstRun = firstRunState.isInFirstRun;
+    debugPrint(
+        'DashboardShell: build loadState.showLoading=${loadState.showLoading} isInFirstRun=$isInFirstRun (phase=${firstRunState.phase})');
+
+    final destinationTitle =
+        isInFirstRun ? 'SubWatch' : _destinationTitle(_selectedDestination);
+    final destinationSubtitle =
+        isInFirstRun ? null : _destinationSubtitle(_selectedDestination);
 
     Widget body;
     if (loadState.showLoading) {
@@ -245,91 +261,115 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
       body = _DashboardErrorState(
         onRetry: _reloadSnapshot,
       );
+    } else if (isInFirstRun) {
+      body = _FirstRunSurface(
+        shell: this,
+        phase: firstRunState.phase,
+        firstScanSnapshot: firstRunState.firstScanSnapshot,
+      );
     } else {
       body = _buildDashboardContent(
         loadRecoveryState: loadState.loadRecoveryState,
       );
     }
 
+    // Guard against watching providers that require a snapshot before it's ready.
+    final sourceStatus =
+        (loadState.showLoading || loadState.hasFatalError || isInFirstRun)
+            ? null
+            : ref.watch(dashboardSourceStatusProvider);
+
+    final type = Theme.of(context).extension<DashboardTypeScale>();
+
     return Scaffold(
-      appBar: AppBar(
-        title: AnimatedSwitcher(
-          duration: reduceMotion ? Duration.zero : dashboardMotionDuration,
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeOutCubic,
-          transitionBuilder: (child, animation) {
-            final position = Tween<Offset>(
-              begin: const Offset(0, 0.06),
-              end: Offset.zero,
-            ).animate(animation);
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: position,
-                child: child,
-              ),
-            );
-          },
-          child: Column(
-            key: ValueKey<String>(
-              'destination-title-$destinationTitle-${destinationSubtitle ?? ''}',
-            ),
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Semantics(
-                header: true,
-                child: Text(
-                  destinationTitle,
-                  style: type.heading,
-                ),
-              ),
-              if (destinationSubtitle != null)
-                Text(
-                  destinationSubtitle,
-                  style: type.caption.copyWith(
+      appBar: isInFirstRun
+          ? null
+          : AppBar(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      destinationTitle,
+                      style: type?.heading ??
+                          Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  if (destinationSubtitle != null)
+                    Text(
+                      destinationSubtitle,
+                      style: (type?.caption ??
+                              Theme.of(context).textTheme.bodySmall)
+                          ?.copyWith(
                         color: DashboardShellPalette.mutedInk,
                       ),
-                ),
-            ],
-          ),
-        ),
-      ),
+                    ),
+                ],
+              ),
+              actions: <Widget>[
+                if (!isInFirstRun &&
+                    _selectedDestination == _DashboardDestination.home &&
+                    sourceStatus != null &&
+                    sourceStatus.isActionEnabled)
+                  IconButton(
+                    key: const ValueKey<String>('app-bar-sync-button'),
+                    onPressed: () => _handleSyncEntry(sourceStatus),
+                    icon: const Icon(Icons.sync_rounded),
+                    tooltip: sourceStatus.actionLabel,
+                  ),
+              ],
+            ),
       body: DashboardBackdrop(child: body),
-      bottomNavigationBar: NavigationBar(
-        key: const ValueKey<String>('top-level-navigation'),
-        selectedIndex: _selectedDestination.index,
-        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-        onDestinationSelected: (index) {
-          _selectDestination(_DashboardDestination.values[index]);
-        },
-        destinations: const <NavigationDestination>[
-          NavigationDestination(
-            key: ValueKey<String>('destination-home'),
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            key: ValueKey<String>('destination-subscriptions'),
-            icon: Icon(Icons.subscriptions_outlined),
-            selectedIcon: Icon(Icons.subscriptions_rounded),
-            label: 'Subscriptions',
-          ),
-          NavigationDestination(
-            key: ValueKey<String>('destination-review'),
-            icon: Icon(Icons.fact_check_outlined),
-            selectedIcon: Icon(Icons.fact_check_rounded),
-            label: 'Review',
-          ),
-          NavigationDestination(
-            key: ValueKey<String>('destination-settings'),
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded),
-            label: 'Settings',
-          ),
-        ],
-      ),
+      floatingActionButton: (!isInFirstRun &&
+              _selectedDestination == _DashboardDestination.subscriptions)
+          ? FloatingActionButton(
+              key: const ValueKey<String>('open-manual-subscription-form'),
+              onPressed: _showCreateManualSubscriptionForm,
+              backgroundColor: DashboardShellPalette.accent,
+              foregroundColor: DashboardShellPalette.canvas,
+              child: const Icon(Icons.add_rounded),
+              tooltip: 'Add subscription',
+            )
+          : null,
+      bottomNavigationBar: isInFirstRun
+          ? null
+          : NavigationBar(
+              key: const ValueKey<String>('top-level-navigation'),
+              selectedIndex: _selectedDestination.index,
+              labelBehavior:
+                  NavigationDestinationLabelBehavior.onlyShowSelected,
+              onDestinationSelected: (index) {
+                _selectDestination(_DashboardDestination.values[index]);
+              },
+              destinations: const <NavigationDestination>[
+                NavigationDestination(
+                  key: ValueKey<String>('destination-home'),
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home_rounded),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  key: ValueKey<String>('destination-subscriptions'),
+                  icon: Icon(Icons.subscriptions_outlined),
+                  selectedIcon: Icon(Icons.subscriptions_rounded),
+                  label: 'Subscriptions',
+                ),
+                NavigationDestination(
+                  key: ValueKey<String>('destination-review'),
+                  icon: Icon(Icons.fact_check_outlined),
+                  selectedIcon: Icon(Icons.fact_check_rounded),
+                  label: 'Review',
+                ),
+                NavigationDestination(
+                  key: ValueKey<String>('destination-settings'),
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings_rounded),
+                  label: 'Settings',
+                ),
+              ],
+            ),
     );
   }
 
@@ -353,9 +393,9 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
       case _DashboardDestination.subscriptions:
         return 'Your list';
       case _DashboardDestination.review:
-        return 'Needs attention';
+        return null;
       case _DashboardDestination.settings:
-        return 'This phone';
+        return null;
     }
   }
 

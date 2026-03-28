@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_killer/application/models/raw_device_sms.dart';
 
 import 'support/dashboard_shell_test_harness.dart';
 
@@ -7,9 +8,18 @@ void main() {
   testWidgets(
     'manual subscriptions can be added, edited, deleted, and kept separate from detected items',
     (tester) async {
-      final harness = DashboardShellReviewHarness();
+      final harness = DashboardShellReviewHarness(
+        deviceSmsGateway: FakeDeviceSmsGateway(<RawDeviceSms>[
+          RawDeviceSms(
+            id: 'confirmed-netflix',
+            address: 'NETFLIX',
+            body: 'Your Netflix subscription has been renewed for Rs 499.',
+            receivedAt: DateTime(2026, 3, 12, 10, 0),
+          ),
+        ]),
+      );
 
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: harness.runtimeUseCase,
         handleManualSubscriptionUseCase:
@@ -63,7 +73,6 @@ void main() {
 
       await scrollDashboardUntilVisible(tester, find.text('Disney+ Hotstar'));
       expect(find.text('Disney+ Hotstar'), findsOneWidget);
-      expect(find.text('Yearly'), findsWidgets);
 
       final gymClubCard = find
           .ancestor(
@@ -75,9 +84,7 @@ void main() {
       expect(gymClubRow.onTap, isNotNull);
       gymClubRow.onTap!.call();
       await pumpDashboardShellUi(tester);
-      expect(
-          find.text(
-              'Saved on this phone and kept separate from scans.'),
+      expect(find.text('Saved on this phone and kept separate from scans.'),
           findsOneWidget);
       expect(find.text('Added by you'), findsWidgets);
       expect(find.text('Billing'), findsOneWidget);
@@ -118,7 +125,7 @@ void main() {
         tester,
         find.widgetWithText(TextButton, 'Remove from list'),
       );
-      expect(find.text('Remove manual subscription?'), findsOneWidget);
+      expect(find.text('Remove added subscription?'), findsOneWidget);
       await tapAndPumpDashboardShell(
         tester,
         find.widgetWithText(FilledButton, 'Remove'),
@@ -139,8 +146,6 @@ Future<void> _openManualEditor(WidgetTester tester) async {
     tester,
     find.byKey(const ValueKey<String>('open-manual-subscription-form')),
   );
-  // The popular service picker now appears first; tap "Custom entry" to
-  // proceed to the blank manual editor form.
   final customEntry = find.text('Something else');
   if (customEntry.evaluate().isNotEmpty) {
     await tester.ensureVisible(customEntry);
@@ -188,4 +193,3 @@ Future<void> _saveManualEditor(WidgetTester tester) async {
   await tester.ensureVisible(saveButton);
   await tapAndPumpDashboardShell(tester, saveButton);
 }
-

@@ -63,19 +63,19 @@ void main() {
       expect(stopwatch.elapsedMilliseconds, lessThan(1000), 
           reason: 'Projection took too long for 1000 messages');
 
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: runtimeUseCase,
         syncDeviceSmsUseCase: syncUseCase,
       );
 
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
       
-      await tester.tap(find.byKey(const ValueKey<String>('sync-with-sms-button')));
+      await tester.tap(find.byKey(const ValueKey<String>('app-bar-sync-button')));
       await tester.pump();
       // Wait for the minimum duration (600ms) plus some buffer for the sync operation
       await tester.pump(const Duration(milliseconds: 1000));
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
       
       expect(find.textContaining('Scan finished.'), findsOneWidget);
     });
@@ -136,18 +136,18 @@ void main() {
           reason: 'Projection took too long for 2000 messages');
 
       // Now verify UI responsiveness
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: runtimeUseCase,
         syncDeviceSmsUseCase: syncUseCase,
       );
 
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
       
-      await tester.tap(find.byKey(const ValueKey<String>('sync-with-sms-button')));
+      await tester.tap(find.byKey(const ValueKey<String>('app-bar-sync-button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1000));
-      await tester.pumpAndSettle();
+      await settleDashboard(tester);
       
       // Ensure sync completes and results are shown
       expect(find.textContaining('Scan finished.'), findsOneWidget);

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_killer/app/subscription_killer_app.dart';
 import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
 import 'package:sub_killer/application/contracts/problem_report_launcher.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
 import 'package:sub_killer/application/models/raw_device_sms.dart';
 import 'package:sub_killer/application/providers/stub_local_message_source_capability_provider.dart';
+import 'package:sub_killer/application/stores/in_memory_sms_onboarding_progress_store.dart';
+import 'package:sub_killer/application/use_cases/complete_sms_onboarding_use_case.dart';
+import 'package:sub_killer/application/use_cases/load_sms_onboarding_progress_use_case.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
-import 'package:sub_killer/presentation/dashboard/dashboard_shell.dart';
 
 import 'support/dashboard_shell_test_harness.dart';
 
@@ -14,7 +17,7 @@ void main() {
   testWidgets('confirmed subscriptions render separately from review items', (
     tester,
   ) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 13, 9, 0),
@@ -33,7 +36,7 @@ void main() {
     expect(find.text('SubWatch'), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('totals-summary-card')),
         findsOneWidget);
-    expect(find.text('Monthly spend'), findsOneWidget);
+    expect(find.text('Monthly spend estimate'), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('home-action-strip')),
         findsOneWidget);
     expect(find.byKey(const ValueKey<String>('product-guidance-panel')),
@@ -53,7 +56,7 @@ void main() {
     );
     expect(
       find.text(
-        'Looks recurring, but not confirmed yet.',
+        'Looks recurring, but still uncertain',
       ),
       findsOneWidget,
     );
@@ -88,7 +91,7 @@ void main() {
   testWidgets('settings stays compact when nothing can be restored', (
     tester,
   ) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -101,7 +104,6 @@ void main() {
       find.descendant(
         of: find.byKey(
           const ValueKey<String>('destination-settings-surface'),
-
         ),
         matching: find.text('Settings'),
       ),
@@ -111,17 +113,28 @@ void main() {
       find.byKey(const ValueKey<String>('section-settings-recovery')),
       findsNothing,
     );
-    expect(find.byKey(const ValueKey<String>('settings-open-help')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('settings-trust-panel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('settings-open-how-it-works')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('settings-open-privacy')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey<String>('settings-open-about')),
       findsOneWidget,
     );
   });
 
-  testWidgets('demo state opens the consolidated help sheet', (
+  testWidgets('settings opens the how SubWatch works sheet', (
     tester,
   ) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -131,47 +144,54 @@ void main() {
     await openDashboardDestination(tester, 'settings');
     await scrollDashboardUntilVisible(
       tester,
-      find.byKey(const ValueKey<String>('settings-open-help')),
+      find.byKey(const ValueKey<String>('settings-open-how-it-works')),
     );
     await tapAndPumpDashboardShell(
       tester,
-      find.byKey(const ValueKey<String>('settings-open-help')),
+      find.byKey(const ValueKey<String>('settings-open-how-it-works')),
     );
 
     expect(
-      find.byKey(const ValueKey<String>('help-privacy-sheet')),
+      find.byKey(const ValueKey<String>('how-subwatch-works-sheet')),
       findsOneWidget,
     );
-    expect(find.text('Help & privacy'), findsWidgets);
-    expect(find.text('Scans'), findsOneWidget);
+    expect(find.text('How SubWatch works'), findsWidgets);
     expect(find.text('Paid subscriptions'), findsOneWidget);
-    expect(find.text('Review & benefits'), findsOneWidget);
+    expect(find.text('Review'), findsWidgets);
+    expect(find.text('Included with your plan'), findsOneWidget);
   });
 
   testWidgets('report a problem opens the launcher path', (tester) async {
     final launcher = _FakeProblemReportLauncher();
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: DashboardShell(
-          runtimeUseCase: LoadRuntimeDashboardUseCase(
-            clock: () => DateTime(2026, 3, 14, 9, 0),
-          ),
-          problemReportLauncher: launcher,
+      SubKillerApp(
+        runtimeUseCase: LoadRuntimeDashboardUseCase(
+          clock: () => DateTime(2026, 3, 14, 9, 0),
         ),
+        problemReportLauncher: launcher,
+        loadSmsOnboardingProgressUseCase: LoadSmsOnboardingProgressUseCase(
+          store: InMemorySmsOnboardingProgressStore()..writeCompleted(true),
+        ),
+        completeSmsOnboardingUseCase: CompleteSmsOnboardingUseCase(
+          store: InMemorySmsOnboardingProgressStore()..writeCompleted(true),
+        ),
+        textScaler: const TextScaler.linear(1.0),
       ),
     );
     await pumpDashboardShellLoad(tester);
 
     await openDashboardDestination(tester, 'settings');
+    final reportProblemFinder =
+        find.byKey(const ValueKey<String>('settings-report-problem'));
     await scrollDashboardUntilVisible(
       tester,
-      find.byKey(const ValueKey<String>('settings-report-problem')),
+      reportProblemFinder,
     );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(const ValueKey<String>('settings-report-problem')),
-    );
+    await tester.ensureVisible(reportProblemFinder);
+    final reportProblemRow = tester.widget<InkWell>(reportProblemFinder);
+    reportProblemRow.onTap!.call();
+    await pumpDashboardShellUi(tester);
 
     expect(launcher.openCount, 1);
     expect(launcher.lastSubject, 'SubWatch problem report');
@@ -182,9 +202,18 @@ void main() {
   testWidgets('review explanation clarifies why an item stays separate', (
     tester,
   ) async {
-    final harness = DashboardShellReviewHarness();
+    final harness = DashboardShellReviewHarness(
+      deviceSmsGateway: FakeDeviceSmsGateway(<RawDeviceSms>[
+        RawDeviceSms(
+          id: 'msg-1',
+          address: 'JIOHOTSTAR',
+          body: 'Your Jiohotstar subscription may renew shortly.',
+          receivedAt: DateTime(2026, 3, 12, 13, 0),
+        ),
+      ]),
+    );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: harness.runtimeUseCase,
       handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
@@ -192,31 +221,28 @@ void main() {
     );
 
     await openDashboardDestination(tester, 'review');
+    final reviewDetailsFinder =
+        find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR'));
     await scrollDashboardUntilVisible(
       tester,
-      find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
+      reviewDetailsFinder,
     );
     await tapAndPumpDashboardShell(
       tester,
-      find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
+      reviewDetailsFinder.first,
     );
+    await pumpDashboardShellUi(tester);
 
-    expect(
-      find.byKey(
-        const ValueKey<String>('review-item-details-sheet-JIOHOTSTAR'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Why SubWatch flagged this'), findsOneWidget);
     await scrollDashboardUntilVisible(
       tester,
       find.text('Why SubWatch flagged this'),
     );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(const ValueKey<String>('review-evidence-panel')),
+    expect(find.text('A recurring-looking signal was found.'), findsOneWidget);
+    expect(
+      find.text('The evidence is still too weak to confirm it automatically.'),
+      findsOneWidget,
     );
-    expect(find.text('What we saw'), findsWidgets);
-    expect(find.text('Why it stays separate'), findsOneWidget);
   });
 
   testWidgets('load error offers a retry path back into the dashboard', (
@@ -224,7 +250,7 @@ void main() {
   ) async {
     final gateway = _FlakyGateway();
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
@@ -297,9 +323,3 @@ class _FakeProblemReportLauncher implements ProblemReportLauncher {
     return true;
   }
 }
-
-
-
-
-
-

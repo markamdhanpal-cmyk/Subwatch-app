@@ -73,7 +73,7 @@ void main() {
   });
 
   testWidgets(
-    'settings stays free of reminder content while subscription surfaces keep reminder controls',
+    'settings keeps reminder content bounded while subscription surfaces keep reminder controls',
     (tester) async {
       final reminderStore = InMemoryLocalRenewalReminderStore();
       await reminderStore.save(
@@ -116,7 +116,7 @@ void main() {
         clock: () => now,
       );
 
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: runtimeUseCase,
       );
@@ -137,11 +137,59 @@ void main() {
       );
 
       await openDashboardDestination(tester, 'settings');
-      expect(find.text('Renewal reminders'), findsNothing);
-      expect(find.text('Renewal notifications'), findsNothing);
+      expect(find.byKey(const ValueKey<String>('settings-open-reminders')),
+          findsOneWidget);
+      expect(find.text('Renewal reminders'), findsOneWidget);
       expect(find.textContaining('3 days before'), findsNothing);
 
-      await openDashboardDestination(tester, 'subscriptions');
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(const ValueKey<String>('settings-open-reminders')),
+      );
+      expect(
+        find.byKey(const ValueKey<String>('settings-reminder-manager-sheet')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('settings-reminder-item-NETFLIX')),
+        findsOneWidget,
+      );
+
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(const ValueKey<String>('settings-reminder-item-NETFLIX')),
+      );
+
+      expect(
+        find.byKey(
+          const ValueKey<String>('renewal-reminder-controls-sheet-NETFLIX'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('enable-reminder-NETFLIX-oneDay')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('enable-reminder-NETFLIX-threeDays')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('enable-reminder-NETFLIX-sevenDays')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('disable-reminder-NETFLIX')),
+        findsOneWidget,
+      );
+
+      await tester.binding.handlePopRoute();
+      await pumpDashboardShellUi(tester);
+
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(const ValueKey<String>('destination-subscriptions')),
+      );
       await scrollDashboardUntilVisible(
         tester,
         find.text('Netflix'),
@@ -168,22 +216,6 @@ void main() {
         find.byKey(
           const ValueKey<String>('renewal-reminder-controls-sheet-NETFLIX'),
         ),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('enable-reminder-NETFLIX-oneDay')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('enable-reminder-NETFLIX-threeDays')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('enable-reminder-NETFLIX-sevenDays')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('disable-reminder-NETFLIX')),
         findsOneWidget,
       );
     },

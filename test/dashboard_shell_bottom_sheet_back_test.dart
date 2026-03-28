@@ -6,7 +6,7 @@ import 'support/dashboard_shell_test_harness.dart';
 
 void main() {
   testWidgets('android back dismisses dashboard bottom sheets', (tester) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -16,15 +16,15 @@ void main() {
     await openDashboardDestination(tester, 'settings');
     await scrollDashboardUntilVisible(
       tester,
-      find.byKey(const ValueKey<String>('settings-open-help')),
+      find.byKey(const ValueKey<String>('settings-open-how-it-works')),
     );
     await tapAndPumpDashboardShell(
       tester,
-      find.byKey(const ValueKey<String>('settings-open-help')),
+      find.byKey(const ValueKey<String>('settings-open-how-it-works')),
     );
 
     expect(
-      find.byKey(const ValueKey<String>('help-privacy-sheet')),
+      find.byKey(const ValueKey<String>('how-subwatch-works-sheet')),
       findsOneWidget,
     );
 
@@ -32,7 +32,7 @@ void main() {
     await pumpDashboardShellUi(tester);
 
     expect(
-      find.byKey(const ValueKey<String>('help-privacy-sheet')),
+      find.byKey(const ValueKey<String>('how-subwatch-works-sheet')),
       findsNothing,
     );
 
@@ -42,7 +42,7 @@ void main() {
     );
 
     expect(
-      find.byKey(const ValueKey<String>('manual-subscription-editor-new')),
+      find.byKey(const ValueKey<String>('popular-service-picker')),
       findsOneWidget,
     );
 
@@ -50,9 +50,8 @@ void main() {
     await pumpDashboardShellUi(tester);
 
     expect(
-      find.byKey(const ValueKey<String>('manual-subscription-editor-new')),
+      find.byKey(const ValueKey<String>('popular-service-picker')),
       findsNothing,
     );
   });
 }
-

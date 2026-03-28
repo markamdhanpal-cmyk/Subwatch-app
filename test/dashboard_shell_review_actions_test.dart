@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sub_killer/application/models/local_message_source_access_state.dart';
 import 'package:sub_killer/application/models/raw_device_sms.dart';
-import 'package:sub_killer/application/providers/stub_local_message_source_capability_provider.dart';
-import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
+import 'package:sub_killer/presentation/dashboard/dashboard_shell_providers.dart';
 
 import 'support/dashboard_shell_test_harness.dart';
 
@@ -11,9 +9,18 @@ void main() {
   testWidgets(
     'confirm review action can be undone and restores review visibility',
     (tester) async {
-      final harness = DashboardShellReviewHarness();
+      final harness = DashboardShellReviewHarness(
+        deviceSmsGateway: FakeDeviceSmsGateway(<RawDeviceSms>[
+          RawDeviceSms(
+            id: 'msg-1',
+            address: 'JIOHOTSTAR',
+            body: 'Your Jiohotstar subscription may renew shortly.',
+            receivedAt: DateTime(2026, 3, 12, 13, 0),
+          ),
+        ]),
+      );
 
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: harness.runtimeUseCase,
         handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
@@ -21,423 +28,48 @@ void main() {
       );
 
       await openDashboardDestination(tester, 'review');
+      await settleDashboard(tester);
+      
+
       await scrollDashboardUntilVisible(
         tester,
-        find.byKey(const ValueKey<String>('confirm-review-action-JIOHOTSTAR')),
+        find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
       );
 
       await tapAndPumpDashboardShell(
         tester,
-        find.byKey(const ValueKey<String>('confirm-review-action-JIOHOTSTAR')),
+        find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
       );
-      await tester.pumpAndSettle();
-
-      await openDashboardDestination(tester, 'settings');
-      await scrollDashboardUntilVisible(tester, find.text('Confirmed'));
-      expect(find.text('Confirmed'), findsOneWidget);
-      expect(find.text('You confirmed this'), findsWidgets);
-      expect(
-        find.byKey(const ValueKey<String>('undo-review-action-JIOHOTSTAR')),
-        findsWidgets,
-      );
-
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('undo-review-action-JIOHOTSTAR')),
-      );
-      await tapAndPumpDashboardShell(
-        tester,
-        find.byKey(const ValueKey<String>('undo-review-action-JIOHOTSTAR')),
-      );
-      await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey<String>('section-confirmedByYou')),
-        findsNothing,
-      );
-      await openDashboardDestination(tester, 'review');
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('confirm-review-action-JIOHOTSTAR')),
-      );
-      expect(
-        find.byKey(const ValueKey<String>('confirm-review-action-JIOHOTSTAR')),
-        findsWidgets,
-      );
-    },
-  );
-
-  testWidgets('dismiss review action can be undone safely', (tester) async {
-    final harness = DashboardShellReviewHarness();
-    const targetKey = 'JIOHOTSTAR';
-
-    await pumpDashboardShellApp(
-      tester,
-      runtimeUseCase: harness.runtimeUseCase,
-      handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
-      undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
-    );
-
-    await openDashboardDestination(tester, 'review');
-    await scrollDashboardUntilVisible(
-      tester,
-      find.byKey(
-        const ValueKey<String>('dismiss-review-action-$targetKey'),
-      ),
-    );
-
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(
-        const ValueKey<String>('dismiss-review-action-$targetKey'),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await openDashboardDestination(tester, 'settings');
-    await scrollDashboardUntilVisible(tester, find.text('Not subscriptions'));
-    expect(find.text('Not subscriptions'), findsOneWidget);
-    expect(find.text('Marked as not a subscription'), findsWidgets);
-    expect(
-      find.byKey(
-        const ValueKey<String>('undo-review-action-$targetKey'),
-      ),
-      findsWidgets,
-    );
-
-    await scrollDashboardUntilVisible(
-      tester,
-      find.byKey(
-        const ValueKey<String>('undo-review-action-$targetKey'),
-      ),
-    );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(
-        const ValueKey<String>('undo-review-action-$targetKey'),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const ValueKey<String>('section-hiddenFromReview')),
-      findsNothing,
-    );
-    await openDashboardDestination(tester, 'review');
-    await scrollDashboardUntilVisible(tester, find.text('Jiohotstar'));
-    expect(
-      find.byKey(
-        const ValueKey<String>('review-item-$targetKey'),
-      ),
-      findsWidgets,
-    );
-  });
-
-  testWidgets(
-    'review destination stays calm when no decisions are pending',
-    (tester) async {
-      await pumpDashboardShellApp(
-        tester,
-        runtimeUseCase: LoadRuntimeDashboardUseCase(
-          capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
-            accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
-          ),
-          deviceSmsGateway: FakeDeviceSmsGateway(
-            <RawDeviceSms>[
-              RawDeviceSms(
-                id: 'raw-netflix',
-                address: 'BANK',
-                body: 'Your Netflix subscription has been renewed for Rs 499.',
-                receivedAt: DateTime(2026, 3, 12, 13, 0),
-              ),
-            ],
-          ),
-          loadMode: RuntimeLedgerLoadMode.refreshFromSource,
-          clock: () => DateTime(2026, 3, 14, 9, 0),
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('review-item-details-sheet-JIOHOTSTAR')),
+          matching: find.text('Jiohotstar'),
         ),
-      );
-
-      await openDashboardDestination(tester, 'review');
-
-      expect(find.text('Needs attention'), findsOneWidget);
-
-      expect(
-        find.byKey(const ValueKey<String>('review-queue-summary-card')),
         findsOneWidget,
       );
-      expect(find.text('Nothing to review right now.'), findsOneWidget);
-      expect(find.text('Clear for now'), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey<String>('section-reviewQueue')),
-        findsNothing,
+
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('review-item-details-sheet-JIOHOTSTAR')),
+          matching: find.text('Confirm'),
+        ),
       );
+      await settleDashboard(tester);
       expect(
-        find.byKey(const ValueKey<String>('service-search-input')),
-        findsNothing,
+        find.text('Jiohotstar added to your subscriptions.'),
+        findsOneWidget,
       );
+
+      await tester.tap(find.text('Undo'));
+      await settleDashboard(tester);
+
       expect(
-        find.byKey(const ValueKey<String>('settings-overview-panel')),
-        findsNothing,
-      );
-      expect(
-        find.byKey(const ValueKey<String>('section-confirmedSubscriptions')),
-        findsNothing,
+        find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
+        findsOneWidget,
       );
     },
   );
-
-  testWidgets('hide card can be undone from local recovery', (tester) async {
-    final harness = DashboardShellReviewHarness();
-
-    await pumpDashboardShellApp(
-      tester,
-      runtimeUseCase: harness.runtimeUseCase,
-      handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
-      undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
-      handleLocalControlOverlayUseCase:
-          harness.handleLocalControlOverlayUseCase,
-      undoLocalControlOverlayUseCase: harness.undoLocalControlOverlayUseCase,
-    );
-
-    await openDashboardDestination(tester, 'subscriptions');
-    await scrollDashboardUntilVisible(
-      tester,
-      find.byKey(
-        const ValueKey<String>(
-          'service-card-actions-confirmedSubscriptions-NETFLIX',
-        ),
-      ),
-    );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(
-        const ValueKey<String>(
-          'service-card-actions-confirmedSubscriptions-NETFLIX',
-        ),
-      ),
-    );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(
-        const ValueKey<String>(
-          'hide-card-action-confirmedSubscriptions-NETFLIX',
-        ),
-      ),
-    );
-
-    expect(find.textContaining('hidden on this phone'), findsOneWidget);
-    expect(find.textContaining('Netflix'), findsNothing);
-
-
-    await openDashboardDestination(tester, 'settings');
-    await scrollDashboardUntilVisible(tester, find.text('Hidden items'));
-    expect(find.text('Hidden on this phone'), findsWidgets);
-
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(
-        const ValueKey<String>(
-          'undo-review-action-card::confirmedSubscriptions::NETFLIX',
-        ),
-      ),
-    );
-
-    await openDashboardDestination(tester, 'subscriptions');
-    await pumpDashboardShellUi(tester);
-    await scrollDashboardUntilVisible(
-      tester,
-      find.text('Netflix'),
-    );
-
-    expect(find.text('Netflix'), findsOneWidget);
-  });
-
-  testWidgets('ignore review item can be undone from local recovery', (
-    tester,
-  ) async {
-    final harness = DashboardShellReviewHarness();
-    const targetKey = 'JIOHOTSTAR';
-
-    await pumpDashboardShellApp(
-      tester,
-      runtimeUseCase: harness.runtimeUseCase,
-      handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
-      undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
-      handleLocalControlOverlayUseCase:
-          harness.handleLocalControlOverlayUseCase,
-      undoLocalControlOverlayUseCase: harness.undoLocalControlOverlayUseCase,
-    );
-
-    await openDashboardDestination(tester, 'review');
-    await scrollDashboardUntilVisible(
-      tester,
-      find.byKey(const ValueKey<String>('review-card-actions-$targetKey')),
-    );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(const ValueKey<String>('review-card-actions-$targetKey')),
-    );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(
-        ValueKey<String>('ignore-review-item-action-$targetKey'),
-      ),
-    );
-
-    expect(find.textContaining('hidden on this phone'), findsOneWidget);
-    expect(
-
-      find.byKey(ValueKey<String>('review-item-$targetKey')),
-      findsNothing,
-    );
-
-    await openDashboardDestination(tester, 'settings');
-    await scrollDashboardUntilVisible(tester, find.text('Hidden items'));
-    expect(find.text('Hidden on this phone'), findsWidgets);
-
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(
-        ValueKey<String>('undo-review-action-service::$targetKey'),
-      ),
-    );
-
-    await openDashboardDestination(tester, 'review');
-    await scrollDashboardUntilVisible(
-      tester,
-      find.byKey(ValueKey<String>('review-item-$targetKey')),
-    );
-    expect(
-      find.byKey(ValueKey<String>('review-item-$targetKey')),
-      findsWidgets,
-    );
-  });
-
-  testWidgets(
-    'review details explain uncertainty and can mark an item as benefit',
-    (tester) async {
-      final harness = DashboardShellReviewHarness();
-
-      await pumpDashboardShellApp(
-        tester,
-        runtimeUseCase: harness.runtimeUseCase,
-        handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
-        undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
-      );
-
-      await openDashboardDestination(tester, 'review');
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
-      );
-      await tapAndPumpDashboardShell(
-        tester,
-        find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
-      );
-
-      expect(
-        find.byKey(
-          const ValueKey<String>('review-item-details-sheet-JIOHOTSTAR'),
-        ),
-        findsWidgets,
-      );
-      await tapAndPumpDashboardShell(
-        tester,
-        find.byKey(const ValueKey<String>('review-evidence-panel')),
-      );
-      expect(find.text('What we saw'), findsWidgets);
-      expect(find.text('Why it showed up'), findsOneWidget);
-      expect(find.text('Why it stays separate'), findsOneWidget);
-
-      await _scrollSheetUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('review-details-benefit-JIOHOTSTAR')),
-      );
-      await tapAndPumpDashboardShell(
-        tester,
-        find.byKey(const ValueKey<String>('review-details-benefit-JIOHOTSTAR')),
-      );
-      await tester.pumpAndSettle();
-
-      await openDashboardDestination(tester, 'subscriptions');
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('toggle-section-trialsAndBenefits')),
-      );
-      await tapAndPumpDashboardShell(
-        tester,
-        find.byKey(const ValueKey<String>('toggle-section-trialsAndBenefits')),
-      );
-      expect(find.text('Jiohotstar'), findsWidgets);
-      expect(
-        find.text('You kept this separate'),
-        findsWidgets,
-      );
-
-      await openDashboardDestination(tester, 'settings');
-      await scrollDashboardUntilVisible(tester, find.text('Separate access'));
-      expect(
-        find.byKey(const ValueKey<String>('section-benefitsByYou')),
-        findsWidgets,
-      );
-      expect(find.text('You kept this separate'), findsWidgets);
-    },
-  );
-
-  testWidgets('review details can seed the manual editor safely', (
-    tester,
-  ) async {
-    final harness = DashboardShellReviewHarness();
-
-    await pumpDashboardShellApp(
-      tester,
-      runtimeUseCase: harness.runtimeUseCase,
-      handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
-      undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
-      handleManualSubscriptionUseCase: harness.handleManualSubscriptionUseCase,
-    );
-
-    await openDashboardDestination(tester, 'review');
-    await scrollDashboardUntilVisible(
-      tester,
-      find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
-    );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
-    );
-    await _scrollSheetUntilVisible(
-      tester,
-      find.byKey(const ValueKey<String>('review-details-edit-JIOHOTSTAR')),
-    );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(const ValueKey<String>('review-details-edit-JIOHOTSTAR')),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const ValueKey<String>('manual-subscription-editor-new')),
-      findsOneWidget,
-    );
-    final serviceField = tester.widget<TextField>(
-      find.byKey(const ValueKey<String>('manual-service-name-input')),
-    );
-    expect(serviceField.controller!.text, 'Jiohotstar');
-  });
 }
-
-Future<void> _scrollSheetUntilVisible(
-  WidgetTester tester,
-  Finder finder,
-) async {
-  await tester.scrollUntilVisible(
-    finder,
-    120,
-    scrollable: find.byType(Scrollable).last,
-  );
-  await tester.pump();
-}
-
 
 

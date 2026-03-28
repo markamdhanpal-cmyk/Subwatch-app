@@ -14,10 +14,10 @@ class DashboardInsetListGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: DashboardShellPalette.elevatedPaper.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(18),
+        color: DashboardShellPalette.elevatedPaper.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(DashboardRadii.nested),
         border: Border.all(
-          color: DashboardShellPalette.outline.withValues(alpha: 0.62),
+          color: DashboardShellPalette.outline.withValues(alpha: 0.82),
         ),
       ),
       child: Column(
@@ -28,9 +28,9 @@ class DashboardInsetListGroup extends StatelessWidget {
                 if (child != children.last)
                   const Divider(
                     height: 1,
-                    indent: 14,
-                    endIndent: 14,
-                    color: DashboardShellPalette.outline,
+                    indent: 16,
+                    endIndent: 16,
+                    color: DashboardShellPalette.divider,
                   ),
               ],
             )

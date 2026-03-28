@@ -15,6 +15,12 @@ import 'package:sub_killer/application/use_cases/request_device_sms_access_use_c
 import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
 import 'package:sub_killer/application/use_cases/undo_local_control_overlay_use_case.dart';
 import 'package:sub_killer/application/use_cases/undo_review_item_action_use_case.dart';
+import 'package:sub_killer/application/stores/in_memory_sms_onboarding_progress_store.dart';
+import 'package:sub_killer/application/stores/in_memory_local_control_overlay_store.dart';
+import 'package:sub_killer/application/stores/in_memory_local_manual_subscription_store.dart';
+import 'package:sub_killer/application/stores/in_memory_local_service_presentation_overlay_store.dart';
+import 'package:sub_killer/application/stores/in_memory_review_action_store.dart';
+import 'package:sub_killer/application/stores/in_memory_local_renewal_reminder_store.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_primitives.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_shell.dart';
 
@@ -26,12 +32,18 @@ void main() {
     (tester) async {
       await _setSmallHandsetViewport(tester, const Size(320, 640));
 
-      final onboardingUseCases = buildMemorySmsOnboardingUseCases();
+      final onboardingStore = InMemorySmsOnboardingProgressStore();
+      final loadOnboardingUseCase =
+          LoadSmsOnboardingProgressUseCase(store: onboardingStore);
+      final completeOnboardingUseCase =
+          CompleteSmsOnboardingUseCase(store: onboardingStore);
       final provider = MutableCapabilityProvider(
         initialState: LocalMessageSourceAccessState.sampleDemo,
         requestResult: LocalMessageSourceAccessRequestResult.granted,
         refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
       );
+      provider.delayRequest =
+          Completer<LocalMessageSourceAccessRequestResult>();
       final syncUseCase = SyncDeviceSmsUseCase(
         requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
           capabilityProvider: provider,
@@ -54,39 +66,46 @@ void main() {
       await _pumpConstrainedDashboardShell(
         tester,
         textScale: 1.2,
+        skipGate: false,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
           capabilityProvider: provider,
+          deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
           clock: () => DateTime(2026, 3, 13, 9, 0),
         ),
         syncDeviceSmsUseCase: syncUseCase,
-        loadSmsOnboardingProgressUseCase: onboardingUseCases.$1,
-        completeSmsOnboardingUseCase: onboardingUseCases.$2,
+        loadSmsOnboardingProgressUseCase: loadOnboardingUseCase,
+        completeSmsOnboardingUseCase: completeOnboardingUseCase,
       );
 
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('sync-with-sms-button')),
-      );
+      // Verify the Gate is readable
+      expect(find.byKey(const ValueKey<String>('first-run-gate-headline')),
+          findsOneWidget);
+
       await tapAndPumpDashboardShell(
         tester,
-        find.byKey(const ValueKey<String>('sync-with-sms-button')),
+        find.byKey(const ValueKey<String>('first-run-get-started-button')),
       );
 
+      await tester.pump(const Duration(milliseconds: 100));
+      await pumpDashboardShellUi(tester);
+
       expect(
-        find.byKey(const ValueKey<String>('sms-permission-onboarding-sheet')),
+        find.byKey(const ValueKey<String>('sms-permission-rationale-sheet')),
         findsOneWidget,
       );
-      expect(find.text('Find subscriptions in your messages'), findsOneWidget);
+      expect(find.text('Start with SMS permission'), findsWidgets);
+
       await tester.ensureVisible(
         find.byKey(
-          const ValueKey<String>('sms-permission-onboarding-continue-action'),
+          const ValueKey<String>('sms-permission-rationale-primary-action'),
         ),
       );
-      await tester.ensureVisible(
-        find.byKey(
-          const ValueKey<String>('sms-permission-onboarding-browse-action'),
-        ),
-      );
+
+      // Complete the request - this triggers the transition to next phase
+      provider.delayRequest!
+          .complete(LocalMessageSourceAccessRequestResult.granted);
+      await settleDashboard(tester);
+
       expect(tester.takeException(), isNull);
     },
   );
@@ -101,6 +120,8 @@ void main() {
         requestResult: LocalMessageSourceAccessRequestResult.denied,
         refreshedState: LocalMessageSourceAccessState.deviceLocalDenied,
       );
+      provider.delayRequest =
+          Completer<LocalMessageSourceAccessRequestResult>();
       final syncUseCase = SyncDeviceSmsUseCase(
         requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
           capabilityProvider: provider,
@@ -114,26 +135,40 @@ void main() {
       await _pumpConstrainedDashboardShell(
         tester,
         textScale: 1.2,
+        skipGate: false,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
           capabilityProvider: provider,
+          deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
         ),
         syncDeviceSmsUseCase: syncUseCase,
       );
 
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('sync-with-sms-button')),
-      );
+      // Handle the Gate
       await tapAndPumpDashboardShell(
         tester,
-        find.byKey(const ValueKey<String>('sync-with-sms-button')),
+        find.byKey(const ValueKey<String>('first-run-get-started-button')),
       );
 
+      // Now we should be at rationale, click it to reach 'denied' phase
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(
+            const ValueKey<String>('sms-permission-rationale-primary-action')),
+      );
+      provider.delayRequest!
+          .complete(LocalMessageSourceAccessRequestResult.denied);
+      await pumpDashboardUntilSyncIdle(tester);
+
       expect(
-        find.text('SMS access is off'),
+        find.byKey(const ValueKey<String>('first-run-denied')),
         findsOneWidget,
       );
-      await tester.ensureVisible(find.text('Open Settings'));
+      expect(
+        find.text('SubWatch needs SMS access to find your subscriptions.'),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(find.text('Try again'));
+
       expect(tester.takeException(), isNull);
     },
   );
@@ -142,6 +177,13 @@ void main() {
     'scan working state and zero-confirmed rescue stay readable on a narrow handset',
     (tester) async {
       await _setSmallHandsetViewport(tester, const Size(320, 640));
+
+      final onboardingStore = InMemorySmsOnboardingProgressStore();
+      await onboardingStore.writeCompleted(true);
+      final loadOnboardingUseCase =
+          LoadSmsOnboardingProgressUseCase(store: onboardingStore);
+      final completeOnboardingUseCase =
+          CompleteSmsOnboardingUseCase(store: onboardingStore);
 
       final provider = MutableCapabilityProvider(
         initialState: LocalMessageSourceAccessState.deviceLocalAvailable,
@@ -164,7 +206,11 @@ void main() {
           deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
         ),
         syncDeviceSmsUseCase: syncUseCase,
+        loadSmsOnboardingProgressUseCase: loadOnboardingUseCase,
+        completeSmsOnboardingUseCase: completeOnboardingUseCase,
       );
+
+      await pumpDashboardShellUi(tester);
 
       await scrollDashboardUntilVisible(
         tester,
@@ -194,19 +240,67 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
-
   testWidgets(
     'sample preview stays readable on a narrow handset with larger text',
     (tester) async {
       await _setSmallHandsetViewport(tester, const Size(320, 640));
 
+      final provider = MutableCapabilityProvider(
+        initialState: LocalMessageSourceAccessState.sampleDemo,
+        requestResult: LocalMessageSourceAccessRequestResult.granted,
+        refreshedState: LocalMessageSourceAccessState.sampleDemo,
+      );
+      final syncUseCase = SyncDeviceSmsUseCase(
+        requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
+          capabilityProvider: provider,
+        ),
+        loadRuntimeDashboard: () => LoadRuntimeDashboardUseCase(
+          capabilityProvider: provider,
+          deviceSmsGateway: FakeDeviceSmsGateway(
+            <RawDeviceSms>[
+              RawDeviceSms(
+                id: 'raw-netflix',
+                address: 'BANK',
+                body: 'Your Netflix subscription has been renewed for Rs 499.',
+                receivedAt: DateTime(2026, 3, 12, 13, 0),
+              ),
+            ],
+          ),
+          clock: () => DateTime(2026, 3, 14, 9, 0),
+        ).execute(),
+      );
+
       await _pumpConstrainedDashboardShell(
         tester,
         textScale: 1.2,
+        skipGate: false,
+        syncDeviceSmsUseCase: syncUseCase,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
+          capabilityProvider: provider,
+          deviceSmsGateway: FakeDeviceSmsGateway(
+            <RawDeviceSms>[
+              RawDeviceSms(
+                id: 'raw-netflix',
+                address: 'BANK',
+                body: 'Your Netflix subscription has been renewed for Rs 499.',
+                receivedAt: DateTime(2026, 3, 14, 9, 0),
+              ),
+            ],
+          ),
           clock: () => DateTime(2026, 3, 14, 9, 0),
         ),
       );
+
+      await pumpDashboardShellUi(tester);
+
+      expect(find.textContaining('Find subscriptions'), findsOneWidget);
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('first-run-get-started-button')),
+      );
+
+      await pumpDashboardShellLoad(tester, skipGate: true);
+      await pumpDashboardShellUi(tester);
 
       await scrollDashboardUntilVisible(
         tester,
@@ -215,7 +309,7 @@ void main() {
 
       expect(find.byKey(const ValueKey<String>('snapshot-certificate-card')),
           findsNothing);
-      expect(find.text('Scan your messages'), findsWidgets);
+      expect(find.textContaining('Scan your messages'), findsWidgets);
       expect(
         find.text('No scan yet'),
         findsOneWidget,
@@ -228,6 +322,7 @@ void main() {
       await _pumpConstrainedDashboardShell(
         tester,
         textScale: 1.2,
+        skipGate: true,
         runtimeUseCase: harness.runtimeUseCase,
         handleManualSubscriptionUseCase:
             harness.handleManualSubscriptionUseCase,
@@ -285,9 +380,7 @@ void main() {
         find.byKey(const ValueKey<String>('save-manual-subscription')),
       );
 
-      expect(
-          find.text(
-              'Gym Club added to your list. It now shows in spend.'),
+      expect(find.text('Gym Club added to your list. It now shows in spend.'),
           findsOneWidget);
       await scrollDashboardUntilVisible(tester, find.text('Gym Club'));
       expect(find.text('Gym Club'), findsOneWidget);
@@ -297,13 +390,14 @@ void main() {
   );
 
   testWidgets(
-    'subscriptions controls keep Add manually visible on a typical handset with larger text',
+    'subscriptions controls keep Add subscription visible on a typical handset with larger text',
     (tester) async {
       await _setSmallHandsetViewport(tester, const Size(392, 850));
 
       await _pumpConstrainedDashboardShell(
         tester,
         textScale: 1.3,
+        skipGate: true,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
           clock: () => DateTime(2026, 3, 14, 9, 0),
         ),
@@ -314,7 +408,7 @@ void main() {
         find.byKey(const ValueKey<String>('open-manual-subscription-form')),
       );
 
-      expect(find.byTooltip('Add manually'), findsOneWidget);
+      expect(find.byTooltip('Add subscription'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -324,12 +418,37 @@ void main() {
     (tester) async {
       await _setSmallHandsetViewport(tester, const Size(320, 640));
 
+      final provider = MutableCapabilityProvider(
+        initialState: LocalMessageSourceAccessState.deviceLocalAvailable,
+        requestResult: LocalMessageSourceAccessRequestResult.granted,
+        refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
+      );
+
       await _pumpConstrainedDashboardShell(
         tester,
         textScale: 1.3,
+        skipGate: true,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
+          capabilityProvider: provider,
+          deviceSmsGateway: FakeDeviceSmsGateway(
+            <RawDeviceSms>[
+              RawDeviceSms(
+                id: 'raw-netflix',
+                address: 'BANK',
+                body: 'Your Netflix subscription has been renewed for Rs 499.',
+                receivedAt: DateTime(2026, 3, 14, 8, 0),
+              ),
+              RawDeviceSms(
+                id: 'raw-amazon',
+                address: 'BANK',
+                body: 'You have set up an autopay mandate for Amazon Prime.',
+                receivedAt: DateTime(2026, 3, 14, 8, 30),
+              ),
+            ],
+          ),
           clock: () => DateTime(2026, 3, 14, 9, 0),
         ),
+        clock: () => DateTime(2026, 3, 14, 9, 0),
       );
 
       final confirmedMetric = find.byKey(
@@ -339,7 +458,10 @@ void main() {
         const ValueKey<String>('home-action-strip'),
       );
 
-      expect(confirmedMetric, findsOneWidget);
+      expect(
+        confirmedMetric,
+        findsOneWidget,
+      );
       expect(reviewMetric, findsOneWidget);
       expect(
         tester.getTopLeft(reviewMetric).dy,
@@ -354,28 +476,38 @@ void main() {
     (tester) async {
       await _setSmallHandsetViewport(tester, const Size(320, 640));
 
-      final harness = DashboardShellReviewHarness();
+      final harness = DashboardShellReviewHarness(
+        deviceSmsGateway: FakeDeviceSmsGateway(<RawDeviceSms>[
+          RawDeviceSms(
+            id: 'msg-1',
+            address: 'JIOHOTSTAR',
+            body: 'Your Jiohotstar subscription may renew shortly.',
+            receivedAt: DateTime(2026, 3, 12, 13, 0),
+          ),
+        ]),
+      );
       await _pumpConstrainedDashboardShell(
         tester,
         textScale: 1.2,
+        skipGate: true,
         runtimeUseCase: harness.runtimeUseCase,
         handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
         undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
         handleManualSubscriptionUseCase:
             harness.handleManualSubscriptionUseCase,
       );
-      
-      debugDumpApp();
 
       await openDashboardDestination(tester, 'review');
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
+      final detailsButton =
+          find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR'));
+      await tester.dragUntilVisible(
+        detailsButton,
+        find.byType(ListView),
+        const Offset(0, -200),
       );
-      await tapAndPumpDashboardShell(
-        tester,
-        find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
-      );
+      await settleDashboard(tester);
+      await tester.tap(detailsButton);
+      await settleDashboard(tester);
 
       expect(
         find.byKey(
@@ -384,11 +516,13 @@ void main() {
         findsOneWidget,
       );
       await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('review-details-edit-JIOHOTSTAR')),
+        find.byKey(const ValueKey<String>('review-details-confirm-JIOHOTSTAR')),
       );
-      await tapAndPumpDashboardShell(
-          tester, find.byKey(const ValueKey<String>('review-evidence-panel')));
-      expect(find.text('What we saw'), findsWidgets);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('review-evidence-panel')),
+      );
+      expect(
+          find.text('A recurring-looking signal was found.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -404,6 +538,9 @@ Future<void> _setSmallHandsetViewport(WidgetTester tester, Size size) async {
 Future<void> _pumpConstrainedDashboardShell(
   WidgetTester tester, {
   double textScale = 1.0,
+  bool skipGate = false,
+  LocalMessageSourceAccessState initialAccessState =
+      LocalMessageSourceAccessState.sampleDemo,
   LoadRuntimeDashboardUseCase? runtimeUseCase,
   SyncDeviceSmsUseCase? syncDeviceSmsUseCase,
   HandleReviewItemActionUseCase? handleReviewItemActionUseCase,
@@ -414,7 +551,35 @@ Future<void> _pumpConstrainedDashboardShell(
   HandleLocalServicePresentationUseCase? handleLocalServicePresentationUseCase,
   LoadSmsOnboardingProgressUseCase? loadSmsOnboardingProgressUseCase,
   CompleteSmsOnboardingUseCase? completeSmsOnboardingUseCase,
+  DateTime Function()? clock,
 }) async {
+  final onboardingStore = InMemorySmsOnboardingProgressStore()
+    ..writeCompleted(skipGate);
+  final provider = MutableCapabilityProvider(
+    initialState: initialAccessState,
+    requestResult: LocalMessageSourceAccessRequestResult.granted,
+    refreshedState: initialAccessState,
+  );
+  final effectiveRuntimeUseCase = runtimeUseCase ??
+      LoadRuntimeDashboardUseCase(
+        capabilityProvider: provider,
+        ledgerSnapshotStore: MemoryLedgerSnapshotStore(),
+        reviewActionStore: InMemoryReviewActionStore(),
+        localControlOverlayStore: InMemoryLocalControlOverlayStore(),
+        localManualSubscriptionStore: InMemoryLocalManualSubscriptionStore(),
+        localRenewalReminderStore: InMemoryLocalRenewalReminderStore(),
+        localServicePresentationOverlayStore:
+            InMemoryLocalServicePresentationOverlayStore(),
+        deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
+        clock: clock,
+      );
+  final defaultSyncDeviceSmsUseCase = SyncDeviceSmsUseCase(
+    requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
+      capabilityProvider: provider,
+    ),
+    loadRuntimeDashboard: effectiveRuntimeUseCase.execute,
+  );
+
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData(
@@ -435,13 +600,15 @@ Future<void> _pumpConstrainedDashboardShell(
         return MediaQuery(
           data: mediaQuery.copyWith(
             textScaler: TextScaler.linear(textScale),
+            disableAnimations: true,
           ),
           child: child!,
         );
       },
       home: DashboardShell(
-        runtimeUseCase: runtimeUseCase,
-        syncDeviceSmsUseCase: syncDeviceSmsUseCase,
+        runtimeUseCase: effectiveRuntimeUseCase,
+        syncDeviceSmsUseCase:
+            syncDeviceSmsUseCase ?? defaultSyncDeviceSmsUseCase,
         handleReviewItemActionUseCase: handleReviewItemActionUseCase,
         undoReviewItemActionUseCase: undoReviewItemActionUseCase,
         handleLocalControlOverlayUseCase: handleLocalControlOverlayUseCase,
@@ -449,11 +616,16 @@ Future<void> _pumpConstrainedDashboardShell(
         handleManualSubscriptionUseCase: handleManualSubscriptionUseCase,
         handleLocalServicePresentationUseCase:
             handleLocalServicePresentationUseCase,
-        loadSmsOnboardingProgressUseCase: loadSmsOnboardingProgressUseCase,
-        completeSmsOnboardingUseCase: completeSmsOnboardingUseCase,
+        loadSmsOnboardingProgressUseCase: loadSmsOnboardingProgressUseCase ??
+            LoadSmsOnboardingProgressUseCase(
+              store: onboardingStore,
+            ),
+        completeSmsOnboardingUseCase: completeSmsOnboardingUseCase ??
+            CompleteSmsOnboardingUseCase(
+              store: onboardingStore,
+            ),
       ),
     ),
   );
-  await pumpDashboardShellLoad(tester);
+  await pumpDashboardShellLoad(tester, skipGate: skipGate);
 }
-

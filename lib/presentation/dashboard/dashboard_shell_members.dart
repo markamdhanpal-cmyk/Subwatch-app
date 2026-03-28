@@ -3,7 +3,6 @@
 part of 'dashboard_shell.dart';
 
 extension _DashboardShellMembers on _DashboardShellState {
-
   void _reloadSnapshot() {
     ref.read(dashboardSnapshotControllerProvider.notifier).reload();
   }
@@ -42,7 +41,9 @@ extension _DashboardShellMembers on _DashboardShellState {
       return;
     }
 
-    ref.read(dashboardLocalControlsProvider.notifier).clearServiceViewControls();
+    ref
+        .read(dashboardLocalControlsProvider.notifier)
+        .clearServiceViewControls();
     _serviceSearchController.clear();
   }
 
@@ -63,7 +64,7 @@ extension _DashboardShellMembers on _DashboardShellState {
     ).targetKey;
   }
 
-  Future<void> _handleSyncWithSms() async {
+  Future<void> _handleSyncWithSms({FirstRunController? firstRun}) async {
     try {
       final result = await ref.read(dashboardSyncStateProvider.notifier).sync(
             minimumIndicatorDuration: const Duration(milliseconds: 600),
@@ -71,6 +72,28 @@ extension _DashboardShellMembers on _DashboardShellState {
       if (!mounted) {
         return;
       }
+
+      if (firstRun != null) {
+        if (result.requestResult ==
+            LocalMessageSourceAccessRequestResult.granted) {
+          final confirmedCount = result.snapshot.cards
+              .where((card) =>
+                  card.bucket == DashboardBucket.confirmedSubscriptions)
+              .length;
+
+          if (confirmedCount > 0) {
+            await firstRun.markCompleted();
+          } else {
+            firstRun.setFirstResult(result.snapshot);
+          }
+        } else if (result.requestResult ==
+            LocalMessageSourceAccessRequestResult.denied) {
+          firstRun.setPhase(FirstRunPhase.denied);
+        } else {
+          firstRun.setPhase(FirstRunPhase.permanentlyDenied);
+        }
+      }
+
       _showFeedbackSnackBar(
         _syncMessage(result.requestResult, result.snapshot),
         action:
@@ -85,6 +108,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       if (!mounted) {
         return;
       }
+      firstRun?.setPhase(FirstRunPhase.denied);
       _showFeedbackSnackBar(
         'Scan failed. Your current results stayed in place.',
       );
@@ -98,18 +122,10 @@ extension _DashboardShellMembers on _DashboardShellState {
       return _handleSyncWithSms();
     }
 
-    if (status.permissionRationaleVariant ==
-        RuntimeLocalMessageSourcePermissionRationaleVariant.firstRun) {
-      final hasCompletedOnboarding = await _readSmsOnboardingCompletion();
-      if (hasCompletedOnboarding) {
-        return _handleSyncWithSms();
-      }
-
-      _showSmsPermissionOnboarding();
-      return;
-    }
-
-    _showSmsPermissionRationale(status.permissionRationaleVariant!);
+    _showSmsPermissionRationale(
+      status.permissionRationaleVariant!,
+      firstRun: ref.read(dashboardFirstRunProvider.notifier),
+    );
   }
 
   Future<bool> _readSmsOnboardingCompletion() async {
@@ -155,7 +171,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return false;
       }
       _showFeedbackSnackBar(
-        'Added item could not be saved. Visible state was kept.',
+        'Couldn\'t save that subscription. Your current view stayed the same.',
       );
       return false;
     }
@@ -193,7 +209,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return false;
       }
       _showFeedbackSnackBar(
-        'Added item could not be updated. Visible state was kept.',
+        'Couldn\'t update that subscription. Your current view stayed the same.',
       );
       return false;
     }
@@ -220,7 +236,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return false;
       }
       _showFeedbackSnackBar(
-        'Added item could not be removed. Visible state was kept.',
+        'Couldn\'t remove that subscription. Your current view stayed the same.',
       );
       return false;
     }
@@ -248,7 +264,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return false;
       case HandleManualSubscriptionOutcome.notFound:
         _showFeedbackSnackBar(
-          'Nothing changed. The manual entry was not available.',
+          'Nothing changed. That subscription wasn\'t available.',
         );
         return false;
     }
@@ -297,7 +313,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Review update failed. Visible state did not change.',
+        'Review couldn\'t be updated. Your current view stayed the same.',
       );
     }
   }
@@ -318,21 +334,21 @@ extension _DashboardShellMembers on _DashboardShellState {
       if (!mounted) {
         return;
       }
-      _showFeedbackSnackBar('Undo failed. Visible review state was kept.');
+      _showFeedbackSnackBar(
+        'Undo didn\'t go through. Your current view stayed the same.',
+      );
     }
   }
 
   Future<void> _handleIgnoreCard(DashboardCard card) async {
     final targetKey = 'service::${card.serviceKey.value}';
     try {
-      await ref
-          .read(dashboardLocalControlsProvider.notifier)
-          .ignoreCard(card);
+      await ref.read(dashboardLocalControlsProvider.notifier).ignoreCard(card);
       if (!mounted) {
         return;
       }
       _showFeedbackSnackBar(
-        '${card.title} ignored locally.',
+        '${card.title} hidden on this phone.',
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
@@ -349,7 +365,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Local control update failed. Visible state did not change.',
+        'That change couldn\'t be saved. Your current view stayed the same.',
       );
     }
   }
@@ -357,14 +373,12 @@ extension _DashboardShellMembers on _DashboardShellState {
   Future<void> _handleHideCard(DashboardCard card) async {
     final targetKey = 'card::${card.bucket.name}::${card.serviceKey.value}';
     try {
-      await ref
-          .read(dashboardLocalControlsProvider.notifier)
-          .hideCard(card);
+      await ref.read(dashboardLocalControlsProvider.notifier).hideCard(card);
       if (!mounted) {
         return;
       }
       _showFeedbackSnackBar(
-        '${card.title} hidden locally.',
+        '${card.title} hidden on this phone.',
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
@@ -381,7 +395,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Local control update failed. Visible state did not change.',
+        'That change couldn\'t be saved. Your current view stayed the same.',
       );
     }
   }
@@ -413,7 +427,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Local control update failed. Visible state did not change.',
+        'That change couldn\'t be saved. Your current view stayed the same.',
       );
     }
   }
@@ -440,7 +454,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Undo failed. Visible local controls were kept.',
+        'Undo didn\'t go through. Your current view stayed the same.',
       );
     }
   }
@@ -457,13 +471,13 @@ extension _DashboardShellMembers on _DashboardShellState {
       if (!mounted) {
         return;
       }
-      _showFeedbackSnackBar('$originalTitle label updated locally.');
+      _showFeedbackSnackBar('$originalTitle label updated on this phone.');
     } catch (_) {
       if (!mounted) {
         return;
       }
       _showFeedbackSnackBar(
-        'Local organization update failed. Visible state did not change.',
+        'That change couldn\'t be saved. Your current view stayed the same.',
       );
     }
   }
@@ -489,7 +503,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Local organization update failed. Visible state did not change.',
+        'That change couldn\'t be saved. Your current view stayed the same.',
       );
     }
   }
@@ -507,7 +521,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       }
       _showFeedbackSnackBar(
         result.changed
-            ? '$originalTitle pinned locally.'
+            ? '$originalTitle pinned on this phone.'
             : 'Nothing changed. This service was already pinned.',
       );
     } catch (_) {
@@ -515,7 +529,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Local organization update failed. Visible state did not change.',
+        'That change couldn\'t be saved. Your current view stayed the same.',
       );
     }
   }
@@ -533,7 +547,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       }
       _showFeedbackSnackBar(
         result.changed
-            ? '$originalTitle unpinned locally.'
+            ? '$originalTitle unpinned on this phone.'
             : 'Nothing changed. This service was not pinned.',
       );
     } catch (_) {
@@ -541,7 +555,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Local organization update failed. Visible state did not change.',
+        'That change couldn\'t be saved. Your current view stayed the same.',
       );
     }
   }
@@ -580,7 +594,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Reminder update failed. Local reminder state did not change.',
+        'Reminder couldn\'t be updated. Your current view stayed the same.',
       );
     }
   }
@@ -598,7 +612,9 @@ extension _DashboardShellMembers on _DashboardShellState {
       }
       switch (result.outcome) {
         case LocalRenewalReminderOutcome.disabled:
-          _showFeedbackSnackBar('$serviceTitle reminder removed locally.');
+          _showFeedbackSnackBar(
+            '$serviceTitle reminder removed from this phone.',
+          );
           break;
         case LocalRenewalReminderOutcome.unchanged:
           _showFeedbackSnackBar('Nothing changed. No reminder was removed.');
@@ -615,7 +631,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Reminder update failed. Local reminder state did not change.',
+        'Reminder couldn\'t be updated. Your current view stayed the same.',
       );
     }
   }
@@ -745,13 +761,12 @@ extension _DashboardShellMembers on _DashboardShellState {
         )
         .length;
     return switch (result) {
-      LocalMessageSourceAccessRequestResult.granted => snapshot
-                  .reviewQueue.isNotEmpty &&
-              confirmedCount == 0
-          ? 'Scan finished. Some items still need review.'
-          : confirmedCount == 0
-              ? 'Scan finished. No paid subscriptions confirmed yet.'
-              : 'Scan finished. Results updated.',
+      LocalMessageSourceAccessRequestResult.granted =>
+        snapshot.reviewQueue.isNotEmpty && confirmedCount == 0
+            ? 'Scan finished. Some items still need review.'
+            : confirmedCount == 0
+                ? 'Scan finished. No paid subscriptions confirmed yet.'
+                : 'Scan finished. Results updated.',
       LocalMessageSourceAccessRequestResult.denied => keptRestoredSnapshot
           ? 'SMS access is off. Showing your last saved results.'
           : 'SMS access is off. You can try again later.',
@@ -768,13 +783,12 @@ extension _DashboardShellMembers on _DashboardShellState {
   }) {
     final message = switch (outcome) {
       ReviewItemActionOutcome.confirmed =>
-        '$title added to confirmed subscriptions.',
+        '$title added to your subscriptions.',
       ReviewItemActionOutcome.markedAsBenefit =>
-        '$title kept separate as a benefit.',
-      ReviewItemActionOutcome.dismissed =>
-        '$title marked as not a subscription.',
+        '$title kept as included access.',
+      ReviewItemActionOutcome.dismissed => '$title removed from Review.',
       ReviewItemActionOutcome.notAllowed =>
-        'SubWatch still needs clearer service details before this can be confirmed.',
+        'SubWatch still needs a clearer service name.',
     };
 
     _showFeedbackSnackBar(
@@ -802,7 +816,7 @@ extension _DashboardShellMembers on _DashboardShellState {
     String title,
   ) {
     final message = switch (outcome) {
-      ReviewItemUndoOutcome.restored => '$title returned to review.',
+      ReviewItemUndoOutcome.restored => '$title returned to Review.',
       ReviewItemUndoOutcome.notFound =>
         'Nothing changed. No review item was restored.',
     };
@@ -815,14 +829,36 @@ extension _DashboardShellMembers on _DashboardShellState {
     SnackBarAction? action,
   }) {
     final reduceMotion = shouldReduceMotion(context);
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        content: Text(message),
-        action: action,
+        backgroundColor: DashboardShellPalette.paper,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: DashboardShellPalette.outlineStrong),
+        ),
+        content: Text(
+          message,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: DashboardShellPalette.ink,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        action: action == null
+            ? null
+            : SnackBarAction(
+                label: action.label,
+                textColor: DashboardShellPalette.accent,
+                onPressed: action.onPressed,
+              ),
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+        duration: action == null
+            ? const Duration(milliseconds: 3200)
+            : const Duration(milliseconds: 4200),
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+        margin: EdgeInsets.fromLTRB(16, 0, 16, 12 + bottomInset),
       ),
       snackBarAnimationStyle: reduceMotion
           ? AnimationStyle.noAnimation
@@ -837,8 +873,8 @@ extension _DashboardShellMembers on _DashboardShellState {
     return shouldReduceMotion(context)
         ? AnimationStyle.noAnimation
         : const AnimationStyle(
-            duration: Duration(milliseconds: 240),
-            reverseDuration: Duration(milliseconds: 190),
+            duration: dashboardSheetMotionDuration,
+            reverseDuration: dashboardSheetReverseDuration,
           );
   }
 
@@ -852,7 +888,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       enableDrag: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.56),
+      barrierColor: DashboardShellPalette.scrim,
       sheetAnimationStyle: _dashboardSheetAnimationStyle(),
       builder: builder,
     );
@@ -871,14 +907,12 @@ extension _DashboardShellMembers on _DashboardShellState {
     ReviewItem item,
     ReviewItemActionDescriptor descriptor,
     ReviewQueueItemPresentation presentation,
-    ContextualExplanationPresentation explanation,
   ) {
     _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _ReviewItemDetailsSheet(
         item: item,
         descriptor: descriptor,
         presentation: presentation,
-        explanation: explanation,
         isBusy: _reviewActionTargetsInFlight.contains(descriptor.targetKey),
         onConfirm: descriptor.canConfirm
             ? () {
@@ -905,6 +939,10 @@ extension _DashboardShellMembers on _DashboardShellState {
             ReviewItemAction.dismissNotSubscription,
           );
         },
+        onIgnore: () {
+          Navigator.of(sheetContext).pop();
+          _handleIgnoreReviewItem(item);
+        },
         onEditDetails: () {
           final initialServiceName = descriptor.canConfirm ? item.title : null;
           const String? initialPlanLabel = null;
@@ -913,10 +951,6 @@ extension _DashboardShellMembers on _DashboardShellState {
             initialServiceName: initialServiceName,
             initialPlanLabel: initialPlanLabel,
           );
-        },
-        onExplain: () {
-          Navigator.of(sheetContext).pop();
-          _showContextualExplanation(explanation);
         },
       ),
     );
@@ -930,56 +964,89 @@ extension _DashboardShellMembers on _DashboardShellState {
     _selectDestination(_DashboardDestination.settings);
   }
 
-  void _showSmsPermissionOnboarding() {
-    _showDashboardBottomSheet<void>(
-      builder: (sheetContext) => _SmsPermissionOnboardingSheet(
-        onBrowseFirst: () async {
-          await _markSmsOnboardingCompleted();
-          if (sheetContext.mounted) {
-            Navigator.of(sheetContext).pop();
-          }
-        },
-        onContinue: () async {
-          await _markSmsOnboardingCompleted();
-          if (sheetContext.mounted) {
-            Navigator.of(sheetContext).pop();
-          }
-          return _handleSyncWithSms();
-        },
-      ),
-    );
+  Future<void> _handleFirstRunGetStarted() async {
+    final sourceStatus = ref.read(dashboardSourceStatusProvider);
+    if (sourceStatus.permissionRationaleVariant != null) {
+      _showSmsPermissionRationale(
+        sourceStatus.permissionRationaleVariant!,
+        firstRun: ref.read(dashboardFirstRunProvider.notifier),
+      );
+      return;
+    }
+
+    _handleSyncWithSms(firstRun: ref.read(dashboardFirstRunProvider.notifier));
+  }
+
+  Future<void> _handleFirstRunRetry() => _handleFirstRunGetStarted();
+
+  void _handleFirstRunOpenSettings() {
+    _openSettingsDestination();
+  }
+
+  Future<void> _handleFirstRunNotNow() async {
+    await ref.read(dashboardFirstRunProvider.notifier).markCompleted();
+  }
+
+  Future<void> _handleFirstRunDone() async {
+    await ref.read(dashboardFirstRunProvider.notifier).markCompleted();
   }
 
   void _showSmsPermissionRationale(
-    RuntimeLocalMessageSourcePermissionRationaleVariant variant,
-  ) {
+    RuntimeLocalMessageSourcePermissionRationaleVariant variant, {
+    FirstRunController? firstRun,
+  }) {
     _showDashboardBottomSheet<void>(
       builder: (sheetContext) => _SmsPermissionRationaleSheet(
         variant: variant,
         onContinue: () {
           Navigator.of(sheetContext).pop();
-          return _handleSyncWithSms();
+          return _handleSyncWithSms(firstRun: firstRun);
         },
         onSecondaryAction: () {
           Navigator.of(sheetContext).pop();
           if (variant ==
               RuntimeLocalMessageSourcePermissionRationaleVariant.retry) {
             _openSettingsDestination();
+            return;
+          }
+          if (firstRun != null) {
+            firstRun.markCompleted();
           }
         },
       ),
     );
   }
 
-  void _showHelpAndPrivacySheet() {
+  void _showHowSubWatchWorksSheet() {
     _showDashboardBottomSheet<void>(
-      builder: (context) => const _HelpAndPrivacySheet(),
+      builder: (context) => const _HowSubWatchWorksSheet(),
+    );
+  }
+
+  void _showPrivacySheet() {
+    _showDashboardBottomSheet<void>(
+      builder: (context) => const _PrivacySheet(),
     );
   }
 
   void _showAboutSheet() {
     _showDashboardBottomSheet<void>(
       builder: (context) => const _AboutSubWatchSheet(),
+    );
+  }
+
+  void _showSettingsReminderManagerSheet(
+    List<DashboardRenewalReminderItemPresentation> reminderItems,
+  ) {
+    _showDashboardBottomSheet<void>(
+      builder: (sheetContext) => _SettingsReminderManagerSheet(
+        reminderItems: reminderItems,
+        busyTargets: _localRenewalReminderTargetsInFlight,
+        onOpenReminderControls: (item) {
+          Navigator.of(sheetContext).pop();
+          _showRenewalReminderControls(item);
+        },
+      ),
     );
   }
 
@@ -1010,9 +1077,9 @@ extension _DashboardShellMembers on _DashboardShellState {
     final cleared = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('Clear all local data?'),
+            title: const Text('Clear all data?'),
             content: const Text(
-              'This removes saved results, review decisions, manual entries, reminders, and local labels from this phone.',
+              'This removes saved subscriptions, review decisions, reminders, and labels from this phone.',
             ),
             actions: <Widget>[
               TextButton(
@@ -1097,6 +1164,8 @@ extension _DashboardShellMembers on _DashboardShellState {
       return _DashboardSection(
         key: ValueKey<String>('section-${section.bucket.name}'),
         title: _serviceSectionTitle(section.bucket),
+        countLabel: _countLabel(section.cards.length),
+        caption: _subscriptionsSectionCaption(section.bucket),
         children: children,
       );
     }
@@ -1107,8 +1176,10 @@ extension _DashboardShellMembers on _DashboardShellState {
       children: <Widget>[
         _CollapsedSubscriptionSection(
           sectionKey: section.bucket.name,
-          label: 'Trials & benefits',
+          label: 'Included with your plan',
           icon: Icons.workspace_premium_outlined,
+          countLabel: _countLabel(section.cards.length),
+          caption: _subscriptionsSectionCaption(section.bucket),
           children: children,
         ),
       ],
@@ -1120,26 +1191,25 @@ extension _DashboardShellMembers on _DashboardShellState {
     DashboardServiceFilterMode filterMode, {
     required List<DashboardServiceSectionView> visibleServiceSections,
   }) {
-    final hasNeedsReview = visibleServiceSections.any(
-      (section) =>
-          section.bucket == DashboardBucket.needsReview &&
-          section.cards.isNotEmpty,
-    );
-    if (filterMode == DashboardServiceFilterMode.allVisible && hasNeedsReview) {
-      return switch (bucket) {
-        DashboardBucket.needsReview => 0,
-        DashboardBucket.confirmedSubscriptions => 1,
-        DashboardBucket.trialsAndBenefits => 2,
-        DashboardBucket.hidden => 3,
-      };
-    }
-
     return switch (bucket) {
       DashboardBucket.confirmedSubscriptions => 0,
       DashboardBucket.needsReview => 1,
       DashboardBucket.trialsAndBenefits => 2,
       DashboardBucket.hidden => 3,
     };
+  }
+
+  String _subscriptionsSectionCaption(DashboardBucket bucket) {
+    switch (bucket) {
+      case DashboardBucket.confirmedSubscriptions:
+        return 'Recurring charges SubWatch can stand behind with confidence.';
+      case DashboardBucket.needsReview:
+        return 'Kept separate until the signal is strong enough to confirm.';
+      case DashboardBucket.trialsAndBenefits:
+        return 'Visible separately because they do not read as direct paid billing.';
+      case DashboardBucket.hidden:
+        return 'Hidden on this phone only.';
+    }
   }
 
   bool _shouldShowManualSubscriptions(
@@ -1198,7 +1268,6 @@ extension _DashboardShellMembers on _DashboardShellState {
       });
     return sorted;
   }
-
 
   List<Widget> _buildSubscriptionSectionChildren(
     List<DashboardCard> cards,
@@ -1291,7 +1360,7 @@ extension _DashboardShellMembers on _DashboardShellState {
     if (entries.isEmpty) {
       return const <Widget>[
         _EmptySectionText(
-          title: 'No manual subscriptions yet',
+          title: 'No added subscriptions yet',
           message:
               'Add one you already know so it stays visible without changing the current scan result.',
           icon: Icons.edit_note_rounded,
@@ -1402,9 +1471,9 @@ extension _DashboardShellMembers on _DashboardShellState {
     return await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('Remove manual subscription?'),
+            title: const Text('Remove added subscription?'),
             content: Text(
-              'Remove ${entry.serviceName} from your manual list?',
+              'Remove ${entry.serviceName} from the subscriptions you added?',
             ),
             actions: <Widget>[
               TextButton(
@@ -1425,6 +1494,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         ) ??
         false;
   }
+
   List<Widget> _buildReviewRows(
     List<ReviewItem> reviewQueue, {
     required String emptyTitle,
@@ -1435,7 +1505,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         _EmptySectionText(
           title: emptyTitle,
           message: emptyMessage,
-          icon: Icons.shield_moon_outlined,
+          icon: Icons.verified_outlined,
         ),
       ];
     }
@@ -1444,30 +1514,23 @@ extension _DashboardShellMembers on _DashboardShellState {
       (item) {
         final descriptor = ReviewItemActionDescriptor.fromReviewItem(item);
         final presentation = ReviewQueueItemPresentation.fromReviewItem(item);
-        final explanation = ContextualExplanationPresentation.forReviewItem(
-          item,
-        );
         final isBusy = _reviewActionTargetsInFlight.contains(
           descriptor.targetKey,
         );
 
         return Padding(
           key: ValueKey<String>('review-item-${descriptor.targetKey}'),
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.only(bottom: DashboardSpacing.medium),
           child: _ReviewDecisionPassportCard(
             item: item,
             descriptor: descriptor,
             presentation: presentation,
-            explanation: explanation,
             isBusy: isBusy,
             onOpenDetails: () => _showReviewItemDetails(
               item,
               descriptor,
               presentation,
-              explanation,
             ),
-            onExplain: () => _showContextualExplanation(explanation),
-            onIgnore: () => _handleIgnoreReviewItem(item),
             onConfirm: descriptor.canConfirm
                 ? () => _handleReviewItemAction(
                       item,
@@ -1528,7 +1591,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         );
       case DashboardBucket.trialsAndBenefits:
         return const _BucketStyle(
-          badgeLabel: 'Separate access',
+          badgeLabel: 'Included',
           background: Color(0xFF18211C),
           border: Color(0xFF314339),
           badgeBackground: DashboardShellPalette.registerPaper,
@@ -1553,7 +1616,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         _SettingsSubsection(
           key: const ValueKey<String>('section-confirmedByYou'),
           title: 'Confirmed',
-          caption: 'You confirmed these.',
+          caption: 'Items you moved out of Review as paid subscriptions.',
           children: _buildConfirmedReviewRows(data.confirmedReviewItems),
         ),
       );
@@ -1567,7 +1630,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         _SettingsSubsection(
           key: const ValueKey<String>('section-hiddenFromReview'),
           title: 'Not subscriptions',
-          caption: 'You marked these as not subscriptions.',
+          caption: 'Items you decided should stay out of subscription tracking.',
           children: _buildDismissedReviewRows(data.dismissedReviewItems),
         ),
       );
@@ -1580,8 +1643,8 @@ extension _DashboardShellMembers on _DashboardShellState {
       children.add(
         _SettingsSubsection(
           key: const ValueKey<String>('section-benefitsByYou'),
-          title: 'Separate access',
-          caption: 'You kept these as benefits.',
+          title: 'Included with your plan',
+          caption: 'Items you kept separate from paid subscriptions.',
           children: _buildBenefitReviewRows(data.benefitReviewItems),
         ),
       );
@@ -1595,7 +1658,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         _SettingsSubsection(
           key: const ValueKey<String>('section-localControls'),
           title: 'Hidden items',
-          caption: 'Only this phone view changes.',
+          caption: 'Local-only controls that affect this phone view.',
           children: <Widget>[
             ..._buildIgnoredLocalRows(data.ignoredLocalItems),
             ..._buildHiddenLocalRows(data.hiddenLocalItems),
@@ -1624,7 +1687,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return 'Scan messages';
       case RuntimeLocalMessageSourceTone.fresh:
       case RuntimeLocalMessageSourceTone.restored:
-        return 'Check messages again';
+        return 'Scan again';
       case RuntimeLocalMessageSourceTone.caution:
         return 'Turn on SMS access';
       case RuntimeLocalMessageSourceTone.unavailable:
@@ -1635,14 +1698,14 @@ extension _DashboardShellMembers on _DashboardShellState {
   String _settingsSourceActionSubtitle(RuntimeLocalMessageSourceStatus status) {
     switch (status.tone) {
       case RuntimeLocalMessageSourceTone.demo:
-        return 'Replace the sample preview with your results.';
+        return 'Replace the sample view.';
       case RuntimeLocalMessageSourceTone.fresh:
       case RuntimeLocalMessageSourceTone.restored:
-        return 'Refresh this view from SMS.';
+        return 'Refresh from SMS.';
       case RuntimeLocalMessageSourceTone.caution:
-        return 'Turn access on when you want a fresh scan.';
+        return 'Allow access to scan again.';
       case RuntimeLocalMessageSourceTone.unavailable:
-        return 'This phone cannot refresh from SMS.';
+        return 'This phone can\'t scan messages.';
     }
   }
 
@@ -1671,9 +1734,8 @@ extension _DashboardShellMembers on _DashboardShellState {
     final separateAccessCount = data.cards
         .where((card) => card.bucket == DashboardBucket.trialsAndBenefits)
         .length;
-    final activeReminderCount = reminderItems
-        .where((item) => item.selectedPreset != null)
-        .length;
+    final activeReminderCount =
+        reminderItems.where((item) => item.selectedPreset != null).length;
 
     return <String>[
       'Issue summary:',
@@ -1687,7 +1749,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       '- Provenance: ${sourceStatus.provenanceDescription}',
       '- Review items: ${data.reviewQueue.length}',
       '- Confirmed subscriptions: $confirmedCount',
-      '- Separate access items: $separateAccessCount',
+      '- Included items: $separateAccessCount',
       '- Manual entries: ${data.manualSubscriptions.length}',
       '- Renewal notifications active: $activeReminderCount',
       '',
@@ -1704,7 +1766,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       case DashboardBucket.needsReview:
         return 'Needs review';
       case DashboardBucket.trialsAndBenefits:
-        return 'Trials & benefits';
+        return 'Included with your plan';
       case DashboardBucket.hidden:
         return 'Hidden items';
     }
@@ -1717,7 +1779,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       case DashboardBucket.needsReview:
         return 'Nothing to review';
       case DashboardBucket.trialsAndBenefits:
-        return 'No trials or benefits';
+        return 'No included services found';
       case DashboardBucket.hidden:
         return 'Nothing hidden';
     }
@@ -1726,11 +1788,11 @@ extension _DashboardShellMembers on _DashboardShellState {
   String _serviceSectionEmptyMessage(DashboardBucket bucket) {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
-        return 'Confirmed subscriptions appear here. You can still add one manually.';
+        return 'Confirmed subscriptions appear here. You can still add one yourself.';
       case DashboardBucket.needsReview:
         return 'Nothing needs review right now.';
       case DashboardBucket.trialsAndBenefits:
-        return 'No benefits right now.';
+        return 'No included services right now.';
       case DashboardBucket.hidden:
         return 'No hidden items here.';
     }
@@ -1790,7 +1852,7 @@ extension _DashboardShellMembers on _DashboardShellState {
                 'passport-card-benefitsByYou-${item.targetKey}'),
             title: item.title,
             subtitle: item.subtitle,
-            statusLabel: 'Kept separate as a benefit',
+            statusLabel: 'Included with your plan',
             isBusy: _reviewActionTargetsInFlight.contains(item.targetKey),
             actionKey: ValueKey<String>('undo-review-action-${item.targetKey}'),
             onUndo: () => _handleUndoReviewItemAction(
@@ -1847,6 +1909,4 @@ extension _DashboardShellMembers on _DashboardShellState {
         )
         .toList(growable: false);
   }
-
-
 }

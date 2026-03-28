@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../contracts/device_sms_gateway.dart';
 import '../contracts/ledger_snapshot_store.dart';
 import '../contracts/local_control_overlay_store.dart';
@@ -338,12 +339,15 @@ class LoadRuntimeDashboardUseCase {
   final ProjectReviewQueueUseCase _projectReviewQueueUseCase;
 
   Future<RuntimeDashboardSnapshot> execute() async {
+    debugPrint('LoadRuntimeDashboardUseCase: execute starting...');
     final messageSourceSelection =
         await _selectLocalMessageSourceUseCase.execute();
+    debugPrint('LoadRuntimeDashboardUseCase: source resolution=${messageSourceSelection.resolution}');
     final snapshotStore = _ledgerSnapshotStore;
     final now = _clock();
     final persistedRecord =
         snapshotStore == null ? null : await snapshotStore.loadRecord();
+    debugPrint('LoadRuntimeDashboardUseCase: persistedRecord=${persistedRecord != null}');
 
     if (_loadMode == RuntimeLedgerLoadMode.restorePersistedOrRefreshSource &&
         persistedRecord != null) {
@@ -369,6 +373,7 @@ class LoadRuntimeDashboardUseCase {
       await _ledgerRepository.replaceAll(const <ServiceLedgerEntry>[]);
       final messages = await messageSourceSelection.messageSource.loadMessages();
       final ingestionResult = await _ingestionUseCase.execute(messages);
+      await _ledgerRepository.replaceAll(ingestionResult.ledgerEntries);
       await snapshotStore?.saveRecord(
         LedgerSnapshotRecord(
           entries: ingestionResult.ledgerEntries,
@@ -379,6 +384,7 @@ class LoadRuntimeDashboardUseCase {
         ),
       );
 
+      debugPrint('LoadRuntimeDashboardUseCase: projecting snapshot...');
       return _projectSnapshot(
         messageSourceSelection,
         provenance: RuntimeSnapshotProvenance(

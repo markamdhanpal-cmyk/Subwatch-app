@@ -8,7 +8,7 @@ class BuildDashboardTotalsSummaryUseCase {
   const BuildDashboardTotalsSummaryUseCase();
 
   static final RegExp _rupeeAmountPattern = RegExp(
-    '(?:\u20B9\s*|Rs\.?\s*|INR\s*|Rupees\s*)([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
+    r'(?:\u20B9\s*|Rs\.?\s*|INR\s*|Rupees\s*)([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
     caseSensitive: false,
   );
   static final RegExp _yearlyPattern = RegExp(
@@ -37,6 +37,7 @@ class BuildDashboardTotalsSummaryUseCase {
               card.state == ResolverState.activePaid,
         )
         .toList(growable: false);
+
     final surfacedReviewCount =
         reviewCount ??
         cards.where((card) => card.bucket == DashboardBucket.needsReview).length;

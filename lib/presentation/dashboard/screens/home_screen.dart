@@ -38,8 +38,14 @@ Widget _buildDashboardHomeScreen({
     hasSpendHeroAction:
         totalsSummary.activePaidCount == 0 && !totalsSummary.hasEstimatedSpend,
   );
-  final showRenewalsZone =
-      dueSoon.hasItems || upcomingRenewals.hasItems || renewalReminderItems.isNotEmpty;
+  final visibleSubscriptionCount = data.cards
+          .where(
+            (card) =>
+                card.bucket == DashboardBucket.confirmedSubscriptions ||
+                card.bucket == DashboardBucket.trialsAndBenefits,
+          )
+          .length +
+      data.manualSubscriptions.length;
   final homeChildren = <Widget>[
     _TotalsSummaryCard(
       presentation: totalsSummary,
@@ -49,30 +55,42 @@ Widget _buildDashboardHomeScreen({
       onPrimaryAction:
           sourceStatus.isActionEnabled ? () => shell._handleSyncEntry(sourceStatus) : null,
     ),
-    if (homeAction != null) ...<Widget>[
-      const SizedBox(height: 12),
-      _HomeActionStrip(
-        copy: homeAction,
-        onReview: shell._openReviewDestination,
-        onSync: () => shell._handleSyncEntry(sourceStatus),
-        onOpenRenewals: shell._scrollHomeToRenewals,
-      ),
-    ],
-    if (showRenewalsZone) ...<Widget>[
-      const SizedBox(height: 16),
-      _HomeRenewalsZoneCard(
-        dueSoon: dueSoon,
-        upcomingRenewals: upcomingRenewals,
-        reminderItems: renewalReminderItems,
-      ),
-    ],
+    const SizedBox(height: DashboardSpacing.large),
+    _HomeRenewalsZoneCard(
+      dueSoon: dueSoon,
+      upcomingRenewals: upcomingRenewals,
+      reminderItems: renewalReminderItems,
+    ),
+    const SizedBox(height: DashboardSpacing.large),
+    _HomeInsightCard(
+      sourceStatus: sourceStatus,
+      totalsSummary: totalsSummary,
+      data: data,
+      onOpenTrustSheet: shell._showHowSubWatchWorksSheet,
+    ),
+    const SizedBox(height: DashboardSpacing.large),
+    _HomeActionStrip(
+      copy: homeAction,
+      subscriptionCount: visibleSubscriptionCount,
+      reviewCount: data.reviewQueue.length,
+      sourceStatus: sourceStatus,
+      onReview: shell._openReviewDestination,
+      onSync: () => shell._handleSyncEntry(sourceStatus),
+      onOpenRenewals: shell._scrollHomeToRenewals,
+      onOpenSubscriptions: () async {
+        shell._selectDestination(_DashboardDestination.subscriptions);
+      },
+      onOpenSettings: () async {
+        shell._openSettingsDestination();
+      },
+    ),
   ];
 
   return ListView(
     controller: shell._homeScrollController,
     key: const PageStorageKey<String>('destination-home-surface'),
     cacheExtent: 2000,
-    padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+    padding: DashboardSpacing.screenInset,
     children: homeChildren,
   );
 }

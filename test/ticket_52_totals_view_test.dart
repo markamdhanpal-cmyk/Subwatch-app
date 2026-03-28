@@ -55,7 +55,7 @@ void main() {
       expect(summary.estimateBadgeLabel, 'Partial estimate');
       expect(
         summary.summaryCopy,
-        'Estimate excludes subscriptions without a visible amount.',
+        'Services without amounts are excluded.',
       );
     },
   );
@@ -102,7 +102,7 @@ void main() {
     expect(summary.monthlyTotalAmount, 450);
     expect(
       summary.summaryCopy,
-      'Annual or quarterly plans are shown as monthly equivalents here.',
+      'Yearly plans are shown monthly.',
     );
   });
 
@@ -154,7 +154,7 @@ void main() {
     expect(summary.estimateBadgeLabel, 'Amount pending');
     expect(
       summary.monthlyTotalCaption,
-      'Shown when a billed or manual amount is available',
+      'Appears when an amount is visible',
     );
   });
 
@@ -209,7 +209,7 @@ void main() {
       clock: () => DateTime(2026, 3, 14, 9, 0),
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: runtimeUseCase,
     );
@@ -218,7 +218,7 @@ void main() {
       find.byKey(const ValueKey<String>('totals-summary-card')),
       findsOneWidget,
     );
-    expect(find.text('Monthly spend'), findsOneWidget);
+    expect(find.text('Monthly spend estimate'), findsOneWidget);
     expect(find.text('\u20B9499'), findsOneWidget);
     expect(find.text('Confirmed'), findsOneWidget);
     expect(find.text('Review'), findsWidgets);

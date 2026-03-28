@@ -119,6 +119,100 @@ final dashboardCompleteSmsOnboardingUseCaseProvider =
   ),
 );
 
+enum FirstRunPhase {
+  /// Still loading onboarding completion state.
+  loading,
+
+  /// Show the first-run gate (no permission requested yet).
+  gate,
+
+  /// Permission was denied once — show short retry state.
+  denied,
+
+  /// Permission permanently denied — show Settings nudge.
+  permanentlyDenied,
+
+  /// Permission granted, scan in progress.
+  scanning,
+
+  /// First scan completed with zero confirmed paid subscriptions.
+  firstResult,
+
+  /// Onboarding complete — show normal Home.
+  completed,
+}
+
+class FirstRunState {
+  const FirstRunState({
+    required this.phase,
+    this.firstScanSnapshot,
+  });
+
+  const FirstRunState.loading() : phase = FirstRunPhase.loading, firstScanSnapshot = null;
+
+  final FirstRunPhase phase;
+  final RuntimeDashboardSnapshot? firstScanSnapshot;
+
+  FirstRunState copyWith({
+    FirstRunPhase? phase,
+    RuntimeDashboardSnapshot? firstScanSnapshot,
+  }) {
+    return FirstRunState(
+      phase: phase ?? this.phase,
+      firstScanSnapshot: firstScanSnapshot ?? this.firstScanSnapshot,
+    );
+  }
+
+  bool get isInFirstRun => phase != FirstRunPhase.completed;
+}
+
+class FirstRunController extends StateNotifier<FirstRunState> {
+  FirstRunController(this._ref) : super(const FirstRunState.loading());
+
+  final Ref _ref;
+
+  Future<void> initialize() async {
+    debugPrint('FirstRunController: initialize starting...');
+    final completed = await _ref
+        .read(dashboardLocalControlsProvider.notifier)
+        .loadSmsOnboardingCompletion();
+    debugPrint('FirstRunController: initialize completed=$completed');
+    if (completed) {
+      state = const FirstRunState(phase: FirstRunPhase.completed);
+    } else {
+      state = const FirstRunState(phase: FirstRunPhase.gate);
+    }
+    debugPrint('FirstRunController: initialize finished, state phase=${state.phase}');
+  }
+
+  void setPhase(FirstRunPhase phase) {
+    state = state.copyWith(phase: phase);
+  }
+
+  void setFirstResult(RuntimeDashboardSnapshot snapshot) {
+    state = FirstRunState(
+      phase: FirstRunPhase.firstResult,
+      firstScanSnapshot: snapshot,
+    );
+  }
+
+  Future<void> markCompleted() async {
+    await _ref
+        .read(dashboardLocalControlsProvider.notifier)
+        .markSmsOnboardingCompleted();
+    state = const FirstRunState(phase: FirstRunPhase.completed);
+  }
+
+  void reset() {
+    state = const FirstRunState(phase: FirstRunPhase.gate);
+  }
+}
+
+final dashboardFirstRunProvider =
+    StateNotifierProvider<FirstRunController, FirstRunState>(
+  (ref) => FirstRunController(ref),
+);
+
 class DashboardLoadRecoveryState {
   const DashboardLoadRecoveryState({
     required this.title,
@@ -194,6 +288,7 @@ class DashboardSnapshotController extends StateNotifier<DashboardSnapshotState> 
     bool clearPreservedSnapshot = false,
   }) async {
     final preservedSnapshot = clearPreservedSnapshot ? null : state.snapshot;
+    debugPrint('DashboardSnapshotController: loadInitial starting...');
     state = DashboardSnapshotState(
       snapshot: preservedSnapshot,
       isLoading: true,
@@ -205,9 +300,12 @@ class DashboardSnapshotController extends StateNotifier<DashboardSnapshotState> 
     );
 
     try {
+      debugPrint('DashboardSnapshotController: executing runtime use case...');
       final snapshot = await _ref.read(dashboardRuntimeUseCaseProvider).execute();
+      debugPrint('DashboardSnapshotController: loadInitial success');
       state = DashboardSnapshotState.ready(snapshot);
     } catch (error, stackTrace) {
+      debugPrint('DashboardSnapshotController: loadInitial error: $error');
       state = DashboardSnapshotState(
         snapshot: preservedSnapshot,
         isLoading: false,
@@ -251,23 +349,34 @@ class DashboardSyncController extends StateNotifier<DashboardSyncState> {
   Future<SyncDeviceSmsResult> sync({
     Duration minimumIndicatorDuration = Duration.zero,
   }) async {
+    debugPrint('DashboardSyncController: sync starting...');
     if (state.isSyncing) {
+      debugPrint('DashboardSyncController: sync already in progress');
       throw StateError('Sync already in progress.');
     }
 
     state = const DashboardSyncState.syncing();
     final startedAt = DateTime.now();
     try {
+      debugPrint('DashboardSyncController: executing sync use case...');
       final result = await _ref.read(dashboardSyncUseCaseProvider).execute();
+      debugPrint('DashboardSyncController: sync use case finished');
+
       final remaining =
           minimumIndicatorDuration - DateTime.now().difference(startedAt);
       if (remaining > Duration.zero) {
+        debugPrint('DashboardSyncController: waiting for minimum indicator duration...');
         await Future<void>.delayed(remaining);
       }
+      debugPrint('DashboardSyncController: updating snapshot controller...');
       _ref
           .read(dashboardSnapshotControllerProvider.notifier)
           .setSnapshot(result.snapshot);
+      debugPrint('DashboardSyncController: sync success');
       return result;
+    } catch (e) {
+      debugPrint('DashboardSyncController: sync failed: $e');
+      rethrow;
     } finally {
       state = const DashboardSyncState.idle();
     }
@@ -342,6 +451,7 @@ class DashboardReviewActionsController
   }
 
   void _setTargetBusy(String targetKey, {required bool busy}) {
+    debugPrint('DashboardReviewActionsController: _setTargetBusy targetKey=$targetKey busy=$busy');
     final nextTargets = state.targetsInFlight.toSet();
     if (busy) {
       nextTargets.add(targetKey);

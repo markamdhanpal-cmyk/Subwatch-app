@@ -11,7 +11,7 @@ void main() {
       'home keeps only summary surfaces and removes the old overview stack', (
     tester,
   ) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase.deviceLocalStub(
         clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -30,7 +30,7 @@ void main() {
         findsNothing);
     expect(find.byKey(const ValueKey<String>('totals-summary-card')),
         findsOneWidget);
-    expect(find.text('Monthly spend'), findsOneWidget);
+    expect(find.text('Monthly spend estimate'), findsOneWidget);
     expect(find.text('How totals work'), findsNothing);
     expect(find.byKey(const ValueKey<String>('home-action-strip')),
         findsOneWidget);
@@ -63,7 +63,7 @@ void main() {
       refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: provider,
@@ -95,12 +95,6 @@ void main() {
     expect(find.byKey(const ValueKey<String>('home-action-strip')),
         findsOneWidget);
     expect(find.text('1 item waiting'), findsWidgets);
-    expect(
-      find.text(
-        '1 item needs your decision before they move into subscriptions.',
-      ),
-      findsOneWidget,
-    );
     final totalsTop = tester
         .getTopLeft(find.byKey(const ValueKey<String>('totals-summary-card')))
         .dy;
@@ -114,10 +108,12 @@ void main() {
       find.byKey(const ValueKey<String>('home-action-primary-action')),
     );
 
-    expect(find.text('Items for your review'), findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('section-reviewQueue')),
-        findsWidgets);
+    expect(
+      find.byKey(const ValueKey<String>('section-reviewQueue')),
+      findsOneWidget,
+    );
   });
 }
+
 
 

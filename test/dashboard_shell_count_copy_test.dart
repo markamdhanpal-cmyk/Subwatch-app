@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 
@@ -7,7 +7,7 @@ import 'support/dashboard_shell_test_harness.dart';
 void main() {
   testWidgets('subscriptions view keeps section headers compact',
       (tester) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -42,7 +42,7 @@ void main() {
 
   testWidgets('review destination keeps the summary calm and count-free',
       (tester) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 14, 9, 0),

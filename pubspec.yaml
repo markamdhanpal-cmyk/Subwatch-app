@@ -1,6 +1,6 @@
 name: sub_killer
 description: SubWatch is a careful local-first subscription watch for device SMS.
-version: 0.1.0
+version: 0.1.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

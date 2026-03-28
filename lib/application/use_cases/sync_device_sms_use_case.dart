@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../contracts/ledger_snapshot_store.dart';
 import '../contracts/local_control_overlay_store.dart';
 import '../contracts/local_renewal_reminder_store.dart';
@@ -86,8 +87,13 @@ class SyncDeviceSmsUseCase {
   final Future<RuntimeDashboardSnapshot> Function() _loadRuntimeDashboard;
 
   Future<SyncDeviceSmsResult> execute() async {
+    debugPrint('SyncDeviceSmsUseCase: execute starting...');
     final accessResult = await _requestDeviceSmsAccessUseCase.execute();
+    debugPrint('SyncDeviceSmsUseCase: accessResult=${accessResult.requestResult}');
+    
+    debugPrint('SyncDeviceSmsUseCase: loading runtime dashboard...');
     final snapshot = await _loadRuntimeDashboard();
+    debugPrint('SyncDeviceSmsUseCase: execute success');
 
     return SyncDeviceSmsResult(
       requestResult: accessResult.requestResult,

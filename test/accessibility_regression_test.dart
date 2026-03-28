@@ -8,6 +8,10 @@ import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_primitives.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_shell.dart';
 
+import 'package:sub_killer/application/stores/in_memory_sms_onboarding_progress_store.dart';
+import 'package:sub_killer/application/use_cases/complete_sms_onboarding_use_case.dart';
+import 'package:sub_killer/application/use_cases/load_sms_onboarding_progress_use_case.dart';
+
 import 'support/dashboard_shell_test_harness.dart';
 
 void main() {
@@ -20,10 +24,10 @@ void main() {
         await _setupAccessibilityTest(tester, scale, narrowHandset);
         
         // Verify Home hero elements
-        expect(find.text('Monthly spend'), findsOneWidget);
+        expect(find.text('Monthly spend estimate'), findsOneWidget);
         expect(find.byKey(const ValueKey<String>('spend-hero-amount')), findsOneWidget);
         
-        final syncButton = find.byKey(const ValueKey<String>('sync-with-sms-button'));
+        final syncButton = find.byKey(const ValueKey<String>('app-bar-sync-button'));
         await scrollDashboardUntilVisible(tester, syncButton);
         expect(syncButton, findsOneWidget);
         
@@ -36,7 +40,7 @@ void main() {
         await _setupAccessibilityTest(tester, scale, narrowHandset, harness: harness);
         
         await openDashboardDestination(tester, 'subscriptions');
-        await tester.pumpAndSettle();
+        await settleDashboard(tester);
         
         // Find a subscription card (e.g. Netflix from sample data if present, or added one)
         // Since we are using sample data, let's check for "Netflix"
@@ -54,7 +58,7 @@ void main() {
         await _setupAccessibilityTest(tester, scale, narrowHandset);
         
         await openDashboardDestination(tester, 'review');
-        await tester.pumpAndSettle();
+        await settleDashboard(tester);
         
         // Items in review queue use a different card component with action labels
         final reviewCard = find.text('Confirm').first;
@@ -127,6 +131,7 @@ Future<void> _setupAccessibilityTest(
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.linear(textScale),
+            disableAnimations: true,
           ),
           child: child!,
         );
@@ -139,6 +144,8 @@ Future<void> _setupAccessibilityTest(
         handleLocalControlOverlayUseCase: harness?.handleLocalControlOverlayUseCase,
         undoLocalControlOverlayUseCase: harness?.undoLocalControlOverlayUseCase,
         handleLocalServicePresentationUseCase: harness?.handleLocalServicePresentationUseCase,
+        loadSmsOnboardingProgressUseCase: harness?.loadSmsOnboardingProgressUseCase ?? LoadSmsOnboardingProgressUseCase(store: InMemorySmsOnboardingProgressStore()..writeCompleted(true)),
+        completeSmsOnboardingUseCase: harness?.completeSmsOnboardingUseCase ?? CompleteSmsOnboardingUseCase(store: InMemorySmsOnboardingProgressStore()..writeCompleted(true)),
       ),
     ),
   );

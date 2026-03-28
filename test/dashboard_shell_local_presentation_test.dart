@@ -29,7 +29,7 @@ void main() {
       deviceSmsGateway: gateway,
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: harness.runtimeUseCase,
       handleLocalServicePresentationUseCase: harness.handleLocalServicePresentationUseCase,
@@ -50,7 +50,7 @@ void main() {
     await tapAndPumpDashboardShell(tester, find.widgetWithText(OutlinedButton, 'Pin near top'));
 
     // Verify sheet is closed
-    await tester.pumpAndSettle();
+    await settleDashboard(tester);
     expect(find.text('Manage device'), findsNothing);
 
     // Check that Spotify is now in a pinned/top position
@@ -77,14 +77,14 @@ void main() {
     await tester.tap(saveButtonFinder);
     await tester.pump(); 
     await tester.pump(const Duration(seconds: 1)); 
-    await tester.pumpAndSettle(); 
+    await settleDashboard(tester); 
 
     // Verify sheet is closed
     expect(find.text('Manage device'), findsNothing, reason: 'Sheet should be closed after save');
 
     // Wait a bit more for projection and state update
     await tester.pump(const Duration(milliseconds: 500));
-    await tester.pumpAndSettle();
+    await settleDashboard(tester);
 
     expect(find.text('Music Premium'), findsOneWidget, reason: 'Music Premium should be visible on the card');
     expect(find.text('Spotify'), findsNothing);
@@ -95,14 +95,14 @@ void main() {
     
     expect(find.text('Unpin'), findsOneWidget);
     await tapAndPumpDashboardShell(tester, find.widgetWithText(OutlinedButton, 'Unpin'));
-    await tester.pumpAndSettle();
+    await settleDashboard(tester);
 
     // 4. RESET LABEL
     await tapAndPumpDashboardShell(tester, find.text('Music Premium'));
     await tapAndPumpDashboardShell(tester, find.widgetWithText(OutlinedButton, 'Manage device'));
     
     await tapAndPumpDashboardShell(tester, find.widgetWithText(TextButton, 'Clear name'));
-    await tester.pumpAndSettle();
+    await settleDashboard(tester);
     
     expect(find.text('Spotify'), findsOneWidget);
     expect(find.text('Music Premium'), findsNothing);

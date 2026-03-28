@@ -68,7 +68,7 @@ void main() {
   });
 
   testWidgets('dashboard shows honest empty due soon state', (tester) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase.deviceLocalStub(
         clock: () => DateTime(2026, 3, 14, 9, 0),

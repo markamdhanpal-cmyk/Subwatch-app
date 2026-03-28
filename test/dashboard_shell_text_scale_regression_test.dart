@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_killer/application/models/local_message_source_access_state.dart';
 import 'package:sub_killer/application/models/manual_subscription_models.dart';
+import 'package:sub_killer/application/models/raw_device_sms.dart';
 import 'package:sub_killer/application/use_cases/complete_sms_onboarding_use_case.dart';
 import 'package:sub_killer/application/use_cases/handle_local_control_overlay_use_case.dart';
 import 'package:sub_killer/application/use_cases/handle_local_renewal_reminder_use_case.dart';
@@ -11,7 +13,9 @@ import 'package:sub_killer/application/use_cases/handle_manual_subscription_use_
 import 'package:sub_killer/application/use_cases/handle_review_item_action_use_case.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 import 'package:sub_killer/application/use_cases/load_sms_onboarding_progress_use_case.dart';
+import 'package:sub_killer/application/use_cases/request_device_sms_access_use_case.dart';
 import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
+import 'package:sub_killer/application/stores/in_memory_sms_onboarding_progress_store.dart';
 import 'package:sub_killer/application/use_cases/undo_local_control_overlay_use_case.dart';
 import 'package:sub_killer/application/use_cases/undo_review_item_action_use_case.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_primitives.dart';
@@ -47,8 +51,7 @@ void main() {
         _testSubscriptionCardsAtScale(textScale);
         _testReviewCardsAtScale(textScale);
         _testSettingsRowsAtScale(textScale);
-        // Note: Onboarding/SMS permission surfaces require manual verification
-        // as they depend on onboarding completion state not available in test harness
+        _testOnboardingAndPermissionSurfacesAtScale(textScale);
       });
     }
   });
@@ -60,7 +63,6 @@ void main() {
       _testBadgesAreVisibleAtScale(textScale);
     }
   });
-
 }
 
 // ============================================================================
@@ -269,10 +271,25 @@ void _testSettingsRowsAtScale(double textScale) {
 
       await openDashboardDestination(tester, 'settings');
 
-      // Verify key settings panels are present
+      expect(find.byKey(const ValueKey<String>('settings-trust-panel')),
+          findsOneWidget);
       expect(find.byKey(const ValueKey<String>('settings-quick-actions-panel')),
           findsOneWidget);
       expect(find.byKey(const ValueKey<String>('settings-support-panel')),
+          findsOneWidget);
+
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('settings-data-panel')),
+      );
+      expect(find.byKey(const ValueKey<String>('settings-data-panel')),
+          findsOneWidget);
+
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('settings-about-panel')),
+      );
+      expect(find.byKey(const ValueKey<String>('settings-about-panel')),
           findsOneWidget);
 
       expect(tester.takeException(), isNull);
@@ -280,7 +297,7 @@ void _testSettingsRowsAtScale(double textScale) {
   );
 
   testWidgets(
-    'settings about and help rows render at ${textScale}x',
+    'settings trust and support rows render at ${textScale}x',
     (WidgetTester tester) async {
       await _pumpAppWithTextScale(
         tester,
@@ -292,58 +309,126 @@ void _testSettingsRowsAtScale(double textScale) {
 
       await openDashboardDestination(tester, 'settings');
 
-      // Verify about and help rows
-      expect(find.byKey(const ValueKey<String>('settings-open-help')),
+      expect(find.byKey(const ValueKey<String>('settings-open-how-it-works')),
           findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('settings-open-privacy')),
+          findsOneWidget);
+
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('settings-open-about')),
+      );
       expect(find.byKey(const ValueKey<String>('settings-open-about')),
           findsOneWidget);
 
       expect(tester.takeException(), isNull);
     },
   );
-}
 
+  testWidgets(
+    'settings reminder manager opens cleanly at ${textScale}x',
+    (WidgetTester tester) async {
+      final now = DateTime(2026, 3, 14, 9, 0);
+      final harness = DashboardShellReviewHarness(
+        clock: () => now,
+      );
+
+      await harness.localManualSubscriptionStore.save(
+        ManualSubscriptionEntry(
+          id: 'manual-1',
+          serviceName: 'Manual Gym',
+          billingCycle: ManualSubscriptionBillingCycle.monthly,
+          nextRenewalDate: now.add(const Duration(days: 7)),
+          amountInMinorUnits: 50000,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      await _pumpAppWithTextScale(
+        tester,
+        textScale: textScale,
+        runtimeUseCase: harness.runtimeUseCase,
+        handleManualSubscriptionUseCase:
+            harness.handleManualSubscriptionUseCase,
+        handleLocalRenewalReminderUseCase:
+            harness.handleLocalRenewalReminderUseCase,
+      );
+
+      await openDashboardDestination(tester, 'settings');
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('settings-open-reminders')),
+      );
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(const ValueKey<String>('settings-open-reminders')),
+      );
+
+      expect(
+        find.byKey(const ValueKey<String>('settings-reminder-manager-sheet')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+}
 // ============================================================================
 // ONBOARDING AND PERMISSION SURFACE TESTS
 // ============================================================================
 
 void _testOnboardingAndPermissionSurfacesAtScale(double textScale) {
   testWidgets(
-    'SMS permission onboarding sheet renders at ${textScale}x',
+    'SMS permission first-run rationale renders at ${textScale}x',
     (WidgetTester tester) async {
-      final harness = DashboardShellReviewHarness();
+      final onboardingUseCases = buildMemorySmsOnboardingUseCases();
+      final provider = MutableCapabilityProvider(
+        initialState: LocalMessageSourceAccessState.sampleDemo,
+        requestResult: LocalMessageSourceAccessRequestResult.granted,
+        refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
+      );
 
       await _pumpAppWithTextScale(
         tester,
         textScale: textScale,
-        runtimeUseCase: harness.runtimeUseCase,
-        handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
-        undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
+        runtimeUseCase: LoadRuntimeDashboardUseCase(
+          capabilityProvider: provider,
+          deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
+          clock: () => DateTime(2026, 3, 14, 9, 0),
+        ),
+        syncDeviceSmsUseCase: SyncDeviceSmsUseCase(
+          requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
+            capabilityProvider: provider,
+          ),
+          loadRuntimeDashboard: () => LoadRuntimeDashboardUseCase(
+            capabilityProvider: provider,
+            deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
+            clock: () => DateTime(2026, 3, 14, 9, 0),
+          ).execute(),
+        ),
+        loadSmsOnboardingProgressUseCase: onboardingUseCases.$1,
+        completeSmsOnboardingUseCase: onboardingUseCases.$2,
+        skipGate: false,
       );
 
-      await openDashboardDestination(tester, 'home');
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(const ValueKey<String>('first-run-get-started-button')),
+      );
 
-      // Verify onboarding sheet is present (key trust copy)
       expect(
-        find.byKey(const ValueKey<String>('sms-permission-onboarding-sheet')),
+        find.byKey(const ValueKey<String>('sms-permission-rationale-sheet')),
         findsOneWidget,
       );
-
-      // Verify title is visible
-      expect(
-        find.byKey(const ValueKey<String>('sms-onboarding-title')),
-        findsOneWidget,
-      );
-
-      // Verify CTAs are visible
-      expect(
-        find.byKey(const ValueKey<String>(
-            'sms-permission-onboarding-continue-action')),
-        findsOneWidget,
-      );
+      expect(find.text('Start with SMS permission'), findsWidgets);
       expect(
         find.byKey(
-            const ValueKey<String>('sms-permission-onboarding-browse-action')),
+            const ValueKey<String>('sms-permission-rationale-primary-action')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>(
+            'sms-permission-rationale-secondary-action')),
         findsOneWidget,
       );
 
@@ -352,27 +437,50 @@ void _testOnboardingAndPermissionSurfacesAtScale(double textScale) {
   );
 
   testWidgets(
-    'SMS permission rationale sheet renders at ${textScale}x',
+    'SMS permission retry rationale renders at ${textScale}x',
     (WidgetTester tester) async {
-      final harness = DashboardShellReviewHarness();
+      final provider = MutableCapabilityProvider(
+        initialState: LocalMessageSourceAccessState.deviceLocalDenied,
+        requestResult: LocalMessageSourceAccessRequestResult.denied,
+        refreshedState: LocalMessageSourceAccessState.deviceLocalDenied,
+      );
 
       await _pumpAppWithTextScale(
         tester,
         textScale: textScale,
-        runtimeUseCase: harness.runtimeUseCase,
-        handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
-        undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
+        runtimeUseCase: LoadRuntimeDashboardUseCase(
+          capabilityProvider: provider,
+          deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
+          clock: () => DateTime(2026, 3, 14, 9, 0),
+        ),
+        syncDeviceSmsUseCase: SyncDeviceSmsUseCase(
+          requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
+            capabilityProvider: provider,
+          ),
+          loadRuntimeDashboard: () => LoadRuntimeDashboardUseCase(
+            capabilityProvider: provider,
+            deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
+            clock: () => DateTime(2026, 3, 14, 9, 0),
+          ).execute(),
+        ),
       );
 
       await openDashboardDestination(tester, 'home');
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('home-action-primary-action')),
+      );
+      final actionButton = tester.widget<FilledButton>(
+        find.byKey(const ValueKey<String>('home-action-primary-action')),
+      );
+      actionButton.onPressed!.call();
+      await pumpDashboardShellUi(tester);
 
-      // Verify rationale sheet is present
       expect(
         find.byKey(const ValueKey<String>('sms-permission-rationale-sheet')),
         findsOneWidget,
       );
-
-      // Verify primary action is reachable
+      expect(find.text('SMS access is off'), findsWidgets);
       expect(
         find.byKey(
             const ValueKey<String>('sms-permission-rationale-primary-action')),
@@ -386,25 +494,50 @@ void _testOnboardingAndPermissionSurfacesAtScale(double textScale) {
   testWidgets(
     'onboarding CTA buttons have adequate tap targets at ${textScale}x',
     (WidgetTester tester) async {
-      final harness = DashboardShellReviewHarness();
+      final onboardingUseCases = buildMemorySmsOnboardingUseCases();
+      final provider = MutableCapabilityProvider(
+        initialState: LocalMessageSourceAccessState.sampleDemo,
+        requestResult: LocalMessageSourceAccessRequestResult.granted,
+        refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
+      );
 
       await _pumpAppWithTextScale(
         tester,
         textScale: textScale,
-        runtimeUseCase: harness.runtimeUseCase,
-        handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
-        undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
+        runtimeUseCase: LoadRuntimeDashboardUseCase(
+          capabilityProvider: provider,
+          deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
+          clock: () => DateTime(2026, 3, 14, 9, 0),
+        ),
+        syncDeviceSmsUseCase: SyncDeviceSmsUseCase(
+          requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
+            capabilityProvider: provider,
+          ),
+          loadRuntimeDashboard: () => LoadRuntimeDashboardUseCase(
+            capabilityProvider: provider,
+            deviceSmsGateway: const FakeDeviceSmsGateway(<RawDeviceSms>[]),
+            clock: () => DateTime(2026, 3, 14, 9, 0),
+          ).execute(),
+        ),
+        loadSmsOnboardingProgressUseCase: onboardingUseCases.$1,
+        completeSmsOnboardingUseCase: onboardingUseCases.$2,
+        skipGate: false,
       );
 
-      await openDashboardDestination(tester, 'home');
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(const ValueKey<String>('first-run-get-started-button')),
+      );
 
-      // Verify FilledButton (primary CTA) has adequate size
-      final filledButton = find.byType(FilledButton).first;
+      final filledButton = find.byKey(
+        const ValueKey<String>('sms-permission-rationale-primary-action'),
+      );
       final buttonSize = tester.getSize(filledButton);
       expect(buttonSize.height, greaterThanOrEqualTo(48));
 
-      // Verify TextButton (secondary CTA) is hit-testable
-      final textButton = find.byType(TextButton).hitTestable().first;
+      final textButton = find.byKey(
+        const ValueKey<String>('sms-permission-rationale-secondary-action'),
+      );
       expect(textButton, findsOneWidget);
 
       expect(tester.takeException(), isNull);
@@ -645,11 +778,20 @@ Future<void> _pumpAppWithTextScale(
   HandleLocalServicePresentationUseCase? handleLocalServicePresentationUseCase,
   LoadSmsOnboardingProgressUseCase? loadSmsOnboardingProgressUseCase,
   CompleteSmsOnboardingUseCase? completeSmsOnboardingUseCase,
+  bool skipGate = true,
 }) async {
+  final fallbackStore = InMemorySmsOnboardingProgressStore()
+    ..writeCompleted(true);
+  final actualLoadSmsOnboarding = loadSmsOnboardingProgressUseCase ??
+      LoadSmsOnboardingProgressUseCase(store: fallbackStore);
+  final actualCompleteSmsOnboarding = completeSmsOnboardingUseCase ??
+      CompleteSmsOnboardingUseCase(store: fallbackStore);
+
   await tester.pumpWidget(
     MediaQuery(
       data: MediaQueryData(
         textScaler: TextScaler.linear(textScale),
+        disableAnimations: true,
       ),
       child: MaterialApp(
         theme: _buildTestTheme(),
@@ -664,11 +806,11 @@ Future<void> _pumpAppWithTextScale(
           handleManualSubscriptionUseCase: handleManualSubscriptionUseCase,
           handleLocalServicePresentationUseCase:
               handleLocalServicePresentationUseCase,
-          loadSmsOnboardingProgressUseCase: loadSmsOnboardingProgressUseCase,
-          completeSmsOnboardingUseCase: completeSmsOnboardingUseCase,
+          loadSmsOnboardingProgressUseCase: actualLoadSmsOnboarding,
+          completeSmsOnboardingUseCase: actualCompleteSmsOnboarding,
         ),
       ),
     ),
   );
-  await pumpDashboardShellLoad(tester);
+  await pumpDashboardShellLoad(tester, skipGate: skipGate);
 }

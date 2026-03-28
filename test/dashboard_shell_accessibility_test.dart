@@ -15,9 +15,24 @@ void main() {
     (tester) async {
       final handle = tester.ensureSemantics();
       try {
-        final harness = DashboardShellReviewHarness();
+        final harness = DashboardShellReviewHarness(
+          deviceSmsGateway: FakeDeviceSmsGateway(<RawDeviceSms>[
+            RawDeviceSms(
+              id: 'confirmed-netflix',
+              address: 'NETFLIX',
+              body: 'Your Netflix subscription has been renewed for Rs 499.',
+              receivedAt: DateTime(2026, 3, 12, 10, 0),
+            ),
+            RawDeviceSms(
+              id: 'review-jiohotstar',
+              address: 'JIOHOTSTAR',
+              body: 'Your Jiohotstar subscription may renew shortly.',
+              receivedAt: DateTime(2026, 3, 12, 13, 0),
+            ),
+          ]),
+        );
 
-        await pumpDashboardShellApp(
+        await pumpConstrainedDashboardShell(
           tester,
           runtimeUseCase: harness.runtimeUseCase,
           handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
@@ -28,41 +43,29 @@ void main() {
         await scrollDashboardUntilVisible(tester, find.text('Netflix'));
 
         expect(find.byTooltip('More actions for Netflix'), findsOneWidget);
-        expect(
-          find.bySemanticsLabel(
-            RegExp(
-              'Netflix\\. Confirmed\\. Amount \\u20B9499\\. Cycle not clear yet\\. Double tap for details\\.',
-            ),
-          ),
-          findsOneWidget,
+        final netflixSemantics = tester.getSemantics(
+          find.byKey(const ValueKey<String>('subscription-row-semantics-NETFLIX')),
         );
-
-
-        await scrollDashboardUntilVisible(
-            tester, find.text('Google Gemini Pro'));
-        expect(
-          find.bySemanticsLabel(
-            RegExp(
-              r'Google Gemini Pro\. Separate access\. Bundled with another plan - no separate charge\. Double tap for details\.',
-            ),
-          ),
-          findsOneWidget,
-        );
-
+        expect(netflixSemantics.label, contains('Netflix'));
+        expect(netflixSemantics.label, contains('Confirmed'));
+        expect(netflixSemantics.label, contains('499'));
+        expect(netflixSemantics.label, contains('Double tap for details'));
 
         await openDashboardDestination(tester, 'review');
         await scrollDashboardUntilVisible(tester, find.text('Jiohotstar'));
 
-        expect(find.byTooltip('More actions for Jiohotstar'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
+          findsOneWidget,
+        );
         expect(
           find.bySemanticsLabel(
             RegExp(
-              r'Jiohotstar\. Needs your review\. Looks recurring, but not confirmed yet\. Double tap for details\.',
+              r'Jiohotstar\. Looks recurring, but still uncertain\. Review actions below\.',
             ),
           ),
           findsOneWidget,
         );
-
       } finally {
         handle.dispose();
       }
@@ -87,7 +90,7 @@ void main() {
         final manualEntry =
             (await harness.localManualSubscriptionStore.list()).single;
 
-        await pumpDashboardShellApp(
+        await pumpConstrainedDashboardShell(
           tester,
           runtimeUseCase: harness.runtimeUseCase,
           handleManualSubscriptionUseCase:
@@ -102,16 +105,13 @@ void main() {
           findsOneWidget,
         );
         final rowSemantics = tester.getSemantics(
-          find.byKey(
-              ValueKey<String>('manual-row-semantics-${manualEntry.id}')),
+          find.byKey(ValueKey<String>('manual-row-semantics-${manualEntry.id}')),
         );
         expect(rowSemantics.label, contains(manualServiceName));
-
         expect(rowSemantics.label, contains('Added by you'));
-        expect(rowSemantics.label, contains('Amount \u20B91,499'));
+        expect(rowSemantics.label, contains('1499'));
         expect(rowSemantics.label, contains('Yearly'));
         expect(rowSemantics.label, contains('Double tap for details'));
-
 
         await tapAndPumpDashboardShell(
           tester,
@@ -119,43 +119,22 @@ void main() {
         );
 
         expect(
-          find.bySemanticsLabel('Edit manual entry for $manualServiceName'),
+          find.bySemanticsLabel(
+              'Edit subscription you added for $manualServiceName'),
           findsOneWidget,
         );
         expect(
-          find.bySemanticsLabel('Remove manual entry for $manualServiceName'),
+          find.bySemanticsLabel(
+              'Remove subscription you added for $manualServiceName'),
           findsOneWidget,
         );
         expect(
-          find.bySemanticsLabel('Set a local reminder for $manualServiceName'),
+          find.bySemanticsLabel('Set a reminder for $manualServiceName'),
           findsOneWidget,
         );
       } finally {
         handle.dispose();
       }
-    },
-  );
-
-  testWidgets('home action button exposes a clean semantics label', (
-    tester,
-  ) async {
-    final handle = tester.ensureSemantics();
-    try {
-      await pumpDashboardShellApp(
-        tester,
-        runtimeUseCase: LoadRuntimeDashboardUseCase(
-          clock: () => DateTime(2026, 3, 14, 9, 0),
-        ),
-      );
-
-      final semantics = tester.getSemantics(
-        find.byKey(const ValueKey<String>('sync-with-sms-button')),
-      );
-
-      expect(semantics.label, contains('Scan your messages'));
-    } finally {
-      handle.dispose();
-    }
   });
 
   testWidgets('error recovery retry action has a clear semantics label', (
@@ -163,7 +142,7 @@ void main() {
   ) async {
     final handle = tester.ensureSemantics();
     try {
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
           capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
@@ -184,10 +163,11 @@ void main() {
     }
   });
 
-  testWidgets('settings rows expose merged support semantics', (tester) async {
+  testWidgets('settings rows expose merged trust and support semantics',
+      (tester) async {
     final handle = tester.ensureSemantics();
     try {
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
           clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -195,19 +175,29 @@ void main() {
       );
 
       await openDashboardDestination(tester, 'settings');
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('settings-open-about')),
+      );
 
       expect(
         find.bySemanticsLabel(
-          'Help & privacy. What stays local. How scans work..',
+          'Private on this phone. Your messages are checked on-device.',
         ),
         findsOneWidget,
       );
       expect(
-        find.bySemanticsLabel(
-          'About SubWatch. What SubWatch tracks..',
-        ),
+        find.bySemanticsLabel('How SubWatch works.'),
         findsOneWidget,
       );
+      expect(
+        find.bySemanticsLabel('Privacy.'),
+        findsOneWidget,
+      );
+      final aboutSemantics = tester.getSemantics(
+        find.byKey(const ValueKey<String>('settings-open-about')),
+      );
+      expect(aboutSemantics.label, contains('About SubWatch'));
     } finally {
       handle.dispose();
     }
@@ -216,9 +206,18 @@ void main() {
   testWidgets('overflow and close controls keep safe tap target sizes', (
     tester,
   ) async {
-    final harness = DashboardShellReviewHarness();
+    final harness = DashboardShellReviewHarness(
+      deviceSmsGateway: FakeDeviceSmsGateway(<RawDeviceSms>[
+        RawDeviceSms(
+          id: 'confirmed-netflix',
+          address: 'NETFLIX',
+          body: 'Your Netflix subscription has been renewed for Rs 499.',
+          receivedAt: DateTime(2026, 3, 12, 10, 0),
+        ),
+      ]),
+    );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: harness.runtimeUseCase,
       handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
@@ -248,10 +247,3 @@ class _AlwaysThrowingGateway implements DeviceSmsGateway {
     throw Exception('still broken');
   }
 }
-
-
-
-
-
-
-

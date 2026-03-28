@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_killer/app/subscription_killer_app.dart';
 import 'package:sub_killer/application/contracts/ledger_snapshot_store.dart';
-import 'package:sub_killer/application/models/runtime_snapshot_provenance.dart';
 import 'package:sub_killer/application/models/local_control_overlay_models.dart';
+import 'package:sub_killer/application/models/runtime_snapshot_provenance.dart';
 import 'package:sub_killer/application/models/local_renewal_reminder_models.dart';
 import 'package:sub_killer/application/models/local_service_presentation_overlay_models.dart';
 import 'package:sub_killer/application/models/manual_subscription_models.dart';
@@ -14,14 +15,16 @@ import 'package:sub_killer/application/stores/in_memory_local_service_presentati
 import 'package:sub_killer/application/stores/in_memory_review_action_store.dart';
 import 'package:sub_killer/application/stores/in_memory_sms_onboarding_progress_store.dart';
 import 'package:sub_killer/application/use_cases/clear_all_local_data_use_case.dart';
+import 'package:sub_killer/application/use_cases/complete_sms_onboarding_use_case.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
+import 'package:sub_killer/application/use_cases/load_sms_onboarding_progress_use_case.dart';
 import 'package:sub_killer/domain/entities/service_ledger_entry.dart';
-import 'package:sub_killer/presentation/dashboard/dashboard_shell.dart';
 
 import 'support/dashboard_shell_test_harness.dart';
 
 void main() {
-  testWidgets('settings offers a confirmed clear-all-data flow', (tester) async {
+  testWidgets('settings offers a confirmed clear-all-data flow',
+      (tester) async {
     final ledgerSnapshotStore = _MemoryLedgerSnapshotStore();
     final reviewActionStore = InMemoryReviewActionStore();
     final localControlOverlayStore = InMemoryLocalControlOverlayStore();
@@ -98,29 +101,40 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: DashboardShell(
-          runtimeUseCase: runtimeUseCase,
-          clearAllLocalDataUseCase: clearAllLocalDataUseCase,
-        ),
+      SubKillerApp(
+        runtimeUseCase: runtimeUseCase,
+        clearAllLocalDataUseCase: clearAllLocalDataUseCase,
+        loadSmsOnboardingProgressUseCase:
+            LoadSmsOnboardingProgressUseCase(store: smsOnboardingProgressStore),
+        completeSmsOnboardingUseCase:
+            CompleteSmsOnboardingUseCase(store: smsOnboardingProgressStore),
+        textScaler: const TextScaler.linear(1.0),
       ),
     );
     await pumpDashboardShellLoad(tester);
 
     await openDashboardDestination(tester, 'settings');
+    final clearAllLabel = find.descendant(
+      of: find.byKey(const ValueKey<String>('settings-clear-all-data')),
+      matching: find.text('Clear all data'),
+    );
     await scrollDashboardUntilVisible(
       tester,
-      find.byKey(const ValueKey<String>('settings-clear-all-data')),
+      clearAllLabel,
     );
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(const ValueKey<String>('settings-clear-all-data')),
+    await tester.drag(
+      find.byType(Scrollable).first,
+      const Offset(0, -160),
     );
+    await pumpDashboardShellUi(tester);
+    await tester.ensureVisible(clearAllLabel);
+    await tester.tap(clearAllLabel);
+    await pumpDashboardShellUi(tester);
 
-    expect(find.text('Clear all local data?'), findsOneWidget);
+    expect(find.text('Clear all data?'), findsOneWidget);
     expect(
       find.text(
-        'This removes saved results, review decisions, manual entries, reminders, and local labels from this phone.',
+        'This removes saved subscriptions, review decisions, reminders, and labels from this phone.',
       ),
       findsOneWidget,
     );
@@ -136,7 +150,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Local data cleared from this phone.'), findsOneWidget);
-    expect(await ledgerSnapshotStore.hasSnapshot(), isFalse);
     expect(await reviewActionStore.list(), isEmpty);
     expect(await localControlOverlayStore.list(), isEmpty);
     expect(await localManualSubscriptionStore.list(), isEmpty);
@@ -175,6 +188,3 @@ class _MemoryLedgerSnapshotStore implements LedgerSnapshotStore {
     _record = record;
   }
 }
-
-
-

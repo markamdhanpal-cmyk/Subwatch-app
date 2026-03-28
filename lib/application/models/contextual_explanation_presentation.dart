@@ -86,7 +86,7 @@ class ContextualExplanationPresentation {
       bullets: <String>[
         'SubWatch does not guess the service name.',
         'It stays separate while the evidence is unclear.',
-        'Add it manually, dismiss it, or wait.',
+        'Add it as a subscription, dismiss it, or wait.',
       ],
     );
   }
@@ -158,4 +158,3 @@ class ContextualExplanationPresentation {
   final String description;
   final List<String> bullets;
 }
-

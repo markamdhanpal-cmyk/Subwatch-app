@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/dashboard_service_view_models.dart';
 import 'package:sub_killer/application/models/local_service_presentation_overlay_models.dart';
@@ -159,7 +159,7 @@ void main() {
   testWidgets('service search empty state resets back to visible sections', (
     tester,
   ) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -209,7 +209,7 @@ void main() {
   testWidgets('service filter narrows subscriptions browse sections only', (
     tester,
   ) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 14, 9, 0),
@@ -270,7 +270,7 @@ void main() {
   testWidgets('trials and benefits stay collapsed until opened', (
     tester,
   ) async {
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         clock: () => DateTime(2026, 3, 14, 9, 0),

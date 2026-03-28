@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/local_control_overlay_models.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
@@ -40,7 +40,7 @@ void main() {
       clock: () => DateTime(2026, 3, 13, 9, 30),
     ).execute();
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
@@ -75,7 +75,7 @@ void main() {
       ),
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
@@ -130,7 +130,7 @@ void main() {
         ),
       );
 
-      await pumpDashboardShellApp(
+      await pumpConstrainedDashboardShell(
         tester,
         runtimeUseCase: LoadRuntimeDashboardUseCase(
           capabilityProvider: const StubLocalMessageSourceCapabilityProvider(

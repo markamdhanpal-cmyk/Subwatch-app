@@ -10,7 +10,8 @@ import 'support/dashboard_shell_test_harness.dart';
 
 void main() {
   testWidgets(
-      'first-run sync shows onboarding before requesting SMS access and completes a granted flow', (
+      'first-run sync shows onboarding before requesting SMS access and completes a granted flow',
+      (
     tester,
   ) async {
     final onboardingUseCases = buildMemorySmsOnboardingUseCases();
@@ -39,7 +40,7 @@ void main() {
       ).execute(),
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: provider,
@@ -48,15 +49,16 @@ void main() {
       syncDeviceSmsUseCase: syncUseCase,
       loadSmsOnboardingProgressUseCase: onboardingUseCases.$1,
       completeSmsOnboardingUseCase: onboardingUseCases.$2,
+      skipGate: false,
     );
 
     await tapAndPumpDashboardShell(
       tester,
-      find.byKey(const ValueKey<String>('home-action-primary-action')),
+      find.byKey(const ValueKey<String>('first-run-get-started-button')),
     );
 
     expect(
-      find.byKey(const ValueKey<String>('sms-permission-onboarding-sheet')),
+      find.byKey(const ValueKey<String>('sms-permission-rationale-sheet')),
       findsOneWidget,
     );
     expect(provider.requestCount, 0);
@@ -64,7 +66,7 @@ void main() {
     await tapAndPumpDashboardShell(
       tester,
       find.byKey(
-        const ValueKey<String>('sms-permission-onboarding-continue-action'),
+        const ValueKey<String>('sms-permission-rationale-primary-action'),
       ),
     );
     await _pumpPastSyncFeedback(tester);
@@ -76,7 +78,8 @@ void main() {
     );
     expect(find.byKey(const ValueKey<String>('totals-summary-card')),
         findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('home-action-strip')), findsNothing);
+    expect(
+        find.byKey(const ValueKey<String>('home-action-strip')), findsNothing);
   });
 
   testWidgets(
@@ -99,7 +102,7 @@ void main() {
       ).execute(),
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: provider,
@@ -107,39 +110,53 @@ void main() {
       syncDeviceSmsUseCase: syncUseCase,
       loadSmsOnboardingProgressUseCase: onboardingUseCases.$1,
       completeSmsOnboardingUseCase: onboardingUseCases.$2,
+      skipGate: false,
     );
 
     await tapAndPumpDashboardShell(
       tester,
-      find.byKey(const ValueKey<String>('home-action-primary-action')),
+      find.byKey(const ValueKey<String>('first-run-get-started-button')),
     );
 
     expect(
-      find.byKey(const ValueKey<String>('sms-permission-onboarding-sheet')),
+      find.byKey(const ValueKey<String>('sms-permission-rationale-sheet')),
       findsOneWidget,
     );
 
     await tapAndPumpDashboardShell(
       tester,
       find.byKey(
-        const ValueKey<String>('sms-permission-onboarding-browse-action'),
+        const ValueKey<String>('sms-permission-rationale-secondary-action'),
       ),
     );
+    await settleDashboard(tester);
 
     expect(provider.requestCount, 0);
     expect(
-      find.byKey(const ValueKey<String>('sms-permission-onboarding-sheet')),
+      find.byKey(const ValueKey<String>('sms-permission-rationale-sheet')),
       findsNothing,
     );
-    expect(find.text('Scan your messages'), findsWidgets);
-
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(const ValueKey<String>('home-action-primary-action')),
+    expect(
+      find.byKey(const ValueKey<String>('first-run-gate-headline')),
+      findsNothing,
     );
-    await _pumpPastSyncFeedback(tester);
 
-    expect(provider.requestCount, 1);
+    await pumpConstrainedDashboardShell(
+      tester,
+      runtimeUseCase: LoadRuntimeDashboardUseCase(
+        capabilityProvider: provider,
+      ),
+      syncDeviceSmsUseCase: syncUseCase,
+      loadSmsOnboardingProgressUseCase: onboardingUseCases.$1,
+      completeSmsOnboardingUseCase: onboardingUseCases.$2,
+      skipGate: false,
+    );
+
+    expect(
+      find.byKey(const ValueKey<String>('first-run-gate-headline')),
+      findsNothing,
+    );
+    expect(provider.requestCount, 0);
   });
 
   testWidgets('deny state shows a retry rationale and can open settings', (
@@ -160,7 +177,7 @@ void main() {
       ).execute(),
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: provider,
@@ -195,7 +212,8 @@ void main() {
     expect(find.text('Turn on SMS access'), findsWidgets);
   });
 
-  testWidgets('review-heavy snapshot routes to review from the home action surface', (
+  testWidgets(
+      'review-heavy snapshot routes to review from the home action surface', (
     tester,
   ) async {
     final provider = MutableCapabilityProvider(
@@ -204,7 +222,7 @@ void main() {
       refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: provider,
@@ -223,7 +241,8 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const ValueKey<String>('home-action-strip')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('home-action-strip')),
+        findsOneWidget);
     expect(find.text('1 item waiting'), findsWidgets);
     expect(find.byKey(const ValueKey<String>('due-soon-card')), findsNothing);
     expect(
@@ -236,18 +255,22 @@ void main() {
       find.byKey(const ValueKey<String>('home-action-primary-action')),
     );
 
-    expect(find.text('Items for your review'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('section-reviewQueue')),
+      findsOneWidget,
+    );
     expect(find.textContaining('Google Play'), findsOneWidget);
   });
 
-  testWidgets('fresh empty scan keeps home to the spend hero only', (tester) async {
+  testWidgets('fresh empty scan keeps home to the spend hero only',
+      (tester) async {
     final provider = MutableCapabilityProvider(
       initialState: LocalMessageSourceAccessState.deviceLocalAvailable,
       requestResult: LocalMessageSourceAccessRequestResult.granted,
       refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: provider,
@@ -258,7 +281,8 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('totals-summary-card')),
         findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('home-action-strip')), findsNothing);
+    expect(
+        find.byKey(const ValueKey<String>('home-action-strip')), findsNothing);
     expect(find.byKey(const ValueKey<String>('due-soon-card')), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('upcoming-renewals-card')),
@@ -274,14 +298,15 @@ void main() {
       refreshedState: LocalMessageSourceAccessState.deviceLocalUnavailable,
     );
 
-    await pumpDashboardShellApp(
+    await pumpConstrainedDashboardShell(
       tester,
       runtimeUseCase: LoadRuntimeDashboardUseCase(
         capabilityProvider: provider,
       ),
     );
 
-    expect(find.byKey(const ValueKey<String>('home-action-strip')), findsNothing);
+    expect(
+        find.byKey(const ValueKey<String>('home-action-strip')), findsNothing);
     expect(find.byKey(const ValueKey<String>('sync-with-sms-button')),
         findsNothing);
     expect(find.byKey(const ValueKey<String>('totals-summary-card')),
@@ -293,6 +318,3 @@ Future<void> _pumpPastSyncFeedback(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 700));
   await pumpDashboardShellUi(tester);
 }
-
-
-

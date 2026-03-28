@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/domain/entities/evidence_trail.dart';
 import 'package:sub_killer/domain/entities/service_ledger_entry.dart';
 import 'package:sub_killer/domain/entities/subscription_event.dart';
