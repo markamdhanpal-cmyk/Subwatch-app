@@ -282,17 +282,18 @@ class _SettingsTrustCenterHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     return DashboardPanel(
       key: const ValueKey<String>('settings-trust-center-header'),
-      gradient: const LinearGradient(
+      gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: <Color>[
-          Color(0xFF261C18),
-          DashboardShellPalette.paper,
+          colors.accentSoft,
+          colors.paper,
         ],
       ),
-      borderColor: DashboardShellPalette.outlineStrong,
+      borderColor: colors.outlineStrong,
       radius: DashboardRadii.prominentCard,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       child: Column(
@@ -327,7 +328,7 @@ class _SettingsTrustCenterHeader extends StatelessWidget {
           Text(
             'Privacy details, reminders, recovery, and product guidance are grouped here so this screen feels deliberate instead of leftover.',
             style: type.supporting.copyWith(
-              color: DashboardShellPalette.softInk,
+              color: colors.softInk,
               height: 1.34,
             ),
           ),
@@ -349,6 +350,7 @@ class _SettingsSectionLead extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -362,7 +364,7 @@ class _SettingsSectionLead extends StatelessWidget {
         Text(
           caption,
           style: type.supporting.copyWith(
-            color: DashboardShellPalette.mutedInk,
+            color: colors.mutedInk,
             height: 1.28,
           ),
         ),

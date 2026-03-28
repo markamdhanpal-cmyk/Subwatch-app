@@ -12,14 +12,11 @@ class DashboardInsetListGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: DashboardShellPalette.elevatedPaper.withValues(alpha: 0.58),
-        borderRadius: BorderRadius.circular(DashboardRadii.nested),
-        border: Border.all(
-          color: DashboardShellPalette.outline.withValues(alpha: 0.82),
-        ),
-      ),
+    return DashboardPanel(
+      tone: DashboardPanelTone.inset,
+      elevation: DashboardPanelElevation.flat,
+      radius: DashboardRadii.nested,
+      padding: EdgeInsets.zero,
       child: Column(
         children: children
             .expand(
@@ -28,8 +25,8 @@ class DashboardInsetListGroup extends StatelessWidget {
                 if (child != children.last)
                   const Divider(
                     height: 1,
-                    indent: 16,
-                    endIndent: 16,
+                    indent: DashboardListRowRhythm.dividerInset,
+                    endIndent: DashboardListRowRhythm.dividerInset,
                     color: DashboardShellPalette.divider,
                   ),
               ],
@@ -72,11 +69,17 @@ class DashboardEmptySection extends StatelessWidget {
     required this.title,
     required this.message,
     required this.icon,
+    this.eyebrow,
+    this.tone = DashboardEmptyStateTone.neutral,
+    this.action,
   });
 
   final String title;
   final String message;
   final IconData icon;
+  final String? eyebrow;
+  final DashboardEmptyStateTone tone;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +87,9 @@ class DashboardEmptySection extends StatelessWidget {
       title: title,
       message: message,
       icon: icon,
+      eyebrow: eyebrow,
+      tone: tone,
+      action: action,
     );
   }
 }

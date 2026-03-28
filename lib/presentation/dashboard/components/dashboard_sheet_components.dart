@@ -12,6 +12,7 @@ class DashboardSheetCloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dashboardColors;
     return SizedBox.square(
       dimension: 48,
       child: IconButton(
@@ -19,11 +20,12 @@ class DashboardSheetCloseButton extends StatelessWidget {
         padding: EdgeInsets.zero,
         splashRadius: 24,
         style: IconButton.styleFrom(
-          backgroundColor: DashboardShellPalette.nestedPaper,
-          foregroundColor: DashboardShellPalette.softInk,
+          backgroundColor: colors.nestedPaper,
+          foregroundColor: colors.softInk,
+          overlayColor: colors.accent.withValues(alpha: 0.1),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(DashboardRadii.button),
-            side: const BorderSide(color: DashboardShellPalette.outline),
+            side: BorderSide(color: colors.outlineStrong),
           ),
         ),
         onPressed: onPressed,
@@ -40,12 +42,13 @@ class DashboardSheetHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dashboardColors;
     return Align(
       child: Container(
         width: 46,
         height: 5,
         decoration: BoxDecoration(
-          color: DashboardShellPalette.outlineStrong,
+          color: colors.outlineStrong,
           borderRadius: BorderRadius.circular(999),
         ),
       ),
@@ -66,9 +69,10 @@ class DashboardTrustSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     return DashboardPanel(
-      backgroundColor: DashboardShellPalette.paper,
-      borderColor: DashboardShellPalette.outlineStrong,
+      tone: DashboardPanelTone.trust,
+      elevation: DashboardPanelElevation.flat,
       radius: DashboardRadii.card,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
@@ -76,8 +80,7 @@ class DashboardTrustSection extends StatelessWidget {
         children: <Widget>[
           DashboardBadge(
             label: title,
-            backgroundColor: DashboardShellPalette.nestedPaper,
-            foregroundColor: DashboardShellPalette.softInk,
+            tone: DashboardBadgeTone.neutral,
           ),
           const SizedBox(height: DashboardSpacing.small),
           ...items.map(
@@ -86,12 +89,12 @@ class DashboardTrustSection extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 3),
                     child: Icon(
                       Icons.shield_outlined,
                       size: 16,
-                      color: DashboardShellPalette.accent,
+                      color: colors.accent,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -99,7 +102,7 @@ class DashboardTrustSection extends StatelessWidget {
                     child: Text(
                       item,
                       style: type.supporting.copyWith(
-                            color: DashboardShellPalette.softInk,
+                            color: colors.softInk,
                             height: 1.28,
                           ),
                     ),
@@ -131,14 +134,15 @@ class DashboardDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     return SafeArea(
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 18, 14, 12),
         child: DashboardPanel(
           key: sheetKey,
-          backgroundColor: DashboardShellPalette.paper,
-          borderColor: DashboardShellPalette.outlineStrong,
+          tone: DashboardPanelTone.elevated,
+          elevation: DashboardPanelElevation.prominent,
           radius: DashboardRadii.sheet,
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
           child: SingleChildScrollView(
@@ -148,11 +152,11 @@ class DashboardDetailSheet extends StatelessWidget {
               children: <Widget>[
                 const DashboardSheetHandle(),
                 const SizedBox(height: 10),
-                const DashboardBadge(
+                DashboardBadge(
                   label: 'Trust details',
                   icon: Icons.lock_outline_rounded,
-                  backgroundColor: DashboardShellPalette.nestedPaper,
-                  foregroundColor: DashboardShellPalette.softInk,
+                  backgroundColor: colors.nestedPaper,
+                  foregroundColor: colors.softInk,
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -170,7 +174,7 @@ class DashboardDetailSheet extends StatelessWidget {
                           Text(
                             subtitle,
                             style: type.supporting.copyWith(
-                              color: DashboardShellPalette.mutedInk,
+                              color: colors.mutedInk,
                             ),
                           ),
                         ],

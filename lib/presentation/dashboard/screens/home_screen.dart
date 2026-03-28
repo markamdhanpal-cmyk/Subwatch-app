@@ -35,8 +35,6 @@ Widget _buildDashboardHomeScreen({
     sourceStatus: sourceStatus,
     reviewCount: data.reviewQueue.length,
     dueSoonCount: dueSoon.items.length,
-    hasSpendHeroAction:
-        totalsSummary.activePaidCount == 0 && !totalsSummary.hasEstimatedSpend,
   );
   final visibleSubscriptionCount = data.cards
           .where(
@@ -46,14 +44,13 @@ Widget _buildDashboardHomeScreen({
           )
           .length +
       data.manualSubscriptions.length;
+  final showCompletedState = homeAction == null &&
+      sourceStatus.tone == RuntimeLocalMessageSourceTone.fresh &&
+      visibleSubscriptionCount > 0;
   final homeChildren = <Widget>[
     _TotalsSummaryCard(
       presentation: totalsSummary,
       sourceStatus: sourceStatus,
-      provenance: data.provenance,
-      now: data.provenance.recordedAt,
-      onPrimaryAction:
-          sourceStatus.isActionEnabled ? () => shell._handleSyncEntry(sourceStatus) : null,
     ),
     const SizedBox(height: DashboardSpacing.large),
     _HomeRenewalsZoneCard(
@@ -62,27 +59,38 @@ Widget _buildDashboardHomeScreen({
       reminderItems: renewalReminderItems,
     ),
     const SizedBox(height: DashboardSpacing.large),
-    _HomeInsightCard(
+    if (homeAction != null) ...<Widget>[
+      _HomeActionStrip(
+        copy: homeAction,
+        subscriptionCount: visibleSubscriptionCount,
+        reviewCount: data.reviewQueue.length,
+        dueSoonCount: dueSoon.items.length,
+        sourceStatus: sourceStatus,
+        onReview: shell._openReviewDestination,
+        onSync: () => shell._handleSyncEntry(sourceStatus),
+        onOpenRenewals: shell._scrollHomeToRenewals,
+        onOpenSubscriptions: () async {
+          shell._selectDestination(_DashboardDestination.subscriptions);
+        },
+        onOpenSettings: () async {
+          shell._openSettingsDestination();
+        },
+      ),
+      const SizedBox(height: DashboardSpacing.large),
+    ],
+    if (showCompletedState) ...<Widget>[
+      _HomeCompletedState(
+        onOpenSubscriptions: () async {
+          shell._selectDestination(_DashboardDestination.subscriptions);
+        },
+      ),
+      const SizedBox(height: DashboardSpacing.large),
+    ],
+    _HomeTrustRow(
       sourceStatus: sourceStatus,
       totalsSummary: totalsSummary,
       data: data,
       onOpenTrustSheet: shell._showHowSubWatchWorksSheet,
-    ),
-    const SizedBox(height: DashboardSpacing.large),
-    _HomeActionStrip(
-      copy: homeAction,
-      subscriptionCount: visibleSubscriptionCount,
-      reviewCount: data.reviewQueue.length,
-      sourceStatus: sourceStatus,
-      onReview: shell._openReviewDestination,
-      onSync: () => shell._handleSyncEntry(sourceStatus),
-      onOpenRenewals: shell._scrollHomeToRenewals,
-      onOpenSubscriptions: () async {
-        shell._selectDestination(_DashboardDestination.subscriptions);
-      },
-      onOpenSettings: () async {
-        shell._openSettingsDestination();
-      },
     ),
   ];
 

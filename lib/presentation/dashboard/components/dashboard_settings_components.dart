@@ -23,9 +23,10 @@ class DashboardSettingsGroupPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     return DashboardPanel(
-      backgroundColor: DashboardShellPalette.paper,
-      borderColor: DashboardShellPalette.outlineStrong,
+      tone: DashboardPanelTone.elevated,
+      elevation: DashboardPanelElevation.raised,
       radius: DashboardRadii.card,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
       child: Column(
@@ -43,20 +44,16 @@ class DashboardSettingsGroupPanel extends StatelessWidget {
             Text(
               subtitle!,
               style: type.supporting.copyWith(
-                color: DashboardShellPalette.mutedInk,
+                color: colors.mutedInk,
                 height: 1.28,
               ),
             ),
           ],
           const SizedBox(height: DashboardSpacing.small),
-          Container(
-            decoration: BoxDecoration(
-              color: DashboardShellPalette.elevatedPaper.withValues(alpha: 0.58),
-              borderRadius: BorderRadius.circular(DashboardRadii.nested),
-              border: Border.all(
-                color: DashboardShellPalette.outline.withValues(alpha: 0.82),
-              ),
-            ),
+          DashboardPanel(
+            tone: DashboardPanelTone.inset,
+            elevation: DashboardPanelElevation.flat,
+            radius: DashboardRadii.nested,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,6 +81,7 @@ class DashboardSettingsSubsection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -99,7 +97,7 @@ class DashboardSettingsSubsection extends StatelessWidget {
           Text(
             caption!,
             style: type.supporting.copyWith(
-              color: DashboardShellPalette.mutedInk,
+              color: colors.mutedInk,
               height: 1.28,
             ),
           ),
@@ -135,20 +133,18 @@ class DashboardSettingsNavRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
     final stackTrailing =
         trailing != null &&
         (MediaQuery.sizeOf(context).width < 380 ||
             MediaQuery.textScalerOf(context).scale(1) > 1.12);
-    final iconColor = tone == DashboardSettingsRowTone.destructive
-        ? DashboardShellPalette.caution
-        : DashboardShellPalette.softInk;
-    final iconBackground = tone == DashboardSettingsRowTone.destructive
-        ? DashboardShellPalette.cautionSoft
-        : DashboardShellPalette.nestedPaper;
+    final iconTone = tone == DashboardSettingsRowTone.destructive
+        ? DashboardIconSurfaceTone.caution
+        : DashboardIconSurfaceTone.neutral;
     final interactiveTint = tone == DashboardSettingsRowTone.destructive
-        ? DashboardShellPalette.caution
-        : DashboardShellPalette.accent;
+        ? colors.caution
+        : colors.accent;
     final semanticsLabel = <String>[
       title,
       if (hasSubtitle) subtitle!,
@@ -158,7 +154,7 @@ class DashboardSettingsNavRow extends StatelessWidget {
             onTap == null
                 ? Icons.hourglass_top_rounded
                 : Icons.chevron_right_rounded,
-            color: DashboardShellPalette.mutedInk,
+            color: colors.mutedInk,
           )
         : Row(
             mainAxisSize: MainAxisSize.min,
@@ -166,9 +162,10 @@ class DashboardSettingsNavRow extends StatelessWidget {
               trailing!,
               if (onTap != null) ...<Widget>[
                 const SizedBox(width: 8),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
-                  color: DashboardShellPalette.mutedInk,
+                  size: 20,
+                  color: colors.mutedInk,
                 ),
               ],
             ],
@@ -184,14 +181,16 @@ class DashboardSettingsNavRow extends StatelessWidget {
           child: InkWell(
             key: tileKey,
             onTap: onTap,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
             splashColor: interactiveTint.withValues(alpha: 0.08),
             highlightColor: interactiveTint.withValues(alpha: 0.04),
             hoverColor: interactiveTint.withValues(alpha: 0.03),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 68),
+              constraints: const BoxConstraints(
+                minHeight: DashboardListRowRhythm.minHeight,
+              ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 13),
+                padding: DashboardListRowRhythm.verticalPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -200,28 +199,11 @@ class DashboardSettingsNavRow extends StatelessWidget {
                           ? CrossAxisAlignment.start
                           : CrossAxisAlignment.center,
                       children: <Widget>[
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: iconBackground,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: tone == DashboardSettingsRowTone.destructive
-                                  ? DashboardShellPalette.caution.withValues(
-                                      alpha: 0.28,
-                                    )
-                                  : DashboardShellPalette.outline,
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            icon,
-                            color: iconColor,
-                            size: 18,
-                          ),
+                        DashboardIconSurface(
+                          icon: icon,
+                          tone: iconTone,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: DashboardListRowRhythm.gap),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +217,7 @@ class DashboardSettingsNavRow extends StatelessWidget {
                                 Text(
                                   subtitle!,
                                   style: type.supporting.copyWith(
-                                    color: DashboardShellPalette.mutedInk,
+                                    color: colors.mutedInk,
                                     height: 1.28,
                                   ),
                                 ),
@@ -248,9 +230,10 @@ class DashboardSettingsNavRow extends StatelessWidget {
                           trailingWidget,
                         ] else if (onTap != null) ...<Widget>[
                           const SizedBox(width: 8),
-                          const Icon(
+                          Icon(
                             Icons.chevron_right_rounded,
-                            color: DashboardShellPalette.mutedInk,
+                            size: 20,
+                            color: colors.mutedInk,
                           ),
                         ],
                       ],
@@ -258,7 +241,9 @@ class DashboardSettingsNavRow extends StatelessWidget {
                     if (stackTrailing) ...<Widget>[
                       const SizedBox(height: 10),
                       Padding(
-                        padding: const EdgeInsets.only(left: 50),
+                        padding: const EdgeInsets.only(
+                          left: DashboardListRowRhythm.leadingContentInset,
+                        ),
                         child: trailing!,
                       ),
                     ],
@@ -266,9 +251,9 @@ class DashboardSettingsNavRow extends StatelessWidget {
                 ),
               ),
             ),
+            ),
           ),
         ),
-      ),
     );
   }
 }
@@ -294,6 +279,7 @@ class DashboardSettingsRecoveryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     final stackedAction = MediaQuery.sizeOf(context).width < 390 ||
         MediaQuery.textScalerOf(context).scale(1) > 1.12;
     final details = Column(
@@ -307,7 +293,7 @@ class DashboardSettingsRecoveryRow extends StatelessWidget {
         Text(
           subtitle,
           style: type.supporting.copyWith(
-            color: DashboardShellPalette.mutedInk,
+            color: colors.mutedInk,
             height: 1.28,
           ),
         ),
@@ -316,16 +302,16 @@ class DashboardSettingsRecoveryRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
-              color: DashboardShellPalette.nestedPaper,
+              color: colors.nestedPaper,
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: DashboardShellPalette.outline,
+                color: colors.outline,
               ),
             ),
             child: Text(
               statusLabel,
               style: type.meta.copyWith(
-                color: DashboardShellPalette.softInk,
+                color: colors.softInk,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -336,6 +322,7 @@ class DashboardSettingsRecoveryRow extends StatelessWidget {
     final action = TextButton.icon(
       key: actionKey,
       onPressed: isBusy ? null : onUndo,
+      style: DashboardButtonStyles.quietCompact(context),
       icon: const Icon(Icons.undo_rounded, size: 18),
       label: Text(isBusy ? 'Working...' : 'Undo'),
     );
@@ -370,10 +357,13 @@ class DashboardSettingsGroupDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dashboardColors;
     return Container(
-      margin: const EdgeInsets.only(left: 48),
+      margin: const EdgeInsets.only(
+        left: DashboardListRowRhythm.leadingContentInset,
+      ),
       height: 1,
-      color: DashboardShellPalette.divider,
+      color: colors.divider,
     );
   }
 }
@@ -391,6 +381,7 @@ class DashboardSettingsTrustPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     final label = <String>[
       title,
       if (subtitle != null && subtitle!.isNotEmpty) subtitle!,
@@ -401,15 +392,8 @@ class DashboardSettingsTrustPanel extends StatelessWidget {
       label: label.isEmpty ? null : '$label.',
       child: ExcludeSemantics(
         child: DashboardPanel(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[
-              Color(0xFF221915),
-              DashboardShellPalette.paper,
-            ],
-          ),
-          borderColor: DashboardShellPalette.outlineStrong,
+          tone: DashboardPanelTone.accent,
+          elevation: DashboardPanelElevation.prominent,
           radius: DashboardRadii.prominentCard,
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
           child: Row(
@@ -419,26 +403,26 @@ class DashboardSettingsTrustPanel extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: <Color>[
-                      DashboardShellPalette.nestedPaper,
-                      DashboardShellPalette.registerPaper,
+                      colors.nestedPaper,
+                      colors.registerPaper,
                     ],
                   ),
                   borderRadius: BorderRadius.circular(DashboardRadii.button),
                   border: Border.all(
-                    color: DashboardShellPalette.outline,
+                    color: colors.outline,
                   ),
                 ),
                 child: Stack(
-                  children: const <Widget>[
+                  children: <Widget>[
                     Center(
                       child: Icon(
                         Icons.smartphone_rounded,
                         size: 19,
-                        color: DashboardShellPalette.ink,
+                        color: colors.ink,
                       ),
                     ),
                     Positioned(
@@ -447,7 +431,7 @@ class DashboardSettingsTrustPanel extends StatelessWidget {
                       child: Icon(
                         Icons.shield_rounded,
                         size: 16,
-                        color: DashboardShellPalette.statusBlue,
+                        color: colors.statusBlue,
                       ),
                     ),
                   ],
@@ -458,11 +442,11 @@ class DashboardSettingsTrustPanel extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const DashboardBadge(
+                    DashboardBadge(
                       label: 'Trust center',
                       icon: Icons.lock_outline_rounded,
-                      backgroundColor: DashboardShellPalette.nestedPaper,
-                      foregroundColor: DashboardShellPalette.softInk,
+                      backgroundColor: colors.nestedPaper,
+                      foregroundColor: colors.softInk,
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -474,7 +458,7 @@ class DashboardSettingsTrustPanel extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: type.supporting.copyWith(
-                          color: DashboardShellPalette.softInk,
+                          color: colors.softInk,
                           height: 1.28,
                         ),
                       ),
@@ -483,7 +467,7 @@ class DashboardSettingsTrustPanel extends StatelessWidget {
                     Text(
                       'Recovery, reminders, and local controls stay transparent here.',
                       style: type.meta.copyWith(
-                        color: DashboardShellPalette.mutedInk,
+                        color: colors.mutedInk,
                       ),
                     ),
                   ],

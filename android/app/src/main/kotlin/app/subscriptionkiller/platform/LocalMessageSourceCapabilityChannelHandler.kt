@@ -3,8 +3,11 @@ package app.subscriptionkiller.platform
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.core.content.ContextCompat
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -21,6 +24,10 @@ class LocalMessageSourceCapabilityChannelHandler(
             }
             REQUEST_ACCESS_METHOD -> {
                 requestAccess(result)
+                return true
+            }
+            OPEN_APP_SETTINGS_METHOD -> {
+                result.success(openAppSettings())
                 return true
             }
         }
@@ -117,10 +124,26 @@ class LocalMessageSourceCapabilityChannelHandler(
         ) == PackageManager.PERMISSION_GRANTED
     }
 
+    private fun openAppSettings(): Boolean {
+        val activity = this.activity ?: return false
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        return try {
+            activity.startActivity(intent)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     companion object {
         const val CHANNEL_NAME = "sub_killer/local_message_source_capability"
         const val GET_ACCESS_STATE_METHOD = "getAccessState"
         const val REQUEST_ACCESS_METHOD = "requestAccess"
+        const val OPEN_APP_SETTINGS_METHOD = "openAppSettings"
 
         const val ACCESS_STATE_DEVICE_LOCAL_AVAILABLE = "deviceLocalAvailable"
         const val ACCESS_STATE_DEVICE_LOCAL_DENIED = "deviceLocalDenied"

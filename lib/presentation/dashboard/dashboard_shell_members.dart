@@ -3,6 +3,9 @@
 part of 'dashboard_shell.dart';
 
 extension _DashboardShellMembers on _DashboardShellState {
+  static const MethodChannel _localMessageSourceCapabilityChannel =
+      MethodChannel('sub_killer/local_message_source_capability');
+
   void _reloadSnapshot() {
     ref.read(dashboardSnapshotControllerProvider.notifier).reload();
   }
@@ -979,8 +982,27 @@ extension _DashboardShellMembers on _DashboardShellState {
 
   Future<void> _handleFirstRunRetry() => _handleFirstRunGetStarted();
 
-  void _handleFirstRunOpenSettings() {
+  Future<void> _openDevicePermissionSettings() async {
+    try {
+      final opened = await _localMessageSourceCapabilityChannel
+          .invokeMethod<bool>('openAppSettings');
+      if (opened == true) {
+        return;
+      }
+    } on MissingPluginException {
+      // Fall back to the in-app settings screen below.
+    } on PlatformException {
+      // Fall back to the in-app settings screen below.
+    }
+
+    if (!mounted) {
+      return;
+    }
     _openSettingsDestination();
+  }
+
+  Future<void> _handleFirstRunOpenSettings() async {
+    await _openDevicePermissionSettings();
   }
 
   Future<void> _handleFirstRunNotNow() async {
@@ -1006,7 +1028,7 @@ extension _DashboardShellMembers on _DashboardShellState {
           Navigator.of(sheetContext).pop();
           if (variant ==
               RuntimeLocalMessageSourcePermissionRationaleVariant.retry) {
-            _openSettingsDestination();
+            _openDevicePermissionSettings();
             return;
           }
           if (firstRun != null) {
@@ -1202,13 +1224,13 @@ extension _DashboardShellMembers on _DashboardShellState {
   String _subscriptionsSectionCaption(DashboardBucket bucket) {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
-        return 'Recurring charges SubWatch can stand behind with confidence.';
+        return 'Recurring charges SubWatch can stand behind.';
       case DashboardBucket.needsReview:
-        return 'Kept separate until the signal is strong enough to confirm.';
+        return 'Kept separate until the signal is strong enough.';
       case DashboardBucket.trialsAndBenefits:
-        return 'Visible separately because they do not read as direct paid billing.';
+        return 'Visible separately because they are not direct paid billing.';
       case DashboardBucket.hidden:
-        return 'Hidden on this phone only.';
+        return 'Hidden on this phone.';
     }
   }
 
@@ -1577,7 +1599,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return const _BucketStyle(
           badgeLabel: 'Confirmed',
           background: DashboardShellPalette.successSoft,
-          border: Color(0xFF355344),
+          border: Color(0xFF9BC3AE),
           badgeBackground: DashboardShellPalette.registerPaper,
           badgeForeground: DashboardShellPalette.success,
         );
@@ -1592,8 +1614,8 @@ extension _DashboardShellMembers on _DashboardShellState {
       case DashboardBucket.trialsAndBenefits:
         return const _BucketStyle(
           badgeLabel: 'Included',
-          background: Color(0xFF18211C),
-          border: Color(0xFF314339),
+          background: DashboardShellPalette.benefitGoldSoft,
+          border: Color(0xFFD7BF7F),
           badgeBackground: DashboardShellPalette.registerPaper,
           badgeForeground: DashboardShellPalette.benefitGold,
         );
@@ -1601,7 +1623,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return const _BucketStyle(
           badgeLabel: 'Hidden',
           background: DashboardShellPalette.recoverySoft,
-          border: Color(0xFF394556),
+          border: Color(0xFFA8B9D4),
           badgeBackground: DashboardShellPalette.registerPaper,
           badgeForeground: DashboardShellPalette.recovery,
         );
@@ -1775,7 +1797,7 @@ extension _DashboardShellMembers on _DashboardShellState {
   String _serviceSectionEmptyTitle(DashboardBucket bucket) {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
-        return 'No confirmed subscriptions yet';
+        return 'No subscriptions found yet';
       case DashboardBucket.needsReview:
         return 'Nothing to review';
       case DashboardBucket.trialsAndBenefits:

@@ -304,18 +304,23 @@ void main() {
 
       await scrollDashboardUntilVisible(
         tester,
-        find.byKey(const ValueKey<String>('home-action-strip')),
+        find.byKey(const ValueKey<String>('home-trust-row')),
       );
 
       expect(find.byKey(const ValueKey<String>('snapshot-certificate-card')),
           findsNothing);
-      expect(find.textContaining('Scan your messages'), findsWidgets);
+      expect(find.byKey(const ValueKey<String>('home-action-strip')),
+          findsNothing);
+      expect(find.byKey(const ValueKey<String>('home-trust-row')),
+          findsOneWidget);
       expect(
-        find.text('No scan yet'),
+        find.text('This preview stays separate from your real data.'),
         findsOneWidget,
       );
-      expect(find.byKey(const ValueKey<String>('product-guidance-panel')),
-          findsNothing);
+      expect(
+        find.text('Scan this phone whenever you are ready to replace it.'),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
 
       final harness = DashboardShellReviewHarness();
@@ -629,3 +634,4 @@ Future<void> _pumpConstrainedDashboardShell(
   );
   await pumpDashboardShellLoad(tester, skipGate: skipGate);
 }
+

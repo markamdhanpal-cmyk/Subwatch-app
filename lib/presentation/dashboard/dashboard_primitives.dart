@@ -18,6 +18,7 @@ class DashboardSpacing {
   static const double screenBlockGap = 18;
   static const double compactSectionGap = 20;
   static const double sectionGap = 28;
+  static const double sectionHeaderGap = 12;
   static const double rowGap = 14;
 
   static const EdgeInsets screenInset = EdgeInsets.fromLTRB(20, 16, 20, 28);
@@ -38,34 +39,423 @@ class DashboardRadii {
 }
 
 class DashboardShellPalette {
-  static const Color canvas = Color(0xFF100C0A);
-  static const Color canvasRaised = Color(0xFF16110E);
-  static const Color paper = Color(0xFF17110F);
-  static const Color elevatedPaper = Color(0xFF1E1714);
-  static const Color nestedPaper = Color(0xFF261D19);
-  static const Color registerPaper = Color(0xFF14100D);
-  static const Color ink = Color(0xFFF5EBDD);
-  static const Color softInk = Color(0xFFE2D8CA);
-  static const Color mutedInk = Color(0xFFB3A79A);
-  static const Color faintInk = Color(0xFF877B71);
-  static const Color accent = Color(0xFFE0A258);
-  static const Color accentSoft = Color(0xFF352416);
-  static const Color accentGlow = Color(0xFFF1C07C);
-  static const Color statusBlue = Color(0xFF89A2CC);
-  static const Color statusBlueSoft = Color(0xFF192332);
-  static const Color benefitGold = Color(0xFFD1AF67);
-  static const Color benefitGoldSoft = Color(0xFF302315);
-  static const Color success = Color(0xFF86B39F);
-  static const Color successSoft = Color(0xFF16231D);
-  static const Color caution = Color(0xFFD29156);
-  static const Color cautionSoft = Color(0xFF312016);
-  static const Color recovery = Color(0xFFABB8CB);
-  static const Color recoverySoft = Color(0xFF17202A);
-  static const Color outline = Color(0xFF362C27);
-  static const Color outlineStrong = Color(0xFF4C3C34);
-  static const Color divider = Color(0xFF2A221E);
-  static const Color scrim = Color(0x99080504);
-  static const Color shadow = Color(0x66040201);
+  static const Color canvas = Color(0xFFF7EEE3);
+  static const Color canvasRaised = Color(0xFFFFF8F1);
+  static const Color paper = Color(0xFFFFFCF8);
+  static const Color elevatedPaper = Color(0xFFFFF5EC);
+  static const Color nestedPaper = Color(0xFFF6E8DA);
+  static const Color registerPaper = Color(0xFFFBEFE2);
+  static const Color ink = Color(0xFF201813);
+  static const Color softInk = Color(0xFF493A2F);
+  static const Color mutedInk = Color(0xFF7A6657);
+  static const Color faintInk = Color(0xFFA48C79);
+  static const Color accent = Color(0xFFF09A49);
+  static const Color accentSoft = Color(0xFFFFE2C8);
+  static const Color accentGlow = Color(0xFFFFBD80);
+  static const Color accentInk = Color(0xFF2A180C);
+  static const Color statusBlue = Color(0xFF2A8CB5);
+  static const Color statusBlueSoft = Color(0xFFD9EEF6);
+  static const Color benefitGold = Color(0xFFC6A14D);
+  static const Color benefitGoldSoft = Color(0xFFF9EDCD);
+  static const Color success = Color(0xFF3C9D72);
+  static const Color successSoft = Color(0xFFDFF3E7);
+  static const Color caution = Color(0xFFD96F4C);
+  static const Color cautionSoft = Color(0xFFFBE4DB);
+  static const Color recovery = Color(0xFF6C86A9);
+  static const Color recoverySoft = Color(0xFFE4EDF8);
+  static const Color outline = Color(0xFFE3D2C2);
+  static const Color outlineStrong = Color(0xFFD3BBA8);
+  static const Color divider = Color(0xFFEFDFD2);
+  static const Color scrim = Color(0x99533B2A);
+  static const Color shadow = Color(0x1F724122);
+}
+
+@immutable
+class DashboardColorTokens extends ThemeExtension<DashboardColorTokens> {
+  const DashboardColorTokens({
+    required this.canvas,
+    required this.canvasRaised,
+    required this.paper,
+    required this.elevatedPaper,
+    required this.nestedPaper,
+    required this.registerPaper,
+    required this.ink,
+    required this.softInk,
+    required this.mutedInk,
+    required this.faintInk,
+    required this.accent,
+    required this.accentSoft,
+    required this.accentGlow,
+    required this.accentInk,
+    required this.statusBlue,
+    required this.statusBlueSoft,
+    required this.benefitGold,
+    required this.benefitGoldSoft,
+    required this.success,
+    required this.successSoft,
+    required this.caution,
+    required this.cautionSoft,
+    required this.recovery,
+    required this.recoverySoft,
+    required this.outline,
+    required this.outlineStrong,
+    required this.divider,
+    required this.scrim,
+    required this.shadow,
+    required this.trustSurfaceStart,
+    required this.backdropTop,
+    required this.backdropBottom,
+    required this.glowAccent,
+    required this.glowInfo,
+    required this.glowWarm,
+  });
+
+  static const DashboardColorTokens light = DashboardColorTokens(
+    canvas: Color(0xFFF7EEE3),
+    canvasRaised: Color(0xFFFFF8F1),
+    paper: Color(0xFFFFFCF8),
+    elevatedPaper: Color(0xFFFFF5EC),
+    nestedPaper: Color(0xFFF6E8DA),
+    registerPaper: Color(0xFFFBEFE2),
+    ink: Color(0xFF201813),
+    softInk: Color(0xFF493A2F),
+    mutedInk: Color(0xFF7A6657),
+    faintInk: Color(0xFFA48C79),
+    accent: Color(0xFFF09A49),
+    accentSoft: Color(0xFFFFE2C8),
+    accentGlow: Color(0xFFFFBD80),
+    accentInk: Color(0xFF2A180C),
+    statusBlue: Color(0xFF2A8CB5),
+    statusBlueSoft: Color(0xFFD9EEF6),
+    benefitGold: Color(0xFFC6A14D),
+    benefitGoldSoft: Color(0xFFF9EDCD),
+    success: Color(0xFF3C9D72),
+    successSoft: Color(0xFFDFF3E7),
+    caution: Color(0xFFD96F4C),
+    cautionSoft: Color(0xFFFBE4DB),
+    recovery: Color(0xFF6C86A9),
+    recoverySoft: Color(0xFFE4EDF8),
+    outline: Color(0xFFE3D2C2),
+    outlineStrong: Color(0xFFD3BBA8),
+    divider: Color(0xFFEFDFD2),
+    scrim: Color(0x99533B2A),
+    shadow: Color(0x1F724122),
+    trustSurfaceStart: Color(0xFFEAF6FA),
+    backdropTop: Color(0xFFFFFBF5),
+    backdropBottom: Color(0xFFF1E0D1),
+    glowAccent: Color(0xFFFFB476),
+    glowInfo: Color(0xFF8CCFCA),
+    glowWarm: Color(0xFFFFD88A),
+  );
+
+  static const DashboardColorTokens dark = DashboardColorTokens(
+    canvas: Color(0xFF0B0F17),
+    canvasRaised: Color(0xFF101623),
+    paper: Color(0xFF151B28),
+    elevatedPaper: Color(0xFF1A2232),
+    nestedPaper: Color(0xFF212B3D),
+    registerPaper: Color(0xFF1B2536),
+    ink: Color(0xFFF7F8FC),
+    softInk: Color(0xFFDCE2F0),
+    mutedInk: Color(0xFFA5B0C5),
+    faintInk: Color(0xFF7D88A0),
+    accent: Color(0xFFFFA75A),
+    accentSoft: Color(0xFF3A2618),
+    accentGlow: Color(0xFFFFC47E),
+    accentInk: Color(0xFF1C120C),
+    statusBlue: Color(0xFF6BCBFF),
+    statusBlueSoft: Color(0xFF182D41),
+    benefitGold: Color(0xFFE5C46D),
+    benefitGoldSoft: Color(0xFF372B13),
+    success: Color(0xFF5CD39B),
+    successSoft: Color(0xFF183627),
+    caution: Color(0xFFFF8E6E),
+    cautionSoft: Color(0xFF3E211B),
+    recovery: Color(0xFFA6BEFF),
+    recoverySoft: Color(0xFF202A42),
+    outline: Color(0xFF313C52),
+    outlineStrong: Color(0xFF46516C),
+    divider: Color(0xFF232C3F),
+    scrim: Color(0xC005070D),
+    shadow: Color(0x8A000000),
+    trustSurfaceStart: Color(0xFF142A3D),
+    backdropTop: Color(0xFF0F1420),
+    backdropBottom: Color(0xFF090D15),
+    glowAccent: Color(0xFFFF8B38),
+    glowInfo: Color(0xFF2DB8FF),
+    glowWarm: Color(0xFFFFD56C),
+  );
+
+  final Color canvas;
+  final Color canvasRaised;
+  final Color paper;
+  final Color elevatedPaper;
+  final Color nestedPaper;
+  final Color registerPaper;
+  final Color ink;
+  final Color softInk;
+  final Color mutedInk;
+  final Color faintInk;
+  final Color accent;
+  final Color accentSoft;
+  final Color accentGlow;
+  final Color accentInk;
+  final Color statusBlue;
+  final Color statusBlueSoft;
+  final Color benefitGold;
+  final Color benefitGoldSoft;
+  final Color success;
+  final Color successSoft;
+  final Color caution;
+  final Color cautionSoft;
+  final Color recovery;
+  final Color recoverySoft;
+  final Color outline;
+  final Color outlineStrong;
+  final Color divider;
+  final Color scrim;
+  final Color shadow;
+  final Color trustSurfaceStart;
+  final Color backdropTop;
+  final Color backdropBottom;
+  final Color glowAccent;
+  final Color glowInfo;
+  final Color glowWarm;
+
+  @override
+  DashboardColorTokens copyWith({
+    Color? canvas,
+    Color? canvasRaised,
+    Color? paper,
+    Color? elevatedPaper,
+    Color? nestedPaper,
+    Color? registerPaper,
+    Color? ink,
+    Color? softInk,
+    Color? mutedInk,
+    Color? faintInk,
+    Color? accent,
+    Color? accentSoft,
+    Color? accentGlow,
+    Color? accentInk,
+    Color? statusBlue,
+    Color? statusBlueSoft,
+    Color? benefitGold,
+    Color? benefitGoldSoft,
+    Color? success,
+    Color? successSoft,
+    Color? caution,
+    Color? cautionSoft,
+    Color? recovery,
+    Color? recoverySoft,
+    Color? outline,
+    Color? outlineStrong,
+    Color? divider,
+    Color? scrim,
+    Color? shadow,
+    Color? trustSurfaceStart,
+    Color? backdropTop,
+    Color? backdropBottom,
+    Color? glowAccent,
+    Color? glowInfo,
+    Color? glowWarm,
+  }) {
+    return DashboardColorTokens(
+      canvas: canvas ?? this.canvas,
+      canvasRaised: canvasRaised ?? this.canvasRaised,
+      paper: paper ?? this.paper,
+      elevatedPaper: elevatedPaper ?? this.elevatedPaper,
+      nestedPaper: nestedPaper ?? this.nestedPaper,
+      registerPaper: registerPaper ?? this.registerPaper,
+      ink: ink ?? this.ink,
+      softInk: softInk ?? this.softInk,
+      mutedInk: mutedInk ?? this.mutedInk,
+      faintInk: faintInk ?? this.faintInk,
+      accent: accent ?? this.accent,
+      accentSoft: accentSoft ?? this.accentSoft,
+      accentGlow: accentGlow ?? this.accentGlow,
+      accentInk: accentInk ?? this.accentInk,
+      statusBlue: statusBlue ?? this.statusBlue,
+      statusBlueSoft: statusBlueSoft ?? this.statusBlueSoft,
+      benefitGold: benefitGold ?? this.benefitGold,
+      benefitGoldSoft: benefitGoldSoft ?? this.benefitGoldSoft,
+      success: success ?? this.success,
+      successSoft: successSoft ?? this.successSoft,
+      caution: caution ?? this.caution,
+      cautionSoft: cautionSoft ?? this.cautionSoft,
+      recovery: recovery ?? this.recovery,
+      recoverySoft: recoverySoft ?? this.recoverySoft,
+      outline: outline ?? this.outline,
+      outlineStrong: outlineStrong ?? this.outlineStrong,
+      divider: divider ?? this.divider,
+      scrim: scrim ?? this.scrim,
+      shadow: shadow ?? this.shadow,
+      trustSurfaceStart: trustSurfaceStart ?? this.trustSurfaceStart,
+      backdropTop: backdropTop ?? this.backdropTop,
+      backdropBottom: backdropBottom ?? this.backdropBottom,
+      glowAccent: glowAccent ?? this.glowAccent,
+      glowInfo: glowInfo ?? this.glowInfo,
+      glowWarm: glowWarm ?? this.glowWarm,
+    );
+  }
+
+  @override
+  DashboardColorTokens lerp(
+    covariant ThemeExtension<DashboardColorTokens>? other,
+    double t,
+  ) {
+    if (other is! DashboardColorTokens) {
+      return this;
+    }
+    return DashboardColorTokens(
+      canvas: Color.lerp(canvas, other.canvas, t) ?? canvas,
+      canvasRaised: Color.lerp(canvasRaised, other.canvasRaised, t) ?? canvasRaised,
+      paper: Color.lerp(paper, other.paper, t) ?? paper,
+      elevatedPaper: Color.lerp(elevatedPaper, other.elevatedPaper, t) ?? elevatedPaper,
+      nestedPaper: Color.lerp(nestedPaper, other.nestedPaper, t) ?? nestedPaper,
+      registerPaper: Color.lerp(registerPaper, other.registerPaper, t) ?? registerPaper,
+      ink: Color.lerp(ink, other.ink, t) ?? ink,
+      softInk: Color.lerp(softInk, other.softInk, t) ?? softInk,
+      mutedInk: Color.lerp(mutedInk, other.mutedInk, t) ?? mutedInk,
+      faintInk: Color.lerp(faintInk, other.faintInk, t) ?? faintInk,
+      accent: Color.lerp(accent, other.accent, t) ?? accent,
+      accentSoft: Color.lerp(accentSoft, other.accentSoft, t) ?? accentSoft,
+      accentGlow: Color.lerp(accentGlow, other.accentGlow, t) ?? accentGlow,
+      accentInk: Color.lerp(accentInk, other.accentInk, t) ?? accentInk,
+      statusBlue: Color.lerp(statusBlue, other.statusBlue, t) ?? statusBlue,
+      statusBlueSoft: Color.lerp(statusBlueSoft, other.statusBlueSoft, t) ?? statusBlueSoft,
+      benefitGold: Color.lerp(benefitGold, other.benefitGold, t) ?? benefitGold,
+      benefitGoldSoft: Color.lerp(benefitGoldSoft, other.benefitGoldSoft, t) ?? benefitGoldSoft,
+      success: Color.lerp(success, other.success, t) ?? success,
+      successSoft: Color.lerp(successSoft, other.successSoft, t) ?? successSoft,
+      caution: Color.lerp(caution, other.caution, t) ?? caution,
+      cautionSoft: Color.lerp(cautionSoft, other.cautionSoft, t) ?? cautionSoft,
+      recovery: Color.lerp(recovery, other.recovery, t) ?? recovery,
+      recoverySoft: Color.lerp(recoverySoft, other.recoverySoft, t) ?? recoverySoft,
+      outline: Color.lerp(outline, other.outline, t) ?? outline,
+      outlineStrong: Color.lerp(outlineStrong, other.outlineStrong, t) ?? outlineStrong,
+      divider: Color.lerp(divider, other.divider, t) ?? divider,
+      scrim: Color.lerp(scrim, other.scrim, t) ?? scrim,
+      shadow: Color.lerp(shadow, other.shadow, t) ?? shadow,
+      trustSurfaceStart: Color.lerp(trustSurfaceStart, other.trustSurfaceStart, t) ?? trustSurfaceStart,
+      backdropTop: Color.lerp(backdropTop, other.backdropTop, t) ?? backdropTop,
+      backdropBottom: Color.lerp(backdropBottom, other.backdropBottom, t) ?? backdropBottom,
+      glowAccent: Color.lerp(glowAccent, other.glowAccent, t) ?? glowAccent,
+      glowInfo: Color.lerp(glowInfo, other.glowInfo, t) ?? glowInfo,
+      glowWarm: Color.lerp(glowWarm, other.glowWarm, t) ?? glowWarm,
+    );
+  }
+}
+
+extension DashboardColorTokensContext on BuildContext {
+  DashboardColorTokens get dashboardColors =>
+      Theme.of(this).extension<DashboardColorTokens>()!;
+}
+
+enum DashboardPanelTone {
+  base,
+  elevated,
+  inset,
+  accent,
+  trust,
+}
+
+enum DashboardPanelElevation {
+  flat,
+  raised,
+  prominent,
+}
+
+enum DashboardBadgeTone {
+  info,
+  neutral,
+  accent,
+  success,
+  caution,
+  recovery,
+  benefit,
+}
+
+enum DashboardIconSurfaceTone {
+  neutral,
+  accent,
+  info,
+  success,
+  caution,
+  benefit,
+}
+
+enum DashboardEmptyStateTone {
+  neutral,
+  success,
+  trust,
+  accent,
+}
+
+class DashboardGradients {
+  static LinearGradient elevatedSurface(DashboardColorTokens colors) =>
+      LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: <Color>[
+          colors.paper,
+          colors.elevatedPaper,
+        ],
+      );
+
+  static LinearGradient insetSurface(DashboardColorTokens colors) =>
+      LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: <Color>[
+          colors.paper,
+          colors.nestedPaper,
+        ],
+      );
+
+  static LinearGradient accentSurface(DashboardColorTokens colors) =>
+      LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: <Color>[
+          colors.accentSoft,
+          colors.paper,
+        ],
+      );
+
+  static LinearGradient trustSurface(DashboardColorTokens colors) =>
+      LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: <Color>[
+          colors.trustSurfaceStart,
+          colors.paper,
+        ],
+      );
+}
+
+class DashboardListRowRhythm {
+  static const double minHeight = 68;
+  static const double leadingSize = 38;
+  static const double leadingRadius = 14;
+  static const double leadingIconSize = 18;
+  static const double gap = 12;
+  static const double leadingContentInset = leadingSize + gap;
+  static const double dividerInset = 16;
+  static const EdgeInsets verticalPadding =
+      EdgeInsets.symmetric(vertical: 13);
+}
+
+class DashboardActionRhythm {
+  static const double regularHeight = 52;
+  static const double compactHeight = 46;
+  static const double quietHeight = 44;
+  static const EdgeInsets regularPadding =
+      EdgeInsets.symmetric(horizontal: 18, vertical: 15);
+  static const EdgeInsets compactPadding =
+      EdgeInsets.symmetric(horizontal: 14, vertical: 12);
+  static const EdgeInsets quietPadding =
+      EdgeInsets.symmetric(horizontal: 12, vertical: 10);
 }
 
 @immutable
@@ -140,22 +530,14 @@ extension DashboardSemanticTypeScale on DashboardTypeScale {
   TextStyle get screenTitle => heading;
   TextStyle get sectionTitle => subheading;
   TextStyle get rowTitle => body.copyWith(
-        color: DashboardShellPalette.ink,
         fontSize: 16,
         fontWeight: FontWeight.w700,
         height: 1.18,
         letterSpacing: -0.14,
       );
-  TextStyle get supporting => caption.copyWith(
-        color: DashboardShellPalette.mutedInk,
-      );
-  TextStyle get meta => label.copyWith(
-        color: DashboardShellPalette.mutedInk,
-        fontWeight: FontWeight.w700,
-      );
-  TextStyle get badge => label.copyWith(
-        fontWeight: FontWeight.w700,
-      );
+  TextStyle get supporting => caption;
+  TextStyle get meta => label.copyWith(fontWeight: FontWeight.w700);
+  TextStyle get badge => label.copyWith(fontWeight: FontWeight.w700);
 }
 
 class DashboardBackdrop extends StatelessWidget {
@@ -168,44 +550,45 @@ class DashboardBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dashboardColors;
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[
-            Color(0xFF18110E),
-            DashboardShellPalette.canvasRaised,
-            DashboardShellPalette.canvas,
-            Color(0xFF0B0908),
+            colors.backdropTop,
+            colors.canvasRaised,
+            colors.canvas,
+            colors.backdropBottom,
           ],
-          stops: <double>[0, 0.16, 0.56, 1],
+          stops: <double>[0, 0.2, 0.68, 1],
         ),
       ),
       child: Stack(
         children: <Widget>[
-          const Positioned(
+          Positioned(
             top: -120,
             right: -90,
             child: _BackdropGlow(
               size: 240,
-              color: Color(0xFF8D5E34),
+              color: colors.glowAccent,
             ),
           ),
-          const Positioned(
+          Positioned(
             top: 100,
             left: -90,
             child: _BackdropGlow(
               size: 180,
-              color: Color(0xFF3F2D21),
+              color: colors.glowInfo,
             ),
           ),
-          const Positioned(
+          Positioned(
             bottom: -140,
             left: 30,
             child: _BackdropGlow(
               size: 210,
-              color: Color(0xFF1D2D28),
+              color: colors.glowWarm,
             ),
           ),
           child,
@@ -224,6 +607,8 @@ class DashboardPanel extends StatelessWidget {
     this.gradient,
     this.borderColor,
     this.radius = DashboardRadii.card,
+    this.tone = DashboardPanelTone.base,
+    this.elevation = DashboardPanelElevation.raised,
   });
 
   final Widget child;
@@ -232,36 +617,30 @@ class DashboardPanel extends StatelessWidget {
   final Gradient? gradient;
   final Color? borderColor;
   final double radius;
+  final DashboardPanelTone tone;
+  final DashboardPanelElevation elevation;
 
   @override
   Widget build(BuildContext context) {
     final reduceMotion = shouldReduceMotion(context);
+    final colors = context.dashboardColors;
+    final resolvedGradient = gradient ?? _gradientForTone(tone, colors);
+    final resolvedBackground = resolvedGradient == null
+        ? backgroundColor ?? _backgroundForTone(tone, colors)
+        : null;
+    final resolvedBorderColor = borderColor ?? _borderColorForTone(tone, colors);
     return AnimatedContainer(
       duration: reduceMotion ? Duration.zero : dashboardMotionDuration,
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        color: gradient == null
-            ? backgroundColor ?? DashboardShellPalette.paper
-            : null,
-        gradient: gradient,
+        color: resolvedBackground,
+        gradient: resolvedGradient,
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(
-          color: (borderColor ?? DashboardShellPalette.outline)
-              .withValues(alpha: 0.9),
+          color: resolvedBorderColor
+              .withValues(alpha: 0.94),
         ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: DashboardShellPalette.shadow.withValues(alpha: 0.78),
-            blurRadius: 28,
-            spreadRadius: -18,
-            offset: const Offset(0, 14),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.18),
-            blurRadius: 1,
-            offset: const Offset(0, 1),
-          ),
-        ],
+        boxShadow: _shadowForElevation(elevation, colors),
       ),
       child: Padding(
         padding: padding,
@@ -269,6 +648,78 @@ class DashboardPanel extends StatelessWidget {
       ),
     );
   }
+
+  static Gradient? _gradientForTone(
+    DashboardPanelTone tone,
+    DashboardColorTokens colors,
+  ) =>
+      switch (tone) {
+        DashboardPanelTone.base => null,
+        DashboardPanelTone.elevated => DashboardGradients.elevatedSurface(colors),
+        DashboardPanelTone.inset => DashboardGradients.insetSurface(colors),
+        DashboardPanelTone.accent => DashboardGradients.accentSurface(colors),
+        DashboardPanelTone.trust => DashboardGradients.trustSurface(colors),
+      };
+
+  static Color _backgroundForTone(
+    DashboardPanelTone tone,
+    DashboardColorTokens colors,
+  ) =>
+      switch (tone) {
+        DashboardPanelTone.base => colors.paper,
+        DashboardPanelTone.elevated => colors.elevatedPaper,
+        DashboardPanelTone.inset => colors.nestedPaper,
+        DashboardPanelTone.accent => colors.accentSoft,
+        DashboardPanelTone.trust => colors.trustSurfaceStart,
+      };
+
+  static Color _borderColorForTone(
+    DashboardPanelTone tone,
+    DashboardColorTokens colors,
+  ) =>
+      switch (tone) {
+        DashboardPanelTone.base => colors.outlineStrong,
+        DashboardPanelTone.elevated => colors.outlineStrong,
+        DashboardPanelTone.inset => colors.outlineStrong,
+        DashboardPanelTone.accent => colors.accent.withValues(alpha: 0.32),
+        DashboardPanelTone.trust => colors.statusBlue.withValues(alpha: 0.28),
+      };
+
+  static List<BoxShadow> _shadowForElevation(
+    DashboardPanelElevation elevation,
+    DashboardColorTokens colors,
+  ) =>
+      switch (elevation) {
+        DashboardPanelElevation.flat => const <BoxShadow>[],
+        DashboardPanelElevation.raised => <BoxShadow>[
+            BoxShadow(
+              color: colors.accentGlow.withValues(alpha: 0.16),
+              blurRadius: 36,
+              spreadRadius: -26,
+              offset: const Offset(0, 18),
+            ),
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.7),
+              blurRadius: 24,
+              spreadRadius: -18,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        DashboardPanelElevation.prominent => <BoxShadow>[
+            BoxShadow(
+              color: colors.accentGlow.withValues(alpha: 0.22),
+              blurRadius: 44,
+              spreadRadius: -28,
+              offset: const Offset(0, 20),
+            ),
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.82),
+              blurRadius: 30,
+              spreadRadius: -18,
+              offset: const Offset(0, 14),
+            ),
+          ],
+      };
 }
 
 class DashboardBadge extends StatelessWidget {
@@ -276,28 +727,35 @@ class DashboardBadge extends StatelessWidget {
     super.key,
     required this.label,
     this.icon,
-    this.backgroundColor = DashboardShellPalette.statusBlueSoft,
-    this.foregroundColor = DashboardShellPalette.statusBlue,
+    this.tone = DashboardBadgeTone.info,
+    this.backgroundColor,
+    this.foregroundColor,
   });
 
   final String label;
   final IconData? icon;
-  final Color backgroundColor;
-  final Color foregroundColor;
+  final DashboardBadgeTone tone;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
+    final resolvedBackground =
+        backgroundColor ?? _backgroundForTone(tone, colors);
+    final resolvedForeground =
+        foregroundColor ?? _foregroundForTone(tone, colors);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DashboardSpacing.xSmall + 2,
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: resolvedBackground,
         borderRadius: BorderRadius.circular(DashboardRadii.chip),
         border: Border.all(
-          color: foregroundColor.withValues(alpha: 0.18),
+          color: resolvedForeground.withValues(alpha: 0.24),
         ),
       ),
       child: Wrap(
@@ -306,11 +764,11 @@ class DashboardBadge extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
           if (icon != null)
-            Icon(icon, size: 12, color: foregroundColor),
+            Icon(icon, size: 12, color: resolvedForeground),
           Text(
             label,
             style: type.badge.copyWith(
-                  color: foregroundColor,
+                  color: resolvedForeground,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.18,
                 ),
@@ -319,6 +777,127 @@ class DashboardBadge extends StatelessWidget {
       ),
     );
   }
+
+  static Color _backgroundForTone(
+    DashboardBadgeTone tone,
+    DashboardColorTokens colors,
+  ) =>
+      switch (tone) {
+        DashboardBadgeTone.info => colors.statusBlueSoft,
+        DashboardBadgeTone.neutral => colors.nestedPaper,
+        DashboardBadgeTone.accent => colors.accentSoft,
+        DashboardBadgeTone.success => colors.successSoft,
+        DashboardBadgeTone.caution => colors.cautionSoft,
+        DashboardBadgeTone.recovery => colors.recoverySoft,
+        DashboardBadgeTone.benefit => colors.benefitGoldSoft,
+      };
+
+  static Color _foregroundForTone(
+    DashboardBadgeTone tone,
+    DashboardColorTokens colors,
+  ) =>
+      switch (tone) {
+        DashboardBadgeTone.info => colors.statusBlue,
+        DashboardBadgeTone.neutral => colors.softInk,
+        DashboardBadgeTone.accent => colors.accent,
+        DashboardBadgeTone.success => colors.success,
+        DashboardBadgeTone.caution => colors.caution,
+        DashboardBadgeTone.recovery => colors.recovery,
+        DashboardBadgeTone.benefit => colors.benefitGold,
+      };
+}
+
+class DashboardIconSurface extends StatelessWidget {
+  const DashboardIconSurface({
+    super.key,
+    required this.icon,
+    this.tone = DashboardIconSurfaceTone.neutral,
+    this.size = DashboardListRowRhythm.leadingSize,
+    this.iconSize = DashboardListRowRhythm.leadingIconSize,
+    this.radius = DashboardListRowRhythm.leadingRadius,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.borderColor,
+  });
+
+  final IconData icon;
+  final DashboardIconSurfaceTone tone;
+  final double size;
+  final double iconSize;
+  final double radius;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final Color? borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dashboardColors;
+    final resolvedBackground =
+        backgroundColor ?? _backgroundForTone(tone, colors);
+    final resolvedForeground =
+        foregroundColor ?? _foregroundForTone(tone, colors);
+    final resolvedBorder = borderColor ?? _borderForTone(tone, colors);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: resolvedBackground,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: resolvedBorder,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        icon,
+        color: resolvedForeground,
+        size: iconSize,
+      ),
+    );
+  }
+
+  static Color _backgroundForTone(
+    DashboardIconSurfaceTone tone,
+    DashboardColorTokens colors,
+  ) =>
+      switch (tone) {
+        DashboardIconSurfaceTone.neutral => colors.nestedPaper,
+        DashboardIconSurfaceTone.accent => colors.accentSoft,
+        DashboardIconSurfaceTone.info => colors.statusBlueSoft,
+        DashboardIconSurfaceTone.success => colors.successSoft,
+        DashboardIconSurfaceTone.caution => colors.cautionSoft,
+        DashboardIconSurfaceTone.benefit => colors.benefitGoldSoft,
+      };
+
+  static Color _foregroundForTone(
+    DashboardIconSurfaceTone tone,
+    DashboardColorTokens colors,
+  ) =>
+      switch (tone) {
+        DashboardIconSurfaceTone.neutral => colors.softInk,
+        DashboardIconSurfaceTone.accent => colors.accent,
+        DashboardIconSurfaceTone.info => colors.statusBlue,
+        DashboardIconSurfaceTone.success => colors.success,
+        DashboardIconSurfaceTone.caution => colors.caution,
+        DashboardIconSurfaceTone.benefit => colors.benefitGold,
+      };
+
+  static Color _borderForTone(
+    DashboardIconSurfaceTone tone,
+    DashboardColorTokens colors,
+  ) =>
+      switch (tone) {
+        DashboardIconSurfaceTone.neutral => colors.outline,
+        DashboardIconSurfaceTone.accent => colors.accent.withValues(alpha: 0.28),
+        DashboardIconSurfaceTone.info =>
+          colors.statusBlue.withValues(alpha: 0.26),
+        DashboardIconSurfaceTone.success =>
+          colors.success.withValues(alpha: 0.24),
+        DashboardIconSurfaceTone.caution =>
+          colors.caution.withValues(alpha: 0.24),
+        DashboardIconSurfaceTone.benefit =>
+          colors.benefitGold.withValues(alpha: 0.24),
+      };
 }
 
 class DashboardServiceAvatar extends StatelessWidget {
@@ -435,6 +1014,7 @@ class DashboardSectionFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     final reduceMotion = shouldReduceMotion(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,7 +1044,7 @@ class DashboardSectionFrame extends StatelessWidget {
                         eyebrow!,
                         style: type.meta.copyWith(
                               letterSpacing: 0.42,
-                              color: DashboardShellPalette.faintInk,
+                              color: colors.faintInk,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
@@ -476,7 +1056,7 @@ class DashboardSectionFrame extends StatelessWidget {
                         title,
                         style: type.sectionTitle.copyWith(
                               fontWeight: FontWeight.w800,
-                              color: DashboardShellPalette.ink,
+                              color: colors.ink,
                             ),
                       ),
                     ),
@@ -485,7 +1065,7 @@ class DashboardSectionFrame extends StatelessWidget {
                       Text(
                         caption!,
                         style: type.supporting.copyWith(
-                              color: DashboardShellPalette.mutedInk,
+                              color: colors.mutedInk,
                               height: 1.28,
                             ),
                       ),
@@ -513,17 +1093,17 @@ class DashboardSectionFrame extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: DashboardShellPalette.nestedPaper,
+                        color: colors.paper,
                         borderRadius:
                             BorderRadius.circular(DashboardRadii.chip),
                         border: Border.all(
-                          color: DashboardShellPalette.outline,
+                          color: colors.outlineStrong,
                         ),
                       ),
                       child: Text(
                         countLabel!,
                         style: type.meta.copyWith(
-                          color: DashboardShellPalette.softInk,
+                          color: colors.softInk,
                         ),
                       ),
                     ),
@@ -532,9 +1112,55 @@ class DashboardSectionFrame extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: DashboardSpacing.small),
+        const SizedBox(height: DashboardSpacing.sectionHeaderGap),
         ...children,
       ],
+    );
+  }
+}
+
+class DashboardButtonStyles {
+  static ButtonStyle primaryCompact(BuildContext context) {
+    final type = context.dashboardType;
+    return FilledButton.styleFrom(
+      minimumSize: const Size(0, DashboardActionRhythm.compactHeight),
+      padding: DashboardActionRhythm.compactPadding,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(DashboardRadii.button),
+      ),
+      textStyle: type.button,
+    );
+  }
+
+  static ButtonStyle secondaryCompact(BuildContext context) {
+    final type = context.dashboardType;
+    final colors = context.dashboardColors;
+    return OutlinedButton.styleFrom(
+      minimumSize: const Size(0, DashboardActionRhythm.compactHeight),
+      padding: DashboardActionRhythm.compactPadding,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(DashboardRadii.button),
+      ),
+      textStyle: type.button.copyWith(
+        color: colors.softInk,
+      ),
+    );
+  }
+
+  static ButtonStyle quietCompact(BuildContext context) {
+    final type = context.dashboardType;
+    final colors = context.dashboardColors;
+    return TextButton.styleFrom(
+      minimumSize: const Size(0, DashboardActionRhythm.quietHeight),
+      padding: DashboardActionRhythm.quietPadding,
+      foregroundColor: colors.softInk,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(DashboardRadii.button),
+      ),
+      textStyle: type.button.copyWith(
+        color: colors.softInk,
+        fontSize: 13,
+      ),
     );
   }
 }
@@ -558,11 +1184,12 @@ class DashboardRegisterEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     final reduceMotion = shouldReduceMotion(context);
     return SizedBox(
       width: 122,
       child: DashboardPanel(
-        backgroundColor: DashboardShellPalette.registerPaper,
+        backgroundColor: colors.registerPaper,
         borderColor: accent.withValues(alpha: 0.28),
         padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
         radius: DashboardRadii.nested,
@@ -617,7 +1244,7 @@ class DashboardRegisterEntry extends StatelessWidget {
                 value,
                 key: ValueKey<String>('register-value-$label-$value'),
                 style: type.screenTitle.copyWith(
-                      color: DashboardShellPalette.ink,
+                      color: colors.ink,
                       fontWeight: FontWeight.w800,
                       fontSize: 24,
                     ),
@@ -627,7 +1254,7 @@ class DashboardRegisterEntry extends StatelessWidget {
             Text(
               caption,
               style: type.supporting.copyWith(
-                    color: DashboardShellPalette.mutedInk,
+                    color: colors.mutedInk,
                     height: 1.28,
                   ),
             ),
@@ -644,15 +1271,22 @@ class DashboardEmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     required this.icon,
+    this.eyebrow,
+    this.tone = DashboardEmptyStateTone.neutral,
+    this.action,
   });
 
   final String title;
   final String message;
   final IconData icon;
+  final String? eyebrow;
+  final DashboardEmptyStateTone tone;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
     final reduceMotion = shouldReduceMotion(context);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -668,58 +1302,95 @@ class DashboardEmptyState extends StatelessWidget {
         );
       },
       child: DashboardPanel(
-        backgroundColor: DashboardShellPalette.paper,
-        borderColor: DashboardShellPalette.outlineStrong,
+        tone: _panelToneForTone(tone),
+        elevation: DashboardPanelElevation.flat,
         radius: DashboardRadii.card,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: DashboardShellPalette.nestedPaper,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: DashboardShellPalette.outlineStrong,
+            if (eyebrow != null && eyebrow!.isNotEmpty) ...<Widget>[
+              DashboardBadge(
+                label: eyebrow!,
+                tone: _badgeToneForTone(tone),
+              ),
+              const SizedBox(height: 12),
+            ],
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                DashboardIconSurface(
+                  icon: icon,
+                  tone: _iconToneForTone(tone),
+                  size: 40,
+                  iconSize: 18,
+                  radius: 14,
                 ),
-              ),
-              child: Icon(
-                icon,
-                color: DashboardShellPalette.statusBlue,
-                size: 16,
-              ),
-            ),
-            const SizedBox(width: DashboardSpacing.small),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    style: type.rowTitle.copyWith(
-                          color: DashboardShellPalette.softInk,
+                const SizedBox(width: DashboardSpacing.small),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        title,
+                        style: type.rowTitle.copyWith(
+                          color: colors.softInk,
+                          fontWeight: FontWeight.w800,
                         ),
-                  ),
-                  if (message.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: DashboardSpacing.micro),
-                    Text(
-                      message,
-                      style: type.supporting.copyWith(
-                            color: DashboardShellPalette.mutedInk,
+                      ),
+                      if (message.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: DashboardSpacing.micro),
+                        Text(
+                          message,
+                          style: type.supporting.copyWith(
+                            color: colors.mutedInk,
                             height: 1.28,
                           ),
-                    ),
-                  ],
-                ],
-              ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
+            if (action != null) ...<Widget>[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: action!,
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
+  static DashboardPanelTone _panelToneForTone(DashboardEmptyStateTone tone) =>
+      switch (tone) {
+        DashboardEmptyStateTone.neutral => DashboardPanelTone.base,
+        DashboardEmptyStateTone.success => DashboardPanelTone.elevated,
+        DashboardEmptyStateTone.trust => DashboardPanelTone.trust,
+        DashboardEmptyStateTone.accent => DashboardPanelTone.elevated,
+      };
+
+  static DashboardBadgeTone _badgeToneForTone(DashboardEmptyStateTone tone) =>
+      switch (tone) {
+        DashboardEmptyStateTone.neutral => DashboardBadgeTone.neutral,
+        DashboardEmptyStateTone.success => DashboardBadgeTone.success,
+        DashboardEmptyStateTone.trust => DashboardBadgeTone.info,
+        DashboardEmptyStateTone.accent => DashboardBadgeTone.accent,
+      };
+
+  static DashboardIconSurfaceTone _iconToneForTone(
+    DashboardEmptyStateTone tone,
+  ) =>
+      switch (tone) {
+        DashboardEmptyStateTone.neutral => DashboardIconSurfaceTone.neutral,
+        DashboardEmptyStateTone.success => DashboardIconSurfaceTone.success,
+        DashboardEmptyStateTone.trust => DashboardIconSurfaceTone.info,
+        DashboardEmptyStateTone.accent => DashboardIconSurfaceTone.accent,
+      };
 }
 
 bool shouldReduceMotion(BuildContext context) {
@@ -740,11 +1411,19 @@ class SubWatchBrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dashboardColors;
     return SizedBox(
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _SubWatchBrandMarkPainter(showBase: showBase),
+        painter: _SubWatchBrandMarkPainter(
+          showBase: showBase,
+          paper: colors.paper,
+          nestedPaper: colors.nestedPaper,
+          outlineStrong: colors.outlineStrong,
+          accent: colors.accent,
+          ink: colors.ink,
+        ),
       ),
     );
   }
@@ -753,9 +1432,19 @@ class SubWatchBrandMark extends StatelessWidget {
 class _SubWatchBrandMarkPainter extends CustomPainter {
   const _SubWatchBrandMarkPainter({
     required this.showBase,
+    required this.paper,
+    required this.nestedPaper,
+    required this.outlineStrong,
+    required this.accent,
+    required this.ink,
   });
 
   final bool showBase;
+  final Color paper;
+  final Color nestedPaper;
+  final Color outlineStrong;
+  final Color accent;
+  final Color ink;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -765,24 +1454,24 @@ class _SubWatchBrandMarkPainter extends CustomPainter {
         Radius.circular(size.width * 0.21),
       );
       final basePaint = Paint()
-        ..shader = const LinearGradient(
+        ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: <Color>[
-            Color(0xFF1E1714),
-            Color(0xFF13100E),
+            paper,
+            nestedPaper,
           ],
         ).createShader(Offset.zero & size);
       canvas.drawRRect(baseRect, basePaint);
       final outline = Paint()
-        ..color = const Color(0xFF57463D)
+        ..color = outlineStrong
         ..style = PaintingStyle.stroke
         ..strokeWidth = size.width * 0.035;
       canvas.drawRRect(baseRect, outline);
     }
 
     final accentPaint = Paint()
-      ..color = DashboardShellPalette.accent
+      ..color = accent
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = size.width * 0.105;
@@ -794,7 +1483,7 @@ class _SubWatchBrandMarkPainter extends CustomPainter {
     );
     canvas.drawArc(pulseRect, -0.55, 4.95, false, accentPaint);
 
-    final stemPaint = Paint()..color = DashboardShellPalette.accent;
+    final stemPaint = Paint()..color = accent;
     final stemRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(
         size.width * 0.62,
@@ -825,18 +1514,18 @@ class _SubWatchBrandMarkPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: <Color>[
-          Color(0xFF251D19),
-          Color(0xFF181311),
+          Color(0xFFF8E7D3),
+          Color(0xFFF1D3B6),
         ],
       ).createShader(cardRect.outerRect);
     canvas.drawRRect(cardRect, cardPaint);
     final cardOutline = Paint()
-      ..color = const Color(0xFF655146)
+      ..color = const Color(0xFFD2B18D)
       ..style = PaintingStyle.stroke
       ..strokeWidth = size.width * 0.02;
     canvas.drawRRect(cardRect, cardOutline);
 
-    final lightPaint = Paint()..color = const Color(0xFFF6EDE0);
+    final lightPaint = Paint()..color = ink;
     final lineOne = RRect.fromRectAndRadius(
       Rect.fromLTWH(
         size.width * 0.37,
@@ -860,13 +1549,18 @@ class _SubWatchBrandMarkPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width * 0.31, size.height * 0.515),
       size.width * 0.010,
-      Paint()..color = DashboardShellPalette.accent,
+      Paint()..color = accent,
     );
   }
 
   @override
   bool shouldRepaint(covariant _SubWatchBrandMarkPainter oldDelegate) {
-    return oldDelegate.showBase != showBase;
+    return oldDelegate.showBase != showBase ||
+        oldDelegate.paper != paper ||
+        oldDelegate.nestedPaper != nestedPaper ||
+        oldDelegate.outlineStrong != outlineStrong ||
+        oldDelegate.accent != accent ||
+        oldDelegate.ink != ink;
   }
 }
 

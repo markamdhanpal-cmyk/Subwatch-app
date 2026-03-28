@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 
@@ -53,9 +53,16 @@ void main() {
 
     await scrollDashboardUntilVisible(
       tester,
+      find.byKey(const ValueKey<String>('toggle-section-trialsAndBenefits')),
+    );
+    await tapAndPumpDashboardShell(
+      tester,
+      find.byKey(const ValueKey<String>('toggle-section-trialsAndBenefits')),
+    );
+    await scrollDashboardUntilVisible(
+      tester,
       find.textContaining('Google Gemini Pro'),
     );
-
 
     expect(
       tester
@@ -67,7 +74,7 @@ void main() {
             ),
           )
           .data,
-      'Bundled with another plan - no separate charge.',
+      'Included with your plan — no separate charge.',
     );
     expect(
       find.byKey(
@@ -95,3 +102,4 @@ void main() {
     );
   });
 }
+

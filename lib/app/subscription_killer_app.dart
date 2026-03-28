@@ -68,116 +68,6 @@ class SubKillerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseTheme = ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      fontFamily: 'Figtree',
-    );
-    const heroStyle = TextStyle(
-      fontFamily: 'Instrument Serif',
-      color: DashboardShellPalette.ink,
-      fontSize: 46,
-      fontWeight: FontWeight.w400,
-      height: 0.92,
-      letterSpacing: -1.35,
-    );
-    const metricStyle = TextStyle(
-      fontFamily: 'Figtree',
-      color: DashboardShellPalette.ink,
-      fontSize: 40,
-      fontWeight: FontWeight.w800,
-      height: 0.94,
-      letterSpacing: -1.05,
-    );
-    const headingStyle = TextStyle(
-      fontFamily: 'Figtree',
-      color: DashboardShellPalette.ink,
-      fontSize: 29,
-      fontWeight: FontWeight.w700,
-      height: 1.06,
-      letterSpacing: -0.6,
-    );
-    const subheadingStyle = TextStyle(
-      fontFamily: 'Figtree',
-      color: DashboardShellPalette.ink,
-      fontSize: 20,
-      fontWeight: FontWeight.w700,
-      height: 1.14,
-      letterSpacing: -0.26,
-    );
-    const rowTitleStyle = TextStyle(
-      fontFamily: 'Figtree',
-      color: DashboardShellPalette.ink,
-      fontSize: 16,
-      fontWeight: FontWeight.w700,
-      height: 1.18,
-      letterSpacing: -0.12,
-    );
-    const bodyStyle = TextStyle(
-      fontFamily: 'Figtree',
-      color: DashboardShellPalette.softInk,
-      fontSize: 15,
-      fontWeight: FontWeight.w500,
-      height: 1.38,
-      letterSpacing: -0.02,
-    );
-    const supportingStyle = TextStyle(
-      fontFamily: 'Figtree',
-      color: DashboardShellPalette.mutedInk,
-      fontSize: 13,
-      fontWeight: FontWeight.w400,
-      height: 1.32,
-      letterSpacing: 0.02,
-    );
-    const labelStyle = TextStyle(
-      fontFamily: 'Figtree',
-      color: DashboardShellPalette.mutedInk,
-      fontSize: 11,
-      fontWeight: FontWeight.w700,
-      height: 1.12,
-      letterSpacing: 0.3,
-    );
-    const buttonStyle = TextStyle(
-      fontFamily: 'Figtree',
-      color: DashboardShellPalette.paper,
-      fontSize: 14,
-      fontWeight: FontWeight.w700,
-      height: 1.1,
-      letterSpacing: 0.16,
-    );
-    const typeScale = DashboardTypeScale(
-      display: heroStyle,
-      heading: headingStyle,
-      subheading: subheadingStyle,
-      body: bodyStyle,
-      caption: supportingStyle,
-      label: labelStyle,
-      button: buttonStyle,
-    );
-    final colorScheme = const ColorScheme.dark(
-      primary: DashboardShellPalette.accent,
-      onPrimary: Color(0xFF1A120C),
-      secondary: DashboardShellPalette.statusBlue,
-      onSecondary: DashboardShellPalette.paper,
-      error: DashboardShellPalette.caution,
-      onError: DashboardShellPalette.paper,
-      surface: DashboardShellPalette.paper,
-      onSurface: DashboardShellPalette.ink,
-    ).copyWith(
-      primaryContainer: DashboardShellPalette.accentSoft,
-      onPrimaryContainer: DashboardShellPalette.accent,
-      secondaryContainer: DashboardShellPalette.nestedPaper,
-      onSecondaryContainer: DashboardShellPalette.softInk,
-      tertiary: DashboardShellPalette.success,
-      onTertiary: DashboardShellPalette.paper,
-      tertiaryContainer: DashboardShellPalette.successSoft,
-      onTertiaryContainer: DashboardShellPalette.success,
-      outline: DashboardShellPalette.outline,
-      outlineVariant: DashboardShellPalette.divider,
-      shadow: DashboardShellPalette.shadow,
-      scrim: DashboardShellPalette.scrim,
-    );
-
     return MaterialApp(
       title: 'SubWatch',
       debugShowCheckedModeBanner: false,
@@ -190,291 +80,9 @@ class SubKillerApp extends StatelessWidget {
           child: child!,
         );
       },
-      theme: baseTheme.copyWith(
-        colorScheme: colorScheme,
-        scaffoldBackgroundColor: DashboardShellPalette.canvas,
-        splashFactory: InkRipple.splashFactory,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          foregroundColor: DashboardShellPalette.ink,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          centerTitle: false,
-          surfaceTintColor: Colors.transparent,
-          toolbarHeight: 68,
-        ),
-        iconTheme: const IconThemeData(
-          color: DashboardShellPalette.softInk,
-          size: 22,
-        ),
-        cardTheme: const CardThemeData(
-          elevation: 0,
-          margin: EdgeInsets.zero,
-          color: Colors.transparent,
-        ),
-        dividerColor: DashboardShellPalette.divider,
-        dividerTheme: const DividerThemeData(
-          color: DashboardShellPalette.divider,
-          thickness: 1,
-          space: 1,
-        ),
-        bottomSheetTheme: const BottomSheetThemeData(
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-        ),
-        dialogTheme: DialogThemeData(
-          backgroundColor: DashboardShellPalette.elevatedPaper,
-          surfaceTintColor: Colors.transparent,
-          shadowColor: DashboardShellPalette.shadow,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(DashboardRadii.card),
-            side: const BorderSide(color: DashboardShellPalette.outlineStrong),
-          ),
-          titleTextStyle: subheadingStyle.copyWith(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-          ),
-          contentTextStyle: bodyStyle.copyWith(
-            color: DashboardShellPalette.softInk,
-            height: 1.42,
-          ),
-        ),
-        iconButtonTheme: IconButtonThemeData(
-          style: IconButton.styleFrom(
-            foregroundColor: DashboardShellPalette.softInk,
-            backgroundColor: DashboardShellPalette.paper.withValues(alpha: 0.28),
-            disabledForegroundColor:
-                DashboardShellPalette.mutedInk.withValues(alpha: 0.72),
-            overlayColor: DashboardShellPalette.accent.withValues(alpha: 0.12),
-            highlightColor:
-                DashboardShellPalette.accent.withValues(alpha: 0.08),
-            hoverColor: DashboardShellPalette.accent.withValues(alpha: 0.06),
-            animationDuration: dashboardMotionDuration,
-            padding: const EdgeInsets.all(10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(DashboardRadii.button),
-              side: const BorderSide(color: DashboardShellPalette.outline),
-            ),
-          ),
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: DashboardShellPalette.accent,
-          foregroundColor: const Color(0xFF1A120C),
-          elevation: 0,
-          hoverElevation: 0,
-          focusElevation: 0,
-          highlightElevation: 0,
-          splashColor: DashboardShellPalette.accentGlow.withValues(alpha: 0.14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-            side: const BorderSide(color: Color(0x33FFF1DE)),
-          ),
-        ),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: DashboardShellPalette.paper.withValues(alpha: 0.98),
-          indicatorColor: DashboardShellPalette.accentSoft,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          height: 72,
-          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-          labelPadding: const EdgeInsets.only(top: 4),
-          overlayColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.pressed)
-                ? DashboardShellPalette.accent.withValues(alpha: 0.1)
-                : states.contains(WidgetState.hovered)
-                    ? DashboardShellPalette.accent.withValues(alpha: 0.06)
-                    : null,
-          ),
-          labelTextStyle: WidgetStateProperty.resolveWith(
-            (states) => labelStyle.copyWith(
-              color: states.contains(WidgetState.selected)
-                  ? DashboardShellPalette.accent
-                  : DashboardShellPalette.faintInk,
-              fontWeight: states.contains(WidgetState.selected)
-                  ? FontWeight.w800
-                  : FontWeight.w700,
-              letterSpacing: 0.26,
-            ),
-          ),
-          iconTheme: WidgetStateProperty.resolveWith(
-            (states) => IconThemeData(
-              color: states.contains(WidgetState.selected)
-                  ? DashboardShellPalette.accent
-                  : DashboardShellPalette.faintInk,
-              size: 22,
-            ),
-          ),
-        ),
-        popupMenuTheme: PopupMenuThemeData(
-          color: DashboardShellPalette.elevatedPaper,
-          surfaceTintColor: Colors.transparent,
-          shadowColor: DashboardShellPalette.shadow,
-          elevation: 0,
-          position: PopupMenuPosition.under,
-          menuPadding: const EdgeInsets.symmetric(vertical: 6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(DashboardRadii.nested),
-            side: const BorderSide(color: DashboardShellPalette.outlineStrong),
-          ),
-          textStyle: bodyStyle.copyWith(
-            color: DashboardShellPalette.softInk,
-          ),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: DashboardShellPalette.paper,
-          contentTextStyle: bodyStyle.copyWith(
-            color: DashboardShellPalette.ink,
-            height: 1.36,
-            fontWeight: FontWeight.w600,
-          ),
-          actionTextColor: DashboardShellPalette.accent,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(DashboardRadii.button),
-            side: const BorderSide(color: DashboardShellPalette.outlineStrong),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: DashboardShellPalette.accent,
-            foregroundColor: const Color(0xFF1A120C),
-            disabledBackgroundColor: DashboardShellPalette.outline,
-            disabledForegroundColor: DashboardShellPalette.mutedInk,
-            overlayColor: DashboardShellPalette.accentGlow.withValues(alpha: 0.1),
-            animationDuration: dashboardMotionDuration,
-            minimumSize: const Size(0, 52),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(DashboardRadii.button),
-            ),
-            textStyle: typeScale.button,
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: DashboardShellPalette.softInk,
-            side: const BorderSide(color: DashboardShellPalette.outlineStrong),
-            backgroundColor: DashboardShellPalette.nestedPaper.withValues(
-              alpha: 0.88,
-            ),
-            overlayColor: DashboardShellPalette.accent.withValues(alpha: 0.08),
-            animationDuration: dashboardMotionDuration,
-            minimumSize: const Size(0, 52),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(DashboardRadii.button),
-            ),
-            textStyle: typeScale.button.copyWith(
-              color: DashboardShellPalette.softInk,
-            ),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: DashboardShellPalette.softInk,
-            overlayColor: DashboardShellPalette.accent.withValues(alpha: 0.08),
-            animationDuration: dashboardMotionDuration,
-            minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(DashboardRadii.button),
-            ),
-            textStyle: typeScale.button.copyWith(
-              color: DashboardShellPalette.softInk,
-              fontSize: 13,
-            ),
-          ),
-        ),
-        chipTheme: ChipThemeData(
-          backgroundColor: DashboardShellPalette.nestedPaper,
-          selectedColor: DashboardShellPalette.accentSoft,
-          disabledColor: DashboardShellPalette.outline,
-          secondarySelectedColor: DashboardShellPalette.accentSoft,
-          side: const BorderSide(color: DashboardShellPalette.outline),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(DashboardRadii.chip),
-          ),
-          labelStyle: labelStyle.copyWith(color: DashboardShellPalette.mutedInk),
-          secondaryLabelStyle:
-              labelStyle.copyWith(color: DashboardShellPalette.accent),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        ),
-        progressIndicatorTheme: const ProgressIndicatorThemeData(
-          color: DashboardShellPalette.accent,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: DashboardShellPalette.nestedPaper,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          hintStyle: bodyStyle.copyWith(
-            color: DashboardShellPalette.faintInk,
-          ),
-          helperStyle: supportingStyle.copyWith(
-            color: DashboardShellPalette.mutedInk,
-            height: 1.22,
-          ),
-          labelStyle: labelStyle.copyWith(
-            color: DashboardShellPalette.mutedInk,
-          ),
-          prefixIconColor: DashboardShellPalette.faintInk,
-          suffixIconColor: DashboardShellPalette.faintInk,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(DashboardRadii.button),
-            borderSide: const BorderSide(color: DashboardShellPalette.outline),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(DashboardRadii.button),
-            borderSide: const BorderSide(color: DashboardShellPalette.outline),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(DashboardRadii.button),
-            borderSide: const BorderSide(color: DashboardShellPalette.accent),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(DashboardRadii.button),
-            borderSide: const BorderSide(color: DashboardShellPalette.caution),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(DashboardRadii.button),
-            borderSide: const BorderSide(color: DashboardShellPalette.caution),
-          ),
-        ),
-        textSelectionTheme: TextSelectionThemeData(
-          cursorColor: DashboardShellPalette.accent,
-          selectionColor: DashboardShellPalette.accentSoft,
-          selectionHandleColor: DashboardShellPalette.accent,
-        ),
-        textTheme: baseTheme.textTheme.copyWith(
-          displayLarge: heroStyle,
-          displayMedium: metricStyle,
-          displaySmall: headingStyle,
-          headlineLarge: headingStyle,
-          headlineMedium: subheadingStyle,
-          headlineSmall: headingStyle,
-          titleLarge: subheadingStyle,
-          titleMedium: rowTitleStyle,
-          titleSmall: labelStyle.copyWith(
-            color: DashboardShellPalette.softInk,
-            fontSize: 13,
-          ),
-          bodyLarge: bodyStyle,
-          bodyMedium: bodyStyle,
-          bodySmall: supportingStyle,
-          labelLarge: buttonStyle.copyWith(color: DashboardShellPalette.paper),
-          labelMedium: labelStyle.copyWith(
-            color: DashboardShellPalette.mutedInk,
-          ),
-          labelSmall: supportingStyle.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
-          ),
-        ),
-        extensions: const <ThemeExtension<dynamic>>[
-          typeScale,
-        ],
-      ),
+      themeMode: ThemeMode.system,
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
       home: DashboardShell(
         runtimeUseCase:
             _runtimeUseCase ?? LoadRuntimeDashboardUseCase.persistent(),
@@ -504,5 +112,423 @@ class SubKillerApp extends StatelessWidget {
         problemReportLauncher: _problemReportLauncher,
       ),
     );
+  }
+
+  ThemeData _buildTheme(Brightness brightness) {
+    final colors = brightness == Brightness.dark
+        ? DashboardColorTokens.dark
+        : DashboardColorTokens.light;
+    final baseTheme = ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      fontFamily: 'Figtree',
+    );
+    final heroStyle = TextStyle(
+      fontFamily: 'Instrument Serif',
+      color: colors.ink,
+      fontSize: 46,
+      fontWeight: FontWeight.w400,
+      height: 0.92,
+      letterSpacing: -1.35,
+    );
+    final metricStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: colors.ink,
+      fontSize: 40,
+      fontWeight: FontWeight.w800,
+      height: 0.94,
+      letterSpacing: -1.05,
+    );
+    final headingStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: colors.ink,
+      fontSize: 29,
+      fontWeight: FontWeight.w700,
+      height: 1.06,
+      letterSpacing: -0.6,
+    );
+    final subheadingStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: colors.ink,
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
+      height: 1.14,
+      letterSpacing: -0.26,
+    );
+    final rowTitleStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: colors.ink,
+      fontSize: 16,
+      fontWeight: FontWeight.w700,
+      height: 1.18,
+      letterSpacing: -0.12,
+    );
+    final bodyStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: colors.softInk,
+      fontSize: 15,
+      fontWeight: FontWeight.w500,
+      height: 1.38,
+      letterSpacing: -0.02,
+    );
+    final supportingStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: colors.mutedInk,
+      fontSize: 13,
+      fontWeight: FontWeight.w400,
+      height: 1.32,
+      letterSpacing: 0.02,
+    );
+    final labelStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: colors.mutedInk,
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      height: 1.12,
+      letterSpacing: 0.3,
+    );
+    final buttonStyle = TextStyle(
+      fontFamily: 'Figtree',
+      color: colors.accentInk,
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+      height: 1.1,
+      letterSpacing: 0.16,
+    );
+    final typeScale = DashboardTypeScale(
+      display: heroStyle,
+      heading: headingStyle,
+      subheading: subheadingStyle,
+      body: bodyStyle,
+      caption: supportingStyle,
+      label: labelStyle,
+      button: buttonStyle,
+    );
+    final colorScheme = brightness == Brightness.dark
+        ? ColorScheme.dark(
+            primary: colors.accent,
+            onPrimary: colors.accentInk,
+            secondary: colors.statusBlue,
+            onSecondary: colors.ink,
+            error: colors.caution,
+            onError: colors.accentInk,
+            surface: colors.paper,
+            onSurface: colors.ink,
+          )
+        : ColorScheme.light(
+            primary: colors.accent,
+            onPrimary: colors.accentInk,
+            secondary: colors.statusBlue,
+            onSecondary: colors.ink,
+            error: colors.caution,
+            onError: colors.accentInk,
+            surface: colors.paper,
+            onSurface: colors.ink,
+          );
+
+    return baseTheme.copyWith(
+        colorScheme: colorScheme.copyWith(
+          primaryContainer: colors.accentSoft,
+          onPrimaryContainer: colors.ink,
+          secondaryContainer: colors.nestedPaper,
+          onSecondaryContainer: colors.softInk,
+          tertiary: colors.success,
+          onTertiary: colors.accentInk,
+          tertiaryContainer: colors.successSoft,
+          onTertiaryContainer: colors.success,
+          outline: colors.outline,
+          outlineVariant: colors.divider,
+          shadow: colors.shadow,
+          scrim: colors.scrim,
+        ),
+        scaffoldBackgroundColor: colors.canvas,
+        canvasColor: colors.paper,
+        splashFactory: InkRipple.splashFactory,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          foregroundColor: colors.ink,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+          surfaceTintColor: Colors.transparent,
+          toolbarHeight: 68,
+        ),
+        iconTheme: IconThemeData(
+          color: colors.softInk,
+          size: 22,
+        ),
+        cardTheme: const CardThemeData(
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          color: Colors.transparent,
+        ),
+        dividerColor: colors.divider,
+        dividerTheme: DividerThemeData(
+          color: colors.divider,
+          thickness: 1,
+          space: 1,
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: colors.elevatedPaper,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: colors.shadow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.card),
+            side: BorderSide(color: colors.outlineStrong),
+          ),
+          titleTextStyle: subheadingStyle.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
+          contentTextStyle: bodyStyle.copyWith(
+            color: colors.softInk,
+            height: 1.42,
+          ),
+        ),
+        iconButtonTheme: IconButtonThemeData(
+          style: IconButton.styleFrom(
+            foregroundColor: colors.softInk,
+            backgroundColor: colors.paper.withValues(alpha: 0.92),
+            disabledForegroundColor: colors.mutedInk.withValues(alpha: 0.72),
+            overlayColor: colors.accent.withValues(alpha: 0.12),
+            highlightColor: colors.accent.withValues(alpha: 0.08),
+            hoverColor: colors.accent.withValues(alpha: 0.06),
+            animationDuration: dashboardMotionDuration,
+            padding: const EdgeInsets.all(10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DashboardRadii.button),
+              side: BorderSide(color: colors.outline),
+            ),
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: colors.accent,
+          foregroundColor: colors.accentInk,
+          elevation: 0,
+          hoverElevation: 0,
+          focusElevation: 0,
+          highlightElevation: 0,
+          splashColor: colors.accentGlow.withValues(alpha: 0.14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(
+              color: colors.accent.withValues(alpha: 0.24),
+            ),
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: colors.paper.withValues(alpha: 0.94),
+          indicatorColor: colors.accentSoft,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          height: 72,
+          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+          labelPadding: const EdgeInsets.only(top: 4),
+          overlayColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.pressed)
+                ? colors.accent.withValues(alpha: 0.1)
+                : states.contains(WidgetState.hovered)
+                    ? colors.accent.withValues(alpha: 0.06)
+                    : null,
+          ),
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => labelStyle.copyWith(
+              color: states.contains(WidgetState.selected)
+                  ? colors.accent
+                  : colors.faintInk,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w800
+                  : FontWeight.w700,
+              letterSpacing: 0.26,
+            ),
+          ),
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? colors.accent
+                  : colors.faintInk,
+              size: 22,
+            ),
+          ),
+        ),
+        popupMenuTheme: PopupMenuThemeData(
+          color: colors.elevatedPaper,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: colors.shadow,
+          elevation: 0,
+          position: PopupMenuPosition.under,
+          menuPadding: const EdgeInsets.symmetric(vertical: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.nested),
+            side: BorderSide(color: colors.outlineStrong),
+          ),
+          textStyle: bodyStyle.copyWith(
+            color: colors.softInk,
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: colors.elevatedPaper,
+          contentTextStyle: bodyStyle.copyWith(
+            color: colors.ink,
+            height: 1.36,
+            fontWeight: FontWeight.w600,
+          ),
+          actionTextColor: colors.accent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
+            side: BorderSide(color: colors.outlineStrong),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: colors.accent,
+            foregroundColor: colors.accentInk,
+            disabledBackgroundColor: colors.outline,
+            disabledForegroundColor: colors.mutedInk,
+            overlayColor: colors.accentGlow.withValues(alpha: 0.1),
+            animationDuration: dashboardMotionDuration,
+            minimumSize: const Size(0, DashboardActionRhythm.regularHeight),
+            padding: DashboardActionRhythm.regularPadding,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DashboardRadii.button),
+              side: BorderSide(
+                color: colors.accent.withValues(alpha: 0.28),
+              ),
+            ),
+            textStyle: typeScale.button,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: colors.softInk,
+            side: BorderSide(color: colors.outlineStrong),
+            backgroundColor: colors.paper.withValues(
+              alpha: 0.88,
+            ),
+            overlayColor: colors.accent.withValues(alpha: 0.08),
+            animationDuration: dashboardMotionDuration,
+            minimumSize: const Size(0, DashboardActionRhythm.regularHeight),
+            padding: DashboardActionRhythm.regularPadding,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DashboardRadii.button),
+            ),
+            textStyle: typeScale.button.copyWith(
+              color: colors.softInk,
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: colors.softInk,
+            overlayColor: colors.accent.withValues(alpha: 0.08),
+            animationDuration: dashboardMotionDuration,
+            minimumSize: const Size(0, DashboardActionRhythm.quietHeight),
+            padding: DashboardActionRhythm.quietPadding,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(DashboardRadii.button),
+            ),
+            textStyle: typeScale.button.copyWith(
+              color: colors.softInk,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          backgroundColor: colors.nestedPaper,
+          selectedColor: colors.accentSoft,
+          disabledColor: colors.outline,
+          secondarySelectedColor: colors.accentSoft,
+          side: BorderSide(color: colors.outlineStrong),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.chip),
+          ),
+          labelStyle: labelStyle.copyWith(color: colors.mutedInk),
+          secondaryLabelStyle: labelStyle.copyWith(color: colors.accent),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        ),
+        progressIndicatorTheme: ProgressIndicatorThemeData(
+          color: colors.accent,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: colors.nestedPaper,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          hintStyle: bodyStyle.copyWith(
+            color: colors.faintInk,
+          ),
+          helperStyle: supportingStyle.copyWith(
+            color: colors.mutedInk,
+            height: 1.22,
+          ),
+          labelStyle: labelStyle.copyWith(
+            color: colors.mutedInk,
+          ),
+          prefixIconColor: colors.faintInk,
+          suffixIconColor: colors.faintInk,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
+            borderSide: BorderSide(color: colors.outline),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
+            borderSide: BorderSide(color: colors.outline),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
+            borderSide: BorderSide(color: colors.accent),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
+            borderSide: BorderSide(color: colors.caution),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(DashboardRadii.button),
+            borderSide: BorderSide(color: colors.caution),
+          ),
+        ),
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: colors.accent,
+          selectionColor: colors.accentSoft,
+          selectionHandleColor: colors.accent,
+        ),
+        textTheme: baseTheme.textTheme.copyWith(
+          displayLarge: heroStyle,
+          displayMedium: metricStyle,
+          displaySmall: headingStyle,
+          headlineLarge: headingStyle,
+          headlineMedium: subheadingStyle,
+          headlineSmall: headingStyle,
+          titleLarge: subheadingStyle,
+          titleMedium: rowTitleStyle,
+          titleSmall: labelStyle.copyWith(
+            color: colors.softInk,
+            fontSize: 13,
+          ),
+          bodyLarge: bodyStyle,
+          bodyMedium: bodyStyle,
+          bodySmall: supportingStyle,
+          labelLarge: buttonStyle.copyWith(color: colors.accentInk),
+          labelMedium: labelStyle.copyWith(
+            color: colors.mutedInk,
+          ),
+          labelSmall: supportingStyle.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.1,
+          ),
+        ),
+        extensions: <ThemeExtension<dynamic>>[
+          typeScale,
+          colors,
+        ],
+      );
   }
 }

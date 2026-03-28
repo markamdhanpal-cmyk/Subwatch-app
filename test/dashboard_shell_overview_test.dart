@@ -38,12 +38,16 @@ void main() {
         findsOneWidget);
     expect(find.text('Monthly spend estimate'), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('home-action-strip')),
-        findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('product-guidance-panel')),
         findsNothing);
     expect(find.byKey(const ValueKey<String>('home-renewals-zone')),
         findsOneWidget);
-    expect(find.text('Due soon'), findsOneWidget);
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('home-trust-row')),
+    );
+    expect(find.byKey(const ValueKey<String>('home-trust-row')),
+        findsOneWidget);
+    expect(find.text('Sample preview'), findsOneWidget);
 
     await openDashboardDestination(tester, 'review');
     expect(find.text('Review'), findsWidgets);
@@ -116,6 +120,10 @@ void main() {
     expect(
       find.byKey(const ValueKey<String>('settings-trust-panel')),
       findsOneWidget,
+    );
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('settings-open-how-it-works')),
     );
     expect(
       find.byKey(const ValueKey<String>('settings-open-how-it-works')),
@@ -323,3 +331,4 @@ class _FakeProblemReportLauncher implements ProblemReportLauncher {
     return true;
   }
 }
+
