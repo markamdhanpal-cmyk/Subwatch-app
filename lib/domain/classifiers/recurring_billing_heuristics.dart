@@ -96,6 +96,24 @@ class RecurringBillingHeuristics {
   static bool looksLikeTelecomBundle(String body) {
     if (telecomProviderPattern.hasMatch(body) &&
         telecomBenefitPattern.hasMatch(body)) {
+          
+      // Escape Hatch: Direct-billed subscription
+      final amount = extractAmount(body);
+      if (isCredibleAmount(amount)) {
+        final hasBillingLang = hasBillingContext(body) || hasSubscriptionContext(body);
+        final hasSuccessRenewCharge = hasSuccessContext(body) || hasRecurringContext(body);
+        
+        final hasExplicitBundleRechargeNoise = RegExp(
+          r'\b(recharge|pack|complimentary|free|unlocked|benefit)\b',
+          caseSensitive: false,
+        ).hasMatch(body);
+
+        if (hasBillingLang && hasSuccessRenewCharge && !hasExplicitBundleRechargeNoise) {
+          // Strong billing evidence exists, do not veto as bundle noise
+          return false;
+        }
+      }
+
       return true;
     }
 

@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/domain/classifiers/subscription_billed_classifier.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
 import 'package:sub_killer/domain/enums/subscription_event_type.dart';
@@ -151,13 +151,45 @@ void main() {
       expect(result, isNull);
     });
 
-    test(
-        'does not classify generic app-store recurring payment without a clear service',
-        () {
+    test('does not classify generic app-store recurring payment without a clear service', () {
       final result = classifier.classify(
         message(
           'Recurring payment of Rs 159 processed at Google Play on your card XX9123.',
         ),
+      );
+
+      expect(result, isNull);
+    });
+
+    test('does not veto direct telecom subscription billing with strong evidence', () {
+      final result = classifier.classify(
+        message('Your Jio subscription of Rs.149 has been renewed successfully.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.subscriptionBilled);
+      expect(result.amount, 149);
+    });
+
+    test('vetoes standard telecom plan / benefit message', () {
+      final result = classifier.classify(
+        message('Your Jio plan of Rs.299 is active with 2GB/day benefit.'),
+      );
+
+      expect(result, isNull);
+    });
+
+    test('vetoes airtel bundle benefit message', () {
+      final result = classifier.classify(
+        message('Your Airtel recharge of Rs 599 unlocks a FREE 1-month Netflix subscription.'),
+      );
+
+      expect(result, isNull);
+    });
+
+    test('vetoes co-branded bundle wording correctly', () {
+      final result = classifier.classify(
+        message('Enjoy your complimentary JioHotstar bundle with your new plan.'),
       );
 
       expect(result, isNull);
