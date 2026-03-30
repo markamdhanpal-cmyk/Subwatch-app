@@ -1,3 +1,4 @@
+import '../../domain/knowledge/merchant_knowledge_base.dart';
 import '../contracts/device_sms_gateway.dart';
 import '../models/raw_device_sms.dart';
 import '../../domain/contracts/local_message_source.dart';
@@ -33,8 +34,29 @@ class DeviceLocalSmsMessageSource
   Future<List<CanonicalInput>> loadCanonicalInputs() async {
     final rawMessages = await _gateway.readMessages();
 
+    final validMessages = rawMessages.where((msg) {
+      if (msg.body.trim().isEmpty) {
+        return false;
+      }
+
+      final senderLower = msg.address.toLowerCase();
+      if (senderLower.endsWith('.rcs.google.com') ||
+          senderLower.contains('@bot.rcs.google.com')) {
+        return false;
+      }
+
+      final senderUpper = msg.address.toUpperCase();
+      for (final prefix in MerchantKnowledgeBase.suppressedSenderPrefixes) {
+        if (senderUpper.contains(prefix)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
     return List<CanonicalInput>.unmodifiable(
-      rawMessages.map(_canonicalInputMapper.map),
+      validMessages.map(_canonicalInputMapper.map),
     );
   }
 }

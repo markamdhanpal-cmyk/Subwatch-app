@@ -57,6 +57,14 @@ class MerchantKnowledgeBase {
   static const int schemaVersion = 1;
   static const String datasetId = 'india_first_seed_v1';
 
+  static const List<String> suppressedSenderPrefixes = <String>[
+    'LAZYPY', // LazyPay Debt/BNPL
+    'PAYTMI', // Paytm Insurance
+    'KREDIT', // KreditBee BNPL
+    'SIMPL',  // Simpl BNPL
+    'POLICY', // PolicyBazaar Insurance
+  ];
+
   static const List<MerchantKnowledgeEntry> entries = <MerchantKnowledgeEntry>[
     MerchantKnowledgeEntry(
       serviceKey: 'AMAZON_PRIME',
