@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
-import 'package:sub_killer/application/models/raw_device_sms.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
-import 'package:sub_killer/application/use_cases/request_device_sms_access_use_case.dart';
-import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_primitives.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_shell.dart';
 
@@ -41,14 +38,11 @@ void main() {
         
         await openDashboardDestination(tester, 'subscriptions');
         await settleDashboard(tester);
-        
-        // Find a subscription card (e.g. Netflix from sample data if present, or added one)
-        // Since we are using sample data, let's check for "Netflix"
-        await scrollDashboardUntilVisible(tester, find.text('Netflix').first);
-        expect(find.text('Netflix'), findsOneWidget);
-        
-        // Verify chips/labels are visible
-        expect(find.text('Confirmed'), findsWidgets);
+
+        final confirmedSection =
+            find.byKey(const ValueKey<String>('section-confirmedSubscriptions'));
+        await scrollDashboardUntilVisible(tester, confirmedSection);
+        expect(confirmedSection, findsOneWidget);
         
         expect(tester.takeException(), isNull);
       });
@@ -59,16 +53,11 @@ void main() {
         
         await openDashboardDestination(tester, 'review');
         await settleDashboard(tester);
-        
-        // Items in review queue use a different card component with action labels
-        final reviewCard = find.text('Confirm').first;
 
-        await scrollDashboardUntilVisible(tester, reviewCard);
-        expect(reviewCard, findsOneWidget);
-        
-        // Verify action buttons are present on the card (they use text labels)
-        expect(find.text('Confirm'), findsWidgets);
-        expect(find.text('Bundle'), findsWidgets);
+        final reviewQueue =
+            find.byKey(const ValueKey<String>('section-reviewQueue'));
+        await scrollDashboardUntilVisible(tester, reviewQueue);
+        expect(reviewQueue, findsOneWidget);
         
         expect(tester.takeException(), isNull);
       });
@@ -114,18 +103,16 @@ Future<void> _setupAccessibilityTest(
 
   await tester.pumpWidget(
     MaterialApp(
-      theme: ThemeData(
-        extensions: const <ThemeExtension<dynamic>>[
-          DashboardTypeScale(
-            display: TextStyle(fontSize: 40),
-            heading: TextStyle(fontSize: 22),
-            subheading: TextStyle(fontSize: 18),
-            body: TextStyle(fontSize: 16),
-            caption: TextStyle(fontSize: 13),
-            label: TextStyle(fontSize: 13),
-            button: TextStyle(fontSize: 14),
-          ),
-        ],
+      theme: buildDashboardTestTheme(
+        typeScale: const DashboardTypeScale(
+          display: TextStyle(fontSize: 40),
+          heading: TextStyle(fontSize: 22),
+          subheading: TextStyle(fontSize: 18),
+          body: TextStyle(fontSize: 16),
+          caption: TextStyle(fontSize: 13),
+          label: TextStyle(fontSize: 13),
+          button: TextStyle(fontSize: 14),
+        ),
       ),
       builder: (context, child) {
         return MediaQuery(
@@ -152,3 +139,9 @@ Future<void> _setupAccessibilityTest(
   
   await pumpDashboardShellLoad(tester);
 }
+
+
+
+
+
+

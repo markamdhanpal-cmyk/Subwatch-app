@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/raw_device_sms.dart';
-import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
-import 'package:sub_killer/domain/enums/dashboard_bucket.dart';
 
 import 'support/dashboard_shell_test_harness.dart';
 
@@ -108,3 +106,4 @@ void main() {
     expect(find.text('Music Premium'), findsNothing);
   });
 }
+

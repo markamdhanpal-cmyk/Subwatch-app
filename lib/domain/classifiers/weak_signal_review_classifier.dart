@@ -1,6 +1,8 @@
 import '../contracts/event_classifier.dart';
+import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
+import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_event_type.dart';
 import 'recurring_billing_heuristics.dart';
 
@@ -56,7 +58,7 @@ class WeakSignalReviewClassifier implements EventClassifier {
             ((hasAppStoreMerchant && (hasRecurringContext || hasCardContext)) ||
                 (hasDirectRecurringMerchant &&
                     hasCardContext &&
-                    !hasRecurringContext));
+                    hasRecurringContext));
 
     if (pattern == null && !hasMerchantReviewEvidence) {
       return null;
@@ -81,6 +83,28 @@ class WeakSignalReviewClassifier implements EventClassifier {
       summary: 'Recurring-looking message routed to review.',
       detectedAt: message.receivedAt,
       capturedTerms: capturedTerms,
+      evidenceFragments: <EvidenceFragment>[
+        EvidenceFragment(
+          type: EvidenceFragmentType.weakRecurringHint,
+          sourceMessageId: message.id,
+          classifierId: classifierId,
+          strength: hasMerchantReviewEvidence
+              ? EvidenceFragmentStrength.medium
+              : EvidenceFragmentStrength.weak,
+          confidence: hasMerchantReviewEvidence ? 0.72 : 0.58,
+          note: 'Recurring-looking wording detected.',
+          terms: capturedTerms,
+        ),
+        EvidenceFragment(
+          type: EvidenceFragmentType.unknownReview,
+          sourceMessageId: message.id,
+          classifierId: classifierId,
+          strength: EvidenceFragmentStrength.medium,
+          confidence: 0.7,
+          note: 'Insufficient trust for confirmed subscription truth.',
+          terms: capturedTerms,
+        ),
+      ],
     );
   }
 }

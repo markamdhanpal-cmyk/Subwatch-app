@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/repositories/in_memory_ledger_repository.dart';
 import 'package:sub_killer/application/use_cases/project_review_queue_use_case.dart';
 import 'package:sub_killer/domain/entities/evidence_trail.dart';
@@ -19,11 +19,12 @@ void main() {
     ServiceLedgerEntry entry({
       required String key,
       required ResolverState state,
+      EvidenceTrail? evidenceTrail,
     }) {
       return ServiceLedgerEntry(
         serviceKey: ServiceKey(key),
         state: state,
-        evidenceTrail: EvidenceTrail.empty(),
+        evidenceTrail: evidenceTrail ?? EvidenceTrail.empty(),
       );
     }
 
@@ -69,6 +70,10 @@ void main() {
 
       expect(reviewItems, hasLength(1));
       expect(reviewItems.single.serviceKey.value, 'JIOHOTSTAR');
+      expect(
+        reviewItems.single.reasonLine,
+        'A recurring setup was found, but billing is still missing',
+      );
     });
 
     test('verificationOnly becomes a review item', () {
@@ -78,15 +83,31 @@ void main() {
 
       expect(reviewItems, hasLength(1));
       expect(reviewItems.single.serviceKey.value, 'CRUNCHYROLL');
+      expect(
+        reviewItems.single.detailsBullets,
+        contains('Tiny verification charges do not prove an active paid subscription.'),
+      );
     });
 
     test('possibleSubscription becomes a review item', () {
       final reviewItems = projection.buildReviewQueue(<ServiceLedgerEntry>[
-        entry(key: 'MYSTERY_SUB', state: ResolverState.possibleSubscription),
+        entry(
+          key: 'MYSTERY_SUB',
+          state: ResolverState.possibleSubscription,
+          evidenceTrail: EvidenceTrail(
+            notes: <String>[
+              'v2:reason=weakRecurringSignalsObserved',
+            ],
+          ),
+        ),
       ]);
 
       expect(reviewItems, hasLength(1));
       expect(reviewItems.single.serviceKey.value, 'MYSTERY_SUB');
+      expect(
+        reviewItems.single.reasonLine,
+        'It looks recurring, but billing is still unproven',
+      );
     });
 
     test('activePaid is excluded from the review queue', () {
@@ -115,19 +136,48 @@ void main() {
       expect(reviewItems, isEmpty);
     });
 
+    test('unresolved possible subscriptions stay out of the review queue', () {
+      final reviewItems = projection.buildReviewQueue(<ServiceLedgerEntry>[
+        entry(key: 'UNRESOLVED', state: ResolverState.possibleSubscription),
+      ]);
+
+      expect(reviewItems, isEmpty);
+    });
+
     test('multiple mixed ledger entries produce the correct review queue', () async {
       final repository = InMemoryLedgerRepository();
       await repository.write(
         entry(key: 'NETFLIX', state: ResolverState.activePaid),
       );
       await repository.write(
-        entry(key: 'JIOHOTSTAR', state: ResolverState.pendingConversion),
+        entry(
+          key: 'JIOHOTSTAR',
+          state: ResolverState.pendingConversion,
+          evidenceTrail: EvidenceTrail(
+            notes: <String>['v2:reviewPriority=0.61'],
+          ),
+        ),
       );
       await repository.write(
-        entry(key: 'CRUNCHYROLL', state: ResolverState.verificationOnly),
+        entry(
+          key: 'CRUNCHYROLL',
+          state: ResolverState.verificationOnly,
+          evidenceTrail: EvidenceTrail(
+            notes: <String>['v2:reviewPriority=0.84'],
+          ),
+        ),
       );
       await repository.write(
-        entry(key: 'MYSTERY_SUB', state: ResolverState.possibleSubscription),
+        entry(
+          key: 'MYSTERY_SUB',
+          state: ResolverState.possibleSubscription,
+          evidenceTrail: EvidenceTrail(
+            notes: <String>[
+              'v2:reason=weakRecurringSignalsObserved',
+              'v2:reviewPriority=0.28',
+            ],
+          ),
+        ),
       );
       await repository.write(
         entry(key: 'SHOPPING', state: ResolverState.oneTimeOnly),
@@ -145,6 +195,41 @@ void main() {
       expect(
         reviewItems.map((item) => item.serviceKey.value).toList(growable: false),
         <String>['CRUNCHYROLL', 'JIOHOTSTAR', 'MYSTERY_SUB'],
+      );
+    });
+
+    test('higher value billed uncertainty ranks above generic weak recurring', () {
+      final reviewItems = projection.buildReviewQueue(<ServiceLedgerEntry>[
+        entry(
+          key: 'GOOGLE_PLAY',
+          state: ResolverState.possibleSubscription,
+          evidenceTrail: EvidenceTrail(
+            notes: <String>[
+              'v2:reason=paidEvidenceObserved',
+              'v2:reason=likelyPaidNeedsMoreHistory',
+              'v2:reviewPriority=0.67',
+            ],
+          ),
+        ),
+        entry(
+          key: 'MYSTERY_SUB',
+          state: ResolverState.possibleSubscription,
+          evidenceTrail: EvidenceTrail(
+            notes: <String>[
+              'v2:reason=weakRecurringSignalsObserved',
+              'v2:reviewPriority=0.18',
+            ],
+          ),
+        ),
+      ]);
+
+      expect(
+        reviewItems.map((item) => item.serviceKey.value).toList(growable: false),
+        <String>['GOOGLE_PLAY', 'MYSTERY_SUB'],
+      );
+      expect(
+        reviewItems.first.reasonLine,
+        'A billing signal was found, but the proof is still thin',
       );
     });
   });

@@ -1,6 +1,8 @@
 import '../contracts/event_classifier.dart';
+import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
+import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_event_type.dart';
 import '../parsing/indian_amount_parser.dart';
 
@@ -50,35 +52,74 @@ class MandateIntentClassifier implements EventClassifier {
         amount != null &&
         amount <= 2 &&
         _executionPattern.hasMatch(body)) {
+      final capturedTerms = _capturedTerms(body);
       return ParsedSignal(
         classifierId: classifierId,
         eventType: SubscriptionEventType.mandateExecutedMicro,
         summary: 'Recurring mandate validation or micro execution detected.',
         detectedAt: message.receivedAt,
         amount: amount,
-        capturedTerms: _capturedTerms(body),
+        capturedTerms: capturedTerms,
+        evidenceFragments: <EvidenceFragment>[
+          EvidenceFragment(
+            type: EvidenceFragmentType.microCharge,
+            sourceMessageId: message.id,
+            classifierId: classifierId,
+            strength: EvidenceFragmentStrength.strong,
+            confidence: 0.98,
+            amount: amount,
+            note: 'Mandate validation or micro execution detected.',
+            terms: capturedTerms,
+          ),
+        ],
       );
     }
 
     if (hasMandateContext && _creationPattern.hasMatch(body)) {
+      final capturedTerms = _capturedTerms(body);
       return ParsedSignal(
         classifierId: classifierId,
         eventType: SubscriptionEventType.mandateCreated,
         summary: 'Recurring mandate authorization intent detected.',
         detectedAt: message.receivedAt,
         amount: amount,
-        capturedTerms: _capturedTerms(body),
+        capturedTerms: capturedTerms,
+        evidenceFragments: <EvidenceFragment>[
+          EvidenceFragment(
+            type: EvidenceFragmentType.mandateCreated,
+            sourceMessageId: message.id,
+            classifierId: classifierId,
+            strength: EvidenceFragmentStrength.strong,
+            confidence: 0.96,
+            amount: amount,
+            note: 'Mandate authorization intent detected.',
+            terms: capturedTerms,
+          ),
+        ],
       );
     }
 
     if (hasAutopayContext && _setupPattern.hasMatch(body)) {
+      final capturedTerms = _capturedTerms(body);
       return ParsedSignal(
         classifierId: classifierId,
         eventType: SubscriptionEventType.autopaySetup,
         summary: 'Automatic payment or standing instruction setup detected.',
         detectedAt: message.receivedAt,
         amount: amount,
-        capturedTerms: _capturedTerms(body),
+        capturedTerms: capturedTerms,
+        evidenceFragments: <EvidenceFragment>[
+          EvidenceFragment(
+            type: EvidenceFragmentType.autopaySetup,
+            sourceMessageId: message.id,
+            classifierId: classifierId,
+            strength: EvidenceFragmentStrength.strong,
+            confidence: 0.94,
+            amount: amount,
+            note: 'Automatic payment setup detected.',
+            terms: capturedTerms,
+          ),
+        ],
       );
     }
 

@@ -192,8 +192,6 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
   late final TextEditingController _serviceSearchController;
   _DashboardDestination _selectedDestination = _DashboardDestination.home;
 
-  bool _selectedDestinationInitialized = false;
-
   @override
   void initState() {
     super.initState();
@@ -244,7 +242,6 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
   Widget build(BuildContext context) {
     final loadState = ref.watch(dashboardShellLoadStateProvider);
     final firstRunState = ref.watch(dashboardFirstRunProvider);
-    final reduceMotion = shouldReduceMotion(context);
 
     final bool isInFirstRun = firstRunState.isInFirstRun;
     debugPrint(

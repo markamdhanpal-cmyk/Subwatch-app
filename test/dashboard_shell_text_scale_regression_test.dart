@@ -44,6 +44,7 @@ void main() {
   // Text scale factors to test
   const List<double> textScales = <double>[1.0, 1.15, 1.3, 1.5];
 
+
   group('Text scale regression', () {
     for (final textScale in textScales) {
       group('at ${textScale}x scale', () {
@@ -273,10 +274,19 @@ void _testSettingsRowsAtScale(double textScale) {
 
       expect(find.byKey(const ValueKey<String>('settings-trust-panel')),
           findsOneWidget);
-      expect(find.byKey(const ValueKey<String>('settings-quick-actions-panel')),
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('settings-source-action')),
+      );
+      expect(find.byKey(const ValueKey<String>('settings-source-action')),
           findsOneWidget);
-      expect(find.byKey(const ValueKey<String>('settings-support-panel')),
+      expect(find.byKey(const ValueKey<String>('settings-add-manual-action')),
           findsOneWidget);
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('settings-support-panel')),
+      );
+      expect(find.byKey(const ValueKey<String>('settings-support-panel')), findsOneWidget);
 
       await scrollDashboardUntilVisible(
         tester,
@@ -309,6 +319,10 @@ void _testSettingsRowsAtScale(double textScale) {
 
       await openDashboardDestination(tester, 'settings');
 
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('settings-open-how-it-works')),
+      );
       expect(find.byKey(const ValueKey<String>('settings-open-how-it-works')),
           findsOneWidget);
       expect(find.byKey(const ValueKey<String>('settings-open-privacy')),
@@ -356,17 +370,19 @@ void _testSettingsRowsAtScale(double textScale) {
       );
 
       await openDashboardDestination(tester, 'settings');
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('settings-open-reminders')),
-      );
-      await tapAndPumpDashboardShell(
-        tester,
-        find.byKey(const ValueKey<String>('settings-open-reminders')),
-      );
+      final remindersRow =
+          find.byKey(const ValueKey<String>('settings-open-reminders'));
 
+      await scrollDashboardUntilVisible(tester, remindersRow);
+      expect(remindersRow, findsOneWidget);
+      await tapAndPumpDashboardShell(tester, remindersRow);
       expect(
         find.byKey(const ValueKey<String>('settings-reminder-manager-sheet')),
+        findsOneWidget,
+      );
+      expect(find.text('Reminder controls'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('settings-reminder-item-manual-1')),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);
@@ -730,36 +746,10 @@ ThemeData _buildTestTheme() {
     button: buttonStyle,
   );
 
-  final colorScheme = ColorScheme.fromSeed(
-    seedColor: DashboardShellPalette.accent,
+  return buildDashboardTestTheme(
     brightness: Brightness.dark,
-  ).copyWith(
-    primary: DashboardShellPalette.accent,
-    onPrimary: const Color(0xFF1A130F),
-    secondary: DashboardShellPalette.success,
-    onSecondary: DashboardShellPalette.paper,
-    surface: DashboardShellPalette.paper,
-    onSurface: DashboardShellPalette.ink,
-    outline: DashboardShellPalette.outline,
-    outlineVariant: DashboardShellPalette.outlineStrong,
-  );
-
-  return ThemeData(
-    brightness: Brightness.dark,
-    colorScheme: colorScheme,
-    scaffoldBackgroundColor: DashboardShellPalette.canvas,
-    splashFactory: InkRipple.splashFactory,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.transparent,
-      foregroundColor: DashboardShellPalette.ink,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      centerTitle: false,
-    ),
-    iconTheme: const IconThemeData(
-      color: DashboardShellPalette.ink,
-    ),
-    extensions: <ThemeExtension<dynamic>>[typeScale],
+    colorTokens: DashboardColorTokens.dark,
+    typeScale: typeScale,
   );
 }
 
@@ -814,3 +804,14 @@ Future<void> _pumpAppWithTextScale(
   );
   await pumpDashboardShellLoad(tester, skipGate: skipGate);
 }
+
+
+
+
+
+
+
+
+
+
+

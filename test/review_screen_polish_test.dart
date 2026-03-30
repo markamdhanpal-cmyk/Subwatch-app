@@ -32,7 +32,7 @@ void main() {
 
       await scrollDashboardUntilVisible(tester, find.text('Jiohotstar'));
 
-      expect(find.text('Looks recurring, but still uncertain'), findsOneWidget);
+      expect(find.text('It looks recurring, but billing is still unproven'), findsOneWidget);
       expect(find.text('Confirm'), findsWidgets);
       expect(find.text('Bundle'), findsWidgets);
       expect(find.text('Not mine'), findsWidgets);
@@ -47,7 +47,7 @@ void main() {
       expect(
         find.bySemanticsLabel(
           RegExp(
-            r'Jiohotstar\. Looks recurring, but still uncertain\. Review actions below\.',
+            r'Jiohotstar\. It looks recurring, but billing is still unproven\. Review actions below\.',
           ),
         ),
         findsOneWidget,
@@ -85,9 +85,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Why SubWatch flagged this'), findsOneWidget);
-    expect(find.text('A recurring-looking signal was found.'), findsOneWidget);
+    expect(find.text('We saw wording that suggests recurring access.'), findsOneWidget);
     expect(
-      find.text('The evidence is still too weak to confirm it automatically.'),
+      find.text('No strong billed renewal has been confirmed yet.'),
       findsOneWidget,
     );
     expect(find.text('How to decide'), findsNothing);

@@ -1,3 +1,5 @@
+import '../knowledge/merchant_knowledge_base.dart';
+
 class ServiceKey {
   const ServiceKey(this.value);
 
@@ -6,6 +8,11 @@ class ServiceKey {
   String get displayName {
     if (value.isEmpty) {
       return 'Unknown service';
+    }
+
+    final knownDisplayName = MerchantKnowledgeBase.displayNameFor(value);
+    if (knownDisplayName != null && knownDisplayName.isNotEmpty) {
+      return knownDisplayName;
     }
 
     return value

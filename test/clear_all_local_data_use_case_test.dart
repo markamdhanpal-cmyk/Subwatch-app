@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/contracts/ledger_snapshot_store.dart';
 import 'package:sub_killer/application/models/runtime_snapshot_provenance.dart';
 import 'package:sub_killer/application/contracts/local_renewal_reminder_scheduler.dart';
@@ -13,8 +13,13 @@ import 'package:sub_killer/application/stores/in_memory_local_renewal_reminder_s
 import 'package:sub_killer/application/stores/in_memory_local_service_presentation_overlay_store.dart';
 import 'package:sub_killer/application/stores/in_memory_review_action_store.dart';
 import 'package:sub_killer/application/stores/in_memory_sms_onboarding_progress_store.dart';
+import 'package:sub_killer/application/stores/in_memory_service_evidence_bucket_store.dart';
 import 'package:sub_killer/application/use_cases/clear_all_local_data_use_case.dart';
 import 'package:sub_killer/domain/entities/service_ledger_entry.dart';
+import 'package:sub_killer/domain/entities/evidence_trail.dart';
+import 'package:sub_killer/domain/entities/service_evidence_bucket.dart';
+import 'package:sub_killer/domain/enums/service_evidence_source_kind.dart';
+import 'package:sub_killer/domain/value_objects/service_key.dart';
 
 void main() {
   test('clear all local data removes persisted local state and cancels reminders',
@@ -26,6 +31,7 @@ void main() {
     final localRenewalReminderStore = InMemoryLocalRenewalReminderStore();
     final localServicePresentationOverlayStore =
         InMemoryLocalServicePresentationOverlayStore();
+    final serviceEvidenceBucketStore = InMemoryServiceEvidenceBucketStore();
     final smsOnboardingProgressStore = InMemorySmsOnboardingProgressStore();
     final reminderScheduler = _RecordingReminderScheduler();
 
@@ -71,6 +77,25 @@ void main() {
         localLabel: 'Movie nights',
       ),
     );
+    await serviceEvidenceBucketStore.save(
+      <ServiceEvidenceBucket>[
+        ServiceEvidenceBucket(
+          serviceKey: const ServiceKey('NETFLIX'),
+          firstSeenAt: DateTime(2026, 3, 20),
+          lastSeenAt: DateTime(2026, 3, 20),
+          sourceKindsSeen: const <ServiceEvidenceSourceKind>[
+            ServiceEvidenceSourceKind.deviceSmsInbox,
+          ],
+          billedCount: 1,
+          amountSeries: const <double>[499],
+          evidenceTrail: EvidenceTrail(
+            messageIds: const <String>['nf-1'],
+            eventIds: const <String>['nf-event-1'],
+            notes: const <String>['fragment:billed_success'],
+          ),
+        ),
+      ],
+    );
     await smsOnboardingProgressStore.writeCompleted(true);
 
     final useCase = ClearAllLocalDataUseCase(
@@ -82,6 +107,7 @@ void main() {
       localRenewalReminderScheduler: reminderScheduler,
       localServicePresentationOverlayStore:
           localServicePresentationOverlayStore,
+      serviceEvidenceBucketStore: serviceEvidenceBucketStore,
       smsOnboardingProgressStore: smsOnboardingProgressStore,
     );
 
@@ -94,6 +120,7 @@ void main() {
     expect(await localManualSubscriptionStore.list(), isEmpty);
     expect(await localRenewalReminderStore.list(), isEmpty);
     expect(await localServicePresentationOverlayStore.list(), isEmpty);
+    expect(await serviceEvidenceBucketStore.load(), isEmpty);
     expect(await smsOnboardingProgressStore.readCompleted(), isFalse);
     expect(reminderScheduler.cancelledServiceKeys, <String>['NETFLIX']);
   });
@@ -143,4 +170,5 @@ class _RecordingReminderScheduler implements LocalRenewalReminderScheduler {
     return true;
   }
 }
+
 

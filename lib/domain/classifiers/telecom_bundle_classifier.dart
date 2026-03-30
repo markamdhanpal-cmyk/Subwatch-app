@@ -1,6 +1,8 @@
 import '../contracts/event_classifier.dart';
+import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
+import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_event_type.dart';
 
 class TelecomBundleClassifier implements EventClassifier {
@@ -55,12 +57,25 @@ class TelecomBundleClassifier implements EventClassifier {
       return null;
     }
 
+    final capturedTerms = _capturedTerms(body);
+
     return ParsedSignal(
       classifierId: classifierId,
       eventType: SubscriptionEventType.bundleActivated,
       summary: 'Telecom-linked bundled benefit detected.',
       detectedAt: message.receivedAt,
-      capturedTerms: _capturedTerms(body),
+      capturedTerms: capturedTerms,
+      evidenceFragments: <EvidenceFragment>[
+        EvidenceFragment(
+          type: EvidenceFragmentType.bundledBenefit,
+          sourceMessageId: message.id,
+          classifierId: classifierId,
+          strength: EvidenceFragmentStrength.strong,
+          confidence: 0.95,
+          note: 'Telecom-linked bundled benefit detected.',
+          terms: capturedTerms,
+        ),
+      ],
     );
   }
 

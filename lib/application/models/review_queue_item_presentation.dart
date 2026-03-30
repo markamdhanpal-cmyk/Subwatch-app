@@ -18,11 +18,17 @@ class ReviewQueueItemPresentation {
   factory ReviewQueueItemPresentation.fromReviewItem(ReviewItem reviewItem) {
     final descriptor = ReviewItemActionDescriptor.fromReviewItem(reviewItem);
     final lowerRationale = reviewItem.rationale.toLowerCase();
+    final reasonLine = reviewItem.reasonLine.isNotEmpty
+        ? reviewItem.reasonLine
+        : _reasonLine(lowerRationale);
+    final detailsBullets = reviewItem.detailsBullets.isNotEmpty
+        ? reviewItem.detailsBullets
+        : _detailsBullets(lowerRationale);
 
     if (descriptor.canConfirm) {
       return ReviewQueueItemPresentation(
-        reasonLine: _reasonLine(lowerRationale),
-        detailsBullets: _detailsBullets(lowerRationale),
+        reasonLine: reasonLine,
+        detailsBullets: detailsBullets,
         confirmLabel: 'Confirm',
         benefitLabel: 'Bundle',
         editLabel: 'Add subscription',

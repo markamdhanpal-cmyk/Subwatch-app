@@ -131,18 +131,6 @@ extension _DashboardShellMembers on _DashboardShellState {
     );
   }
 
-  Future<bool> _readSmsOnboardingCompletion() async {
-    return ref
-        .read(dashboardLocalControlsProvider.notifier)
-        .loadSmsOnboardingCompletion();
-  }
-
-  Future<void> _markSmsOnboardingCompleted() async {
-    await ref
-        .read(dashboardLocalControlsProvider.notifier)
-        .markSmsOnboardingCompleted();
-  }
-
   Future<bool> _handleCreateManualSubscription(
     _ManualSubscriptionFormValue value,
   ) async {
@@ -1697,10 +1685,6 @@ extension _DashboardShellMembers on _DashboardShellState {
       return '1 item';
     }
     return '$count items';
-  }
-
-  String _reviewItemCountLabel(int count) {
-    return count == 1 ? '1 review item' : '$count review items';
   }
 
   String _settingsSourceActionTitle(RuntimeLocalMessageSourceStatus status) {

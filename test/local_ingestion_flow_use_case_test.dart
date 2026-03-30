@@ -1,8 +1,9 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/local_ingestion_flow_use_case.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
 import 'package:sub_killer/domain/enums/resolver_state.dart';
 import 'package:sub_killer/domain/enums/subscription_event_type.dart';
+import 'package:sub_killer/v2/detection/models/canonical_input.dart';
 
 void main() {
   group('LocalIngestionFlowUseCase', () {
@@ -38,6 +39,26 @@ void main() {
           result.events.single.type, SubscriptionEventType.subscriptionBilled);
       expect(result.events.single.serviceKey.value, 'NETFLIX');
       expect(result.ledgerEntries, hasLength(1));
+      expect(result.ledgerEntries.single.state, ResolverState.activePaid);
+      expect(result.ledgerEntries.single.totalBilled, 499);
+    });
+
+    test('canonical inputs flow through normalization into activePaid', () async {
+      final result = await useCase.executeCanonicalInputs(<CanonicalInput>[
+        CanonicalInput.deviceSms(
+          id: 'netflix-canonical-1',
+          senderHandle: 'BANK',
+          textBody: 'Your Netflix subscription has been renewed for Rs 499.',
+          receivedAt: receivedAt,
+        ),
+      ]);
+
+      expect(result.events, hasLength(1));
+      expect(
+        result.events.single.type,
+        SubscriptionEventType.subscriptionBilled,
+      );
+      expect(result.events.single.serviceKey.value, 'NETFLIX');
       expect(result.ledgerEntries.single.state, ResolverState.activePaid);
       expect(result.ledgerEntries.single.totalBilled, 499);
     });
@@ -194,3 +215,4 @@ void main() {
     });
   });
 }
+

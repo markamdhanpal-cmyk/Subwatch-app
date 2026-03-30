@@ -1,6 +1,8 @@
 import '../contracts/event_classifier.dart';
+import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
+import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_event_type.dart';
 import 'recurring_billing_heuristics.dart';
 
@@ -60,25 +62,52 @@ class SubscriptionBilledClassifier implements EventClassifier {
       return null;
     }
 
+    final capturedTerms = RecurringBillingHeuristics.capturedTerms(
+      body,
+      <RegExp>[
+        RecurringBillingHeuristics.subscriptionContextPattern,
+        RecurringBillingHeuristics.planContextPattern,
+        RecurringBillingHeuristics.recurringContextPattern,
+        RecurringBillingHeuristics.billingPattern,
+        RecurringBillingHeuristics.successPattern,
+        RecurringBillingHeuristics.directRecurringMerchantPattern,
+        RecurringBillingHeuristics.appStoreMerchantPattern,
+        RecurringBillingHeuristics.cardContextPattern,
+      ],
+    );
+
+    final evidenceFragments = <EvidenceFragment>[
+      EvidenceFragment(
+        type: EvidenceFragmentType.billedSuccess,
+        sourceMessageId: message.id,
+        classifierId: classifierId,
+        strength: EvidenceFragmentStrength.strong,
+        confidence: 0.95,
+        amount: amount,
+        note: 'Strong recurring billing evidence detected.',
+        terms: capturedTerms,
+      ),
+      if (hasRecurringContext || body.toLowerCase().contains('renew'))
+        EvidenceFragment(
+          type: EvidenceFragmentType.renewalHint,
+          sourceMessageId: message.id,
+          classifierId: classifierId,
+          strength: EvidenceFragmentStrength.medium,
+          confidence: 0.8,
+          amount: amount,
+          note: 'Renewal or recurring wording present.',
+          terms: capturedTerms,
+        ),
+    ];
+
     return ParsedSignal(
       classifierId: classifierId,
       eventType: SubscriptionEventType.subscriptionBilled,
       summary: 'Strong recurring billing evidence detected.',
       detectedAt: message.receivedAt,
       amount: amount,
-      capturedTerms: RecurringBillingHeuristics.capturedTerms(
-        body,
-        <RegExp>[
-          RecurringBillingHeuristics.subscriptionContextPattern,
-          RecurringBillingHeuristics.planContextPattern,
-          RecurringBillingHeuristics.recurringContextPattern,
-          RecurringBillingHeuristics.billingPattern,
-          RecurringBillingHeuristics.successPattern,
-          RecurringBillingHeuristics.directRecurringMerchantPattern,
-          RecurringBillingHeuristics.appStoreMerchantPattern,
-          RecurringBillingHeuristics.cardContextPattern,
-        ],
-      ),
+      capturedTerms: capturedTerms,
+      evidenceFragments: evidenceFragments,
     );
   }
 }

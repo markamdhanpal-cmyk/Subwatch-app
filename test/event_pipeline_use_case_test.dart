@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/event_pipeline_use_case.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
 import 'package:sub_killer/domain/enums/subscription_event_type.dart';
@@ -76,6 +76,12 @@ void main() {
 
       expect(events, hasLength(1));
       expect(events.single.serviceKey.value, 'NETFLIX');
+      expect(events.single.merchantResolution, isNotNull);
+      expect(events.single.merchantResolution!.resolvedServiceKey.value, 'NETFLIX');
+      expect(
+        events.single.evidenceTrail.notes,
+        contains(startsWith('merchant_resolution:exactAlias:high:')),
+      );
     });
 
     test('returns null for unmatched generic message', () {

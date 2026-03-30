@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sub_killer/presentation/dashboard/dashboard_primitives.dart';
 import 'package:sub_killer/app/subscription_killer_app.dart';
 import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
 import 'package:sub_killer/application/contracts/ledger_snapshot_store.dart';
@@ -12,7 +11,6 @@ import 'package:sub_killer/application/contracts/local_renewal_reminder_schedule
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
 import 'package:sub_killer/application/models/local_renewal_reminder_models.dart';
 import 'package:sub_killer/application/models/raw_device_sms.dart';
-import 'package:sub_killer/application/models/review_item_action_models.dart';
 import 'package:sub_killer/application/models/runtime_snapshot_provenance.dart';
 import 'package:sub_killer/application/stores/in_memory_local_control_overlay_store.dart';
 import 'package:sub_killer/application/stores/in_memory_local_manual_subscription_store.dart';
@@ -30,7 +28,6 @@ import 'package:sub_killer/application/contracts/local_service_presentation_over
 import 'package:sub_killer/application/use_cases/undo_local_control_overlay_use_case.dart';
 import 'package:sub_killer/application/use_cases/undo_review_item_action_use_case.dart';
 import 'package:sub_killer/domain/entities/service_ledger_entry.dart';
-import 'package:sub_killer/presentation/dashboard/dashboard_shell.dart';
 import 'package:sub_killer/presentation/dashboard/dashboard_shell_providers.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
@@ -40,12 +37,8 @@ import 'package:sub_killer/application/use_cases/handle_local_service_presentati
 import 'package:sub_killer/application/use_cases/load_sms_onboarding_progress_use_case.dart';
 import 'package:sub_killer/application/use_cases/complete_sms_onboarding_use_case.dart';
 import 'package:sub_killer/application/providers/stub_local_message_source_capability_provider.dart';
-import 'package:sub_killer/application/models/local_message_source_platform_binding.dart';
-import 'package:sub_killer/application/models/local_message_source_access_state.dart';
 import 'package:sub_killer/application/repositories/in_memory_ledger_repository.dart';
-import 'package:sub_killer/application/use_cases/request_device_sms_access_use_case.dart';
-import 'package:sub_killer/application/contracts/problem_report_launcher.dart';
-import 'package:sub_killer/domain/contracts/ledger_repository.dart';
+import 'package:sub_killer/presentation/dashboard/dashboard_primitives.dart';
 
 class MutableCapabilityProvider
     implements LocalMessageSourceCapabilityProvider {
@@ -249,6 +242,73 @@ class DashboardShellReviewHarness {
   final InMemorySmsOnboardingProgressStore onboardingStore;
 }
 
+ThemeData buildDashboardTestTheme({
+  DashboardTypeScale typeScale = const DashboardTypeScale(
+    display: TextStyle(fontSize: 40),
+    heading: TextStyle(fontSize: 22),
+    subheading: TextStyle(fontSize: 18),
+    body: TextStyle(fontSize: 16),
+    caption: TextStyle(fontSize: 13),
+    label: TextStyle(fontSize: 13),
+    button: TextStyle(fontSize: 14),
+  ),
+  DashboardColorTokens colorTokens = DashboardColorTokens.light,
+  Brightness brightness = Brightness.light,
+}) {
+  final baseTheme = ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+    fontFamily: 'Figtree',
+  );
+  final colorScheme = brightness == Brightness.dark
+      ? ColorScheme.dark(
+          primary: colorTokens.accent,
+          onPrimary: colorTokens.accentInk,
+          secondary: colorTokens.statusBlue,
+          onSecondary: colorTokens.ink,
+          error: colorTokens.caution,
+          onError: colorTokens.accentInk,
+          surface: colorTokens.paper,
+          onSurface: colorTokens.ink,
+        )
+      : ColorScheme.light(
+          primary: colorTokens.accent,
+          onPrimary: colorTokens.accentInk,
+          secondary: colorTokens.statusBlue,
+          onSecondary: colorTokens.ink,
+          error: colorTokens.caution,
+          onError: colorTokens.accentInk,
+          surface: colorTokens.paper,
+          onSurface: colorTokens.ink,
+        );
+
+  return baseTheme.copyWith(
+    colorScheme: colorScheme.copyWith(
+      outline: colorTokens.outline,
+      outlineVariant: colorTokens.outlineStrong,
+      shadow: colorTokens.shadow,
+      scrim: colorTokens.scrim,
+    ),
+    scaffoldBackgroundColor: colorTokens.canvas,
+    splashFactory: InkRipple.splashFactory,
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.transparent,
+      foregroundColor: colorTokens.ink,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      surfaceTintColor: Colors.transparent,
+    ),
+    iconTheme: IconThemeData(
+      color: colorTokens.ink,
+    ),
+    extensions: <ThemeExtension<dynamic>>[
+      typeScale,
+      colorTokens,
+    ],
+  );
+}
+
 Future<void> pumpConstrainedDashboardShell(
   WidgetTester tester, {
   double textScale = 1.0,
@@ -332,8 +392,7 @@ Future<void> pumpDashboardShellLoad(
 
     if (isGate && skipGate && !isSyncing) {
       debugPrint('pumpDashboardShellLoad: Clicking Get Started gate...');
-      await tester.tap(getStartedFinder);
-      await tester.pump();
+      await tapAndPumpDashboardShell(tester, getStartedFinder);
 
       final rationalePrimaryActionFinder = find.byKey(
         const ValueKey<String>('sms-permission-rationale-primary-action'),
@@ -341,8 +400,7 @@ Future<void> pumpDashboardShellLoad(
       if (rationalePrimaryActionFinder.evaluate().isNotEmpty) {
         debugPrint(
             'pumpDashboardShellLoad: Clicking Rationale primary action...');
-        await tester.tap(rationalePrimaryActionFinder);
-        await tester.pump();
+        await tapAndPumpDashboardShell(tester, rationalePrimaryActionFinder);
       }
     }
 
@@ -431,11 +489,27 @@ Future<void> openDashboardDestination(
     of: find.byType(NavigationBar),
     matching: find.text(label),
   );
+  final surfaceFinder = switch (destination) {
+    'home' =>
+      find.byKey(const PageStorageKey<String>('destination-home-surface')),
+    _ => find.byKey(ValueKey<String>("destination-$destination-surface")),
+  };
 
-  if (keyFinder.evaluate().isNotEmpty) {
-    await tester.tap(keyFinder, warnIfMissed: false);
-  } else if (textFinder.evaluate().isNotEmpty) {
-    await tester.tap(textFinder, warnIfMissed: false);
+  final tapCandidates = <Finder>[
+    keyFinder.hitTestable(),
+    keyFinder,
+    textFinder.hitTestable(),
+    textFinder,
+  ];
+
+  for (final candidate in tapCandidates) {
+    if (candidate.evaluate().isEmpty) {
+      continue;
+    }
+    await tapAndPumpDashboardShell(tester, candidate.first);
+    if (surfaceFinder.evaluate().isNotEmpty) {
+      return;
+    }
   }
 
   await settleDashboard(tester);
@@ -451,7 +525,12 @@ Future<void> tapAndPumpDashboardShell(
   }
   debugPrint('Tapping: $finder');
   await tester.ensureVisible(finder.first);
-  await tester.tap(finder.first, warnIfMissed: false);
+  await tester.pump(const Duration(milliseconds: 50));
+  final hitTestableFinder = finder.hitTestable();
+  final tapTarget = hitTestableFinder.evaluate().isNotEmpty
+      ? hitTestableFinder.first
+      : finder.first;
+  await tester.tap(tapTarget, warnIfMissed: false);
   await settleDashboard(tester);
 }
 
@@ -476,7 +555,7 @@ Future<void> scrollDashboardUntilVisible(
     if (finder.evaluate().isNotEmpty) {
       if (tester.any(finder)) {
         try {
-          await tester.ensureVisible(finder);
+          await tester.ensureVisible(finder.first);
           return;
         } catch (_) {
           // Keep scrolling
@@ -484,14 +563,16 @@ Future<void> scrollDashboardUntilVisible(
       }
     }
 
-    final scrollable = find.byType(Scrollable).hitTestable().first;
+    final visibleScrollables = find.byType(Scrollable).hitTestable();
+    final scrollable = visibleScrollables.evaluate().isNotEmpty
+        ? visibleScrollables.first
+        : scrollableFinder.first;
     await tester.drag(scrollable, Offset(0, -delta * 2));
     await tester.pump(const Duration(milliseconds: 50));
     retries++;
   }
   await settleDashboard(tester);
 }
-
 (LoadSmsOnboardingProgressUseCase, CompleteSmsOnboardingUseCase)
     buildMemorySmsOnboardingUseCases() {
   final store = InMemorySmsOnboardingProgressStore();
@@ -517,3 +598,8 @@ Future<void> debug_dump_app(WidgetTester tester) async {
   // ignore: avoid_print
   print('--- WIDGET DUMP END ---');
 }
+
+
+
+
+

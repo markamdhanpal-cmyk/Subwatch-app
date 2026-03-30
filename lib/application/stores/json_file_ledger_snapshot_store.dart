@@ -27,6 +27,7 @@ class JsonFileLedgerSnapshotStore implements LedgerSnapshotStore {
         _fileName = fileName;
 
   static const String defaultFileName = 'ledger_snapshot.json';
+  static const int schemaVersion = 2;
 
   final Future<Directory> Function() _directoryProvider;
   final String _fileName;
@@ -118,6 +119,7 @@ class JsonFileLedgerSnapshotStore implements LedgerSnapshotStore {
           (left, right) => left.serviceKey.value.compareTo(right.serviceKey.value),
         );
       final payload = <String, Object?>{
+        'schemaVersion': schemaVersion,
         'entries': persistedEntries
             .map(
               (entry) => PersistedServiceLedgerEntry.fromDomain(entry).toJson(),

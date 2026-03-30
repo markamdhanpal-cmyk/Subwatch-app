@@ -1,0 +1,17 @@
+enum DecisionReasonCode {
+  paidEvidenceObserved,
+  recurringRenewalObserved,
+  likelyPaidNeedsMoreHistory,
+  bundledBenefitObserved,
+  setupIntentObserved,
+  microVerificationObserved,
+  weakRecurringSignalsObserved,
+  promoSignalsObserved,
+  cancellationSignalsObserved,
+  oneTimeNoiseObserved,
+  ignoreSignalsObserved,
+  contradictionObserved,
+  mlHighSubscriptionProbability,
+  mlLowSubscriptionProbability,
+  mlReviewPriorityElevated,
+}

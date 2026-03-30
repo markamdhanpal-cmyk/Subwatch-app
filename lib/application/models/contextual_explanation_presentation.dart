@@ -65,29 +65,35 @@ class ContextualExplanationPresentation {
 
   factory ContextualExplanationPresentation.forReviewItem(ReviewItem item) {
     final descriptor = ReviewItemActionDescriptor.fromReviewItem(item);
+    final description = item.reasonLine.isNotEmpty ? item.reasonLine : item.rationale;
+    final bullets = item.detailsBullets.isNotEmpty
+        ? item.detailsBullets
+        : <String>[
+            'It stays separate until you decide.',
+            'Bundles, mandates, and tiny charges stay cautious.',
+            'Your choice stays on this phone and can be undone.',
+          ];
 
     if (descriptor.canConfirm) {
-      return const ContextualExplanationPresentation(
+      return ContextualExplanationPresentation(
         actionLabel: 'Why it needs review',
         title: 'Why this item is in review',
-        description: 'This looked recurring, but not strong enough yet.',
-        bullets: <String>[
-          'It stays separate until you decide.',
-          'Bundles, mandates, and tiny charges stay cautious.',
-          'Your choice stays on this phone and can be undone.',
-        ],
+        description: description,
+        bullets: bullets,
       );
     }
 
-    return const ContextualExplanationPresentation(
+    return ContextualExplanationPresentation(
       actionLabel: 'Why it needs review',
       title: 'Why this item still needs review',
-      description: 'This looked recurring, but the service is still unclear.',
-      bullets: <String>[
-        'SubWatch does not guess the service name.',
-        'It stays separate while the evidence is unclear.',
-        'Add it as a subscription, dismiss it, or wait.',
-      ],
+      description: description,
+      bullets: item.detailsBullets.isNotEmpty
+          ? item.detailsBullets
+          : <String>[
+              'SubWatch does not guess the service name.',
+              'It stays separate while the evidence is unclear.',
+              'Add it as a subscription, dismiss it, or wait.',
+            ],
     );
   }
 

@@ -7,6 +7,7 @@ import '../contracts/local_message_source_capability_provider.dart';
 import '../contracts/local_renewal_reminder_store.dart';
 import '../contracts/local_service_presentation_overlay_store.dart';
 import '../contracts/review_action_store.dart';
+import '../contracts/service_evidence_bucket_store.dart';
 import '../models/manual_subscription_models.dart';
 import '../models/local_control_overlay_models.dart';
 import '../models/local_message_source_access_state.dart';
@@ -17,16 +18,23 @@ import '../models/review_item_action_models.dart';
 import '../models/runtime_snapshot_provenance.dart';
 import '../providers/stub_local_message_source_capability_provider.dart';
 import '../repositories/in_memory_ledger_repository.dart';
+import '../repositories/in_memory_service_evidence_bucket_repository.dart';
 import '../stores/json_file_ledger_snapshot_store.dart';
 import '../stores/json_file_local_control_overlay_store.dart';
 import '../stores/json_file_local_manual_subscription_store.dart';
 import '../stores/json_file_local_renewal_reminder_store.dart';
 import '../stores/json_file_local_service_presentation_overlay_store.dart';
 import '../stores/json_file_review_action_store.dart';
+import '../stores/json_file_service_evidence_bucket_store.dart';
 import '../../domain/entities/dashboard_card.dart';
 import '../../domain/entities/review_item.dart';
 import '../../domain/entities/service_ledger_entry.dart';
+import '../../domain/entities/subscription_event.dart';
+import '../../domain/contracts/service_evidence_bucket_repository.dart';
 import '../../domain/projections/deterministic_dashboard_projection.dart';
+import '../../v2/detection/contracts/canonical_input_source.dart';
+import '../../v2/decision/enums/decision_execution_mode.dart';
+import '../../v2/decision/models/shadow_decision_comparison.dart';
 import 'apply_local_control_overlays_use_case.dart';
 import 'apply_local_service_presentation_overlays_use_case.dart';
 import 'apply_review_item_actions_use_case.dart';
@@ -54,6 +62,7 @@ class RuntimeDashboardSnapshot {
     required this.manualSubscriptions,
     required this.localServicePresentationStates,
     required this.localRenewalReminderPreferences,
+    this.shadowComparison,
   });
 
   final List<DashboardCard> cards;
@@ -70,6 +79,7 @@ class RuntimeDashboardSnapshot {
       localServicePresentationStates;
   final Map<String, LocalRenewalReminderPreference>
       localRenewalReminderPreferences;
+  final ShadowDecisionComparison? shadowComparison;
 }
 
 class LoadRuntimeDashboardUseCase {
@@ -86,6 +96,7 @@ class LoadRuntimeDashboardUseCase {
     LocalManualSubscriptionStore? localManualSubscriptionStore,
     LocalRenewalReminderStore? localRenewalReminderStore,
     LocalServicePresentationOverlayStore? localServicePresentationOverlayStore,
+    ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
     RuntimeLedgerLoadMode loadMode =
         RuntimeLedgerLoadMode.restorePersistedOrRefreshSource,
     ApplyReviewItemActionsUseCase? applyReviewItemActionsUseCase,
@@ -93,11 +104,14 @@ class LoadRuntimeDashboardUseCase {
     ApplyLocalServicePresentationOverlaysUseCase?
         applyLocalServicePresentationOverlaysUseCase,
     LocalIngestionFlowUseCase? ingestionUseCase,
+    DecisionExecutionMode decisionExecutionMode =
+        DecisionExecutionMode.bridgeToLedger,
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
   }) {
     final repository = ledgerRepository ?? InMemoryLedgerRepository();
+    final evidenceBucketRepository = InMemoryServiceEvidenceBucketRepository();
     const projection = DeterministicDashboardProjection();
     final binding =
         platformBinding ?? LocalMessageSourcePlatformBinding.sampleDemo();
@@ -107,6 +121,7 @@ class LoadRuntimeDashboardUseCase {
       ledgerSnapshotStore: ledgerSnapshotStore,
       localManualSubscriptionStore: localManualSubscriptionStore,
       localRenewalReminderStore: localRenewalReminderStore,
+      serviceEvidenceBucketStore: serviceEvidenceBucketStore,
       loadMode: loadMode,
       clock: clock ?? DateTime.now,
       applyReviewItemActionsUseCase: applyReviewItemActionsUseCase ??
@@ -138,7 +153,12 @@ class LoadRuntimeDashboardUseCase {
                 binding.unavailableDeviceSmsGateway,
           ),
       ingestionUseCase: ingestionUseCase ??
-          LocalIngestionFlowUseCase(ledgerRepository: repository),
+          LocalIngestionFlowUseCase(
+            ledgerRepository: repository,
+            serviceEvidenceBucketRepository: evidenceBucketRepository,
+            decisionExecutionMode: decisionExecutionMode,
+          ),
+      serviceEvidenceBucketRepository: evidenceBucketRepository,
       projectDashboardUseCase: projectDashboardUseCase ??
           ProjectDashboardUseCase(
             ledgerRepository: repository,
@@ -149,6 +169,7 @@ class LoadRuntimeDashboardUseCase {
             ledgerRepository: repository,
             dashboardProjection: projection,
           ),
+      decisionExecutionMode: decisionExecutionMode,
     );
   }
 
@@ -165,6 +186,7 @@ class LoadRuntimeDashboardUseCase {
     LocalManualSubscriptionStore? localManualSubscriptionStore,
     LocalRenewalReminderStore? localRenewalReminderStore,
     LocalServicePresentationOverlayStore? localServicePresentationOverlayStore,
+    ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
     RuntimeLedgerLoadMode loadMode =
         RuntimeLedgerLoadMode.restorePersistedOrRefreshSource,
     ApplyReviewItemActionsUseCase? applyReviewItemActionsUseCase,
@@ -172,6 +194,8 @@ class LoadRuntimeDashboardUseCase {
     ApplyLocalServicePresentationOverlaysUseCase?
         applyLocalServicePresentationOverlaysUseCase,
     LocalIngestionFlowUseCase? ingestionUseCase,
+    DecisionExecutionMode decisionExecutionMode =
+        DecisionExecutionMode.bridgeToLedger,
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
@@ -196,12 +220,15 @@ class LoadRuntimeDashboardUseCase {
       localServicePresentationOverlayStore:
           localServicePresentationOverlayStore ??
               JsonFileLocalServicePresentationOverlayStore.applicationSupport(),
+      serviceEvidenceBucketStore: serviceEvidenceBucketStore ??
+          JsonFileServiceEvidenceBucketStore.applicationSupport(),
       loadMode: loadMode,
       applyReviewItemActionsUseCase: applyReviewItemActionsUseCase,
       applyLocalControlOverlaysUseCase: applyLocalControlOverlaysUseCase,
       applyLocalServicePresentationOverlaysUseCase:
           applyLocalServicePresentationOverlaysUseCase,
       ingestionUseCase: ingestionUseCase,
+      decisionExecutionMode: decisionExecutionMode,
       projectDashboardUseCase: projectDashboardUseCase,
       projectReviewQueueUseCase: projectReviewQueueUseCase,
       clock: clock,
@@ -217,12 +244,15 @@ class LoadRuntimeDashboardUseCase {
     LocalManualSubscriptionStore? localManualSubscriptionStore,
     LocalRenewalReminderStore? localRenewalReminderStore,
     LocalServicePresentationOverlayStore? localServicePresentationOverlayStore,
+    ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
     RuntimeLedgerLoadMode loadMode =
         RuntimeLedgerLoadMode.restorePersistedOrRefreshSource,
     ApplyReviewItemActionsUseCase? applyReviewItemActionsUseCase,
     ApplyLocalServicePresentationOverlaysUseCase?
         applyLocalServicePresentationOverlaysUseCase,
     LocalIngestionFlowUseCase? ingestionUseCase,
+    DecisionExecutionMode decisionExecutionMode =
+        DecisionExecutionMode.bridgeToLedger,
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
@@ -238,11 +268,13 @@ class LoadRuntimeDashboardUseCase {
       localRenewalReminderStore: localRenewalReminderStore,
       localServicePresentationOverlayStore:
           localServicePresentationOverlayStore,
+      serviceEvidenceBucketStore: serviceEvidenceBucketStore,
       loadMode: loadMode,
       applyReviewItemActionsUseCase: applyReviewItemActionsUseCase,
       applyLocalServicePresentationOverlaysUseCase:
           applyLocalServicePresentationOverlaysUseCase,
       ingestionUseCase: ingestionUseCase,
+      decisionExecutionMode: decisionExecutionMode,
       projectDashboardUseCase: projectDashboardUseCase,
       projectReviewQueueUseCase: projectReviewQueueUseCase,
       clock: clock,
@@ -258,12 +290,15 @@ class LoadRuntimeDashboardUseCase {
     LocalManualSubscriptionStore? localManualSubscriptionStore,
     LocalRenewalReminderStore? localRenewalReminderStore,
     LocalServicePresentationOverlayStore? localServicePresentationOverlayStore,
+    ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
     RuntimeLedgerLoadMode loadMode =
         RuntimeLedgerLoadMode.restorePersistedOrRefreshSource,
     ApplyReviewItemActionsUseCase? applyReviewItemActionsUseCase,
     ApplyLocalServicePresentationOverlaysUseCase?
         applyLocalServicePresentationOverlaysUseCase,
     LocalIngestionFlowUseCase? ingestionUseCase,
+    DecisionExecutionMode decisionExecutionMode =
+        DecisionExecutionMode.bridgeToLedger,
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
@@ -282,11 +317,13 @@ class LoadRuntimeDashboardUseCase {
       localRenewalReminderStore: localRenewalReminderStore,
       localServicePresentationOverlayStore:
           localServicePresentationOverlayStore,
+      serviceEvidenceBucketStore: serviceEvidenceBucketStore,
       loadMode: loadMode,
       applyReviewItemActionsUseCase: applyReviewItemActionsUseCase,
       applyLocalServicePresentationOverlaysUseCase:
           applyLocalServicePresentationOverlaysUseCase,
       ingestionUseCase: ingestionUseCase,
+      decisionExecutionMode: decisionExecutionMode,
       projectDashboardUseCase: projectDashboardUseCase,
       projectReviewQueueUseCase: projectReviewQueueUseCase,
       clock: clock,
@@ -298,6 +335,7 @@ class LoadRuntimeDashboardUseCase {
     required LedgerSnapshotStore? ledgerSnapshotStore,
     required LocalManualSubscriptionStore? localManualSubscriptionStore,
     required LocalRenewalReminderStore? localRenewalReminderStore,
+    required ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
     required RuntimeLedgerLoadMode loadMode,
     required DateTime Function() clock,
     required ApplyReviewItemActionsUseCase? applyReviewItemActionsUseCase,
@@ -306,12 +344,15 @@ class LoadRuntimeDashboardUseCase {
         applyLocalServicePresentationOverlaysUseCase,
     required SelectLocalMessageSourceUseCase selectLocalMessageSourceUseCase,
     required LocalIngestionFlowUseCase ingestionUseCase,
+    required ServiceEvidenceBucketRepository serviceEvidenceBucketRepository,
     required ProjectDashboardUseCase projectDashboardUseCase,
     required ProjectReviewQueueUseCase projectReviewQueueUseCase,
+    required DecisionExecutionMode decisionExecutionMode,
   })  : _ledgerRepository = ledgerRepository,
         _ledgerSnapshotStore = ledgerSnapshotStore,
         _localManualSubscriptionStore = localManualSubscriptionStore,
         _localRenewalReminderStore = localRenewalReminderStore,
+        _serviceEvidenceBucketStore = serviceEvidenceBucketStore,
         _loadMode = loadMode,
         _clock = clock,
         _applyReviewItemActionsUseCase = applyReviewItemActionsUseCase,
@@ -320,13 +361,16 @@ class LoadRuntimeDashboardUseCase {
             applyLocalServicePresentationOverlaysUseCase,
         _selectLocalMessageSourceUseCase = selectLocalMessageSourceUseCase,
         _ingestionUseCase = ingestionUseCase,
+        _serviceEvidenceBucketRepository = serviceEvidenceBucketRepository,
         _projectDashboardUseCase = projectDashboardUseCase,
-        _projectReviewQueueUseCase = projectReviewQueueUseCase;
+        _projectReviewQueueUseCase = projectReviewQueueUseCase,
+        _decisionExecutionMode = decisionExecutionMode;
 
   final InMemoryLedgerRepository _ledgerRepository;
   final LedgerSnapshotStore? _ledgerSnapshotStore;
   final LocalManualSubscriptionStore? _localManualSubscriptionStore;
   final LocalRenewalReminderStore? _localRenewalReminderStore;
+  final ServiceEvidenceBucketStore? _serviceEvidenceBucketStore;
   final RuntimeLedgerLoadMode _loadMode;
   final DateTime Function() _clock;
   final ApplyReviewItemActionsUseCase? _applyReviewItemActionsUseCase;
@@ -335,8 +379,10 @@ class LoadRuntimeDashboardUseCase {
       _applyLocalServicePresentationOverlaysUseCase;
   final SelectLocalMessageSourceUseCase _selectLocalMessageSourceUseCase;
   final LocalIngestionFlowUseCase _ingestionUseCase;
+  final ServiceEvidenceBucketRepository _serviceEvidenceBucketRepository;
   final ProjectDashboardUseCase _projectDashboardUseCase;
   final ProjectReviewQueueUseCase _projectReviewQueueUseCase;
+  final DecisionExecutionMode _decisionExecutionMode;
 
   Future<RuntimeDashboardSnapshot> execute() async {
     debugPrint('LoadRuntimeDashboardUseCase: execute starting...');
@@ -351,6 +397,7 @@ class LoadRuntimeDashboardUseCase {
 
     if (_loadMode == RuntimeLedgerLoadMode.restorePersistedOrRefreshSource &&
         persistedRecord != null) {
+      await _restorePersistedEvidenceBuckets();
       return _restorePersistedSnapshot(
         messageSourceSelection,
         persistedRecord: persistedRecord,
@@ -362,6 +409,7 @@ class LoadRuntimeDashboardUseCase {
         messageSourceSelection.resolution ==
             LocalMessageSourceResolution.deviceLocalStub &&
         persistedRecord != null) {
+      await _restorePersistedEvidenceBuckets();
       return _restorePersistedSnapshot(
         messageSourceSelection,
         persistedRecord: persistedRecord,
@@ -371,15 +419,34 @@ class LoadRuntimeDashboardUseCase {
 
     try {
       await _ledgerRepository.replaceAll(const <ServiceLedgerEntry>[]);
-      final messages = await messageSourceSelection.messageSource.loadMessages();
-      final ingestionResult = await _ingestionUseCase.execute(messages);
+      await _serviceEvidenceBucketRepository.clear();
+      final messageSource = messageSourceSelection.messageSource;
+      final ({List<SubscriptionEvent> events, List<ServiceLedgerEntry> ledgerEntries})
+          ingestionResult;
+      if (messageSource is CanonicalInputSource) {
+        ingestionResult = await _executeCanonicalIngestion(
+          messageSource as CanonicalInputSource,
+        );
+      } else {
+        ingestionResult = await _ingestionUseCase.execute(
+          await messageSource.loadMessages(),
+        );
+      }
       await _ledgerRepository.replaceAll(ingestionResult.ledgerEntries);
+      await _serviceEvidenceBucketStore?.save(
+        await _serviceEvidenceBucketRepository.list(),
+      );
       await snapshotStore?.saveRecord(
         LedgerSnapshotRecord(
           entries: ingestionResult.ledgerEntries,
           metadata: LedgerSnapshotMetadata(
             sourceKind: _sourceKindForSelection(messageSourceSelection),
             refreshedAt: now,
+            decisionExecutionMode: _decisionExecutionMode,
+            shadowDifferenceCount:
+                _ingestionUseCase.lastShadowComparison?.driftCount,
+            shadowComparedAt:
+                _ingestionUseCase.lastShadowComparison?.comparedAt,
           ),
         ),
       );
@@ -392,10 +459,16 @@ class LoadRuntimeDashboardUseCase {
           sourceKind: _sourceKindForSelection(messageSourceSelection),
           recordedAt: now,
           refreshedAt: now,
+          decisionExecutionMode: _decisionExecutionMode,
+          shadowDifferenceCount:
+              _ingestionUseCase.lastShadowComparison?.driftCount,
+          shadowComparedAt:
+              _ingestionUseCase.lastShadowComparison?.comparedAt,
         ),
       );
     } catch (_) {
       if (persistedRecord != null) {
+        await _restorePersistedEvidenceBuckets();
         return _restorePersistedSnapshot(
           messageSourceSelection,
           persistedRecord: persistedRecord,
@@ -421,6 +494,9 @@ class LoadRuntimeDashboardUseCase {
             RuntimeSnapshotSourceKind.unknown,
         recordedAt: recordedAt,
         refreshedAt: persistedRecord.metadata?.refreshedAt,
+        decisionExecutionMode: persistedRecord.metadata?.decisionExecutionMode,
+        shadowDifferenceCount: persistedRecord.metadata?.shadowDifferenceCount,
+        shadowComparedAt: persistedRecord.metadata?.shadowComparedAt,
       ),
     );
   }
@@ -492,6 +568,7 @@ class LoadRuntimeDashboardUseCase {
           appliedLocalServicePresentation.servicePresentationStates,
       localRenewalReminderPreferences:
           await _loadLocalRenewalReminderPreferences(),
+      shadowComparison: _ingestionUseCase.lastShadowComparison,
     );
   }
 
@@ -530,4 +607,28 @@ class LoadRuntimeDashboardUseCase {
         return RuntimeSnapshotSourceKind.safeLocalFallback;
     }
   }
+
+  Future<void> _restorePersistedEvidenceBuckets() async {
+    final store = _serviceEvidenceBucketStore;
+    if (store == null) {
+      await _serviceEvidenceBucketRepository.clear();
+      return;
+    }
+
+    final persistedBuckets = await store.load();
+    await _serviceEvidenceBucketRepository.replaceAll(persistedBuckets);
+  }
+
+  Future<({List<SubscriptionEvent> events, List<ServiceLedgerEntry> ledgerEntries})>
+      _executeCanonicalIngestion(
+    CanonicalInputSource messageSource,
+  ) async {
+    final canonicalInputs = await messageSource.loadCanonicalInputs();
+    return _ingestionUseCase.executeCanonicalInputs(canonicalInputs);
+  }
 }
+
+
+
+
+

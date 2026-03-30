@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element_parameter
 part of 'dashboard_shell.dart';
 
 class _DashboardLoadingState extends StatelessWidget {
@@ -502,21 +503,19 @@ class _TotalsSummaryCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _CompactMetricTile extends StatelessWidget {
   const _CompactMetricTile({
-    super.key,
     required this.label,
     required this.value,
     required this.caption,
     required this.accent,
-    this.valueKey,
   });
 
   final String label;
   final String value;
   final String caption;
   final Color accent;
-  final Key? valueKey;
 
   @override
   Widget build(BuildContext context) {
@@ -546,7 +545,6 @@ class _CompactMetricTile extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 value,
-                key: valueKey,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -1164,13 +1162,15 @@ class _HomeRenewalsZoneCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               Text(
                 'Coming up',
                 style: type.sectionTitle.copyWith(fontWeight: FontWeight.w800),
               ),
-              const SizedBox(width: 8),
               DashboardBadge(
                 label: dueSoon.hasItems
                     ? (dueSoon.items.length == 1
@@ -1583,126 +1583,9 @@ class _HomeTrustRowCopy {
   final Color borderColor;
 }
 
-class _UpcomingRenewalsCard extends StatelessWidget {
-  const _UpcomingRenewalsCard({
-    required this.presentation,
-    required this.reminderItems,
-    required this.showReminderControls,
-    required this.onOpenReminderControls,
-    required this.reminderTargetsInFlight,
-  });
-
-  final DashboardUpcomingRenewalsPresentation presentation;
-  final List<DashboardRenewalReminderItemPresentation> reminderItems;
-  final bool showReminderControls;
-  final ValueChanged<DashboardRenewalReminderItemPresentation>
-      onOpenReminderControls;
-  final Set<String> reminderTargetsInFlight;
-
-  @override
-  Widget build(BuildContext context) {
-    final countLabel = presentation.hasItems
-        ? presentation.items.length == 1
-            ? '1 date'
-            : '${presentation.items.length} dates'
-        : null;
-
-    return Column(
-      key: const ValueKey<String>('upcoming-renewals-card'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        DashboardSectionFrame(
-          title: 'Upcoming renewals',
-          caption: presentation.summaryCopy,
-          countLabel: countLabel,
-          children: <Widget>[
-            if (!presentation.hasItems)
-              _EmptySectionText(
-                title: presentation.emptyTitle,
-                message: presentation.emptyMessage,
-                icon: Icons.event_repeat_outlined,
-              )
-            else
-              _InsetListGroup(
-                children: reminderItems
-                    .map(
-                      (item) => _ReminderRenewalItemTile(
-                        key: ValueKey<String>(
-                          'upcoming-renewal-item-${item.renewal.serviceTitle}',
-                        ),
-                        item: item,
-                        isBusy: reminderTargetsInFlight.contains(
-                          item.renewal.serviceKey,
-                        ),
-                        showReminderControls: showReminderControls,
-                        onOpenReminderControls:
-                            showReminderControls && item.canConfigureReminder
-                                ? () => onOpenReminderControls(item)
-                                : null,
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _DueSoonCard extends StatelessWidget {
-  const _DueSoonCard({
-    required this.presentation,
-  });
-
-  final DashboardDueSoonPresentation presentation;
-
-  @override
-  Widget build(BuildContext context) {
-    final countLabel = presentation.hasItems
-        ? presentation.items.length == 1
-            ? '1 renewal'
-            : '${presentation.items.length} renewals'
-        : null;
-
-    return Column(
-      key: const ValueKey<String>('due-soon-card'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        DashboardSectionFrame(
-          title: 'Due soon',
-          caption: presentation.summaryCopy,
-          countLabel: countLabel,
-          children: <Widget>[
-            if (!presentation.hasItems)
-              _EmptySectionText(
-                title: presentation.emptyTitle,
-                message: presentation.emptyMessage,
-                icon: Icons.schedule_outlined,
-              )
-            else
-              _InsetListGroup(
-                children: presentation.items
-                    .map(
-                      (item) => _RenewalItemTile(
-                        key: ValueKey<String>(
-                          'due-soon-item-${item.serviceTitle}',
-                        ),
-                        item: item,
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
+// ignore: unused_element
 class _RenewalItemTile extends StatelessWidget {
   const _RenewalItemTile({
-    super.key,
     required this.item,
   });
 
@@ -1747,18 +1630,16 @@ class _RenewalItemTile extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _ReminderRenewalItemTile extends StatelessWidget {
   const _ReminderRenewalItemTile({
-    super.key,
     required this.item,
     required this.isBusy,
-    this.showReminderControls = true,
     required this.onOpenReminderControls,
   });
 
   final DashboardRenewalReminderItemPresentation item;
   final bool isBusy;
-  final bool showReminderControls;
   final VoidCallback? onOpenReminderControls;
 
   @override
@@ -1806,7 +1687,7 @@ class _ReminderRenewalItemTile extends StatelessWidget {
                 ),
             ],
           ),
-          if (showReminderControls) ...<Widget>[
+          if (item.canConfigureReminder) ...<Widget>[
             const SizedBox(height: 6),
             TextButton.icon(
               key: ValueKey<String>(
@@ -1920,8 +1801,7 @@ class _SubscriptionInfoChip extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  key: valueKey,
-                  maxLines: 2,
+                    maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DashboardShellPalette.ink,
@@ -2609,6 +2489,7 @@ class _SyncProgressPresentation {
   final String description;
 }
 
+// ignore: unused_element
 class _SourceStatusCard extends StatelessWidget {
   const _SourceStatusCard({
     required this.status,
@@ -2933,6 +2814,7 @@ class _SourceStatusCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _ProductGuidancePanel extends StatelessWidget {
   const _ProductGuidancePanel({
     required this.completion,
@@ -3289,6 +3171,7 @@ class _SampleHomePreviewState {
     required this.highlights,
   });
 
+  // ignore: unused_element
   factory _SampleHomePreviewState.fromSnapshot(
     RuntimeDashboardSnapshot snapshot, {
     required DashboardTotalsSummaryPresentation totalsSummary,
@@ -3481,6 +3364,7 @@ class _SamplePreviewHighlightRow extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _ZeroConfirmedRescuePanel extends StatelessWidget {
   const _ZeroConfirmedRescuePanel({
     required this.completion,
@@ -3679,6 +3563,7 @@ class _ZeroConfirmedRescueState {
     required this.manualCount,
   });
 
+  // ignore: unused_element
   factory _ZeroConfirmedRescueState.fromSnapshot(
     RuntimeDashboardSnapshot snapshot, {
     required RuntimeLocalMessageSourceStatus sourceStatus,
@@ -4997,6 +4882,7 @@ class _OnboardingInfoRow extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _ReviewQueueSummaryCard extends StatelessWidget {
   const _ReviewQueueSummaryCard({
     required this.reviewCount,
@@ -5653,6 +5539,7 @@ class _ServiceViewMenuButton<T> extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _ServiceViewIconButton extends StatelessWidget {
   const _ServiceViewIconButton({
     super.key,
@@ -5952,6 +5839,7 @@ class _ManualLedgerNote extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _TotalsExplanationSheet extends StatelessWidget {
   const _TotalsExplanationSheet({
     required this.presentation,
@@ -6096,6 +5984,8 @@ class _SettingsReminderManagerSheet extends StatelessWidget {
     final activeCount =
         reminderItems.where((item) => item.selectedPreset != null).length;
     final type = context.dashboardType;
+    final stackedHeader = MediaQuery.sizeOf(context).width < 340 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.1;
 
     return SafeArea(
       top: false,
@@ -6121,40 +6011,72 @@ class _SettingsReminderManagerSheet extends StatelessWidget {
                   foregroundColor: DashboardShellPalette.softInk,
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            'Renewal reminders',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            activeCount == 1
-                                ? '1 reminder is active on this phone.'
-                                : activeCount > 1
-                                    ? '$activeCount reminders are active on this phone.'
-                                    : 'Reminders stay on this phone.',
-                            style: type.supporting.copyWith(
-                              color: DashboardShellPalette.mutedInk,
-                              height: 1.28,
-                            ),
-                          ),
-                        ],
+                if (stackedHeader)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _SheetCloseButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
                       ),
-                    ),
-                    _SheetCloseButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
+                      Text(
+                        'Renewal reminders',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        activeCount == 1
+                            ? '1 reminder is active on this phone.'
+                            : activeCount > 1
+                                ? '$activeCount reminders are active on this phone.'
+                                : 'Reminders stay on this phone.',
+                        style: type.supporting.copyWith(
+                          color: DashboardShellPalette.mutedInk,
+                          height: 1.28,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              'Renewal reminders',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              activeCount == 1
+                                  ? '1 reminder is active on this phone.'
+                                  : activeCount > 1
+                                      ? '$activeCount reminders are active on this phone.'
+                                      : 'Reminders stay on this phone.',
+                              style: type.supporting.copyWith(
+                                color: DashboardShellPalette.mutedInk,
+                                height: 1.28,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _SheetCloseButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 14),
                 DashboardPanel(
                   backgroundColor: DashboardShellPalette.paper,
@@ -6450,6 +6372,8 @@ class _ManualSubscriptionRow extends StatelessWidget {
         : (entry.billingCycle == ManualSubscriptionBillingCycle.monthly
             ? 'Monthly plan'
             : 'Yearly plan');
+    final stackedHeader = MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.12;
 
     return Material(
       color: Colors.transparent,
@@ -6490,23 +6414,41 @@ class _ManualSubscriptionRow extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Expanded(
-                                    child: Text(
+                              if (stackedHeader)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Text(
                                       entry.serviceName,
-                                      maxLines: 1,
+                                      maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: type.rowTitle.copyWith(
                                         fontWeight: FontWeight.w800,
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const _ManualLedgerNote(label: 'Added by you'),
-                                ],
-                              ),
+                                    const SizedBox(height: 8),
+                                    const _ManualLedgerNote(label: 'Added by you'),
+                                  ],
+                                )
+                              else
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: Text(
+                                        entry.serviceName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: type.rowTitle.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const _ManualLedgerNote(label: 'Added by you'),
+                                  ],
+                                ),
+                              const SizedBox(height: 8),
                               const SizedBox(height: 8),
                               _SubscriptionMetaPanel(
                                 amountValueKey: ValueKey<String>(
@@ -8137,6 +8079,7 @@ class _LocalServiceControlsSheetState
   }
 }
 
+// ignore: unused_element
 class _PassportCard extends StatelessWidget {
   const _PassportCard({
     required this.title,
@@ -8542,6 +8485,8 @@ class _ReviewDecisionPassportCard extends StatelessWidget {
     final actionHelper = descriptor.canConfirm
         ? 'Only confirmed subscriptions move into your list. If it is included access, keep it separate.'
         : 'Add it yourself if you recognize it, or mark it as not yours.';
+    final stackedHeader = MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.08;
 
     return Semantics(
       container: true,
@@ -8554,7 +8499,9 @@ class _ReviewDecisionPassportCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: <Widget>[
                 DashboardBadge(
                   label: stateLabel,
@@ -8564,60 +8511,110 @@ class _ReviewDecisionPassportCard extends StatelessWidget {
                   backgroundColor: DashboardShellPalette.nestedPaper,
                   foregroundColor: DashboardShellPalette.softInk,
                 ),
-                if (isBusy) ...<Widget>[
-                  const SizedBox(width: 8),
+                if (isBusy)
                   const DashboardBadge(
                     label: 'Saving',
                     icon: Icons.more_horiz_rounded,
                     backgroundColor: DashboardShellPalette.registerPaper,
                     foregroundColor: DashboardShellPalette.accent,
                   ),
-                ],
               ],
             ),
             const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                DashboardServiceAvatar(
-                  key: ValueKey<String>('passport-avatar-${item.title}'),
-                  monogram: identity.monogram,
-                  foregroundColor: identity.foreground,
-                  backgroundColor: identity.background,
-                  borderColor: identity.border,
-                  serviceKey: item.serviceKey.value,
-                  size: 44,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
+            if (stackedHeader)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: titleStyle,
+                      DashboardServiceAvatar(
+                        key: ValueKey<String>('passport-avatar-${item.title}'),
+                        monogram: identity.monogram,
+                        foregroundColor: identity.foreground,
+                        backgroundColor: identity.background,
+                        borderColor: identity.border,
+                        serviceKey: item.serviceKey.value,
+                        size: 44,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        presentation.reasonLine,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: reasonStyle,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              item.title,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: titleStyle,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              presentation.reasonLine,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: reasonStyle,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                _ReviewDetailsButton(
-                  targetKey: descriptor.targetKey,
-                  title: item.title,
-                  isBusy: isBusy,
-                  onPressed: onOpenDetails,
-                ),
-              ],
-            ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _ReviewDetailsButton(
+                      targetKey: descriptor.targetKey,
+                      title: item.title,
+                      isBusy: isBusy,
+                      onPressed: onOpenDetails,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  DashboardServiceAvatar(
+                    key: ValueKey<String>('passport-avatar-${item.title}'),
+                    monogram: identity.monogram,
+                    foregroundColor: identity.foreground,
+                    backgroundColor: identity.background,
+                    borderColor: identity.border,
+                    serviceKey: item.serviceKey.value,
+                    size: 44,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          item.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: titleStyle,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          presentation.reasonLine,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: reasonStyle,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _ReviewDetailsButton(
+                    targetKey: descriptor.targetKey,
+                    title: item.title,
+                    isBusy: isBusy,
+                    onPressed: onOpenDetails,
+                  ),
+                ],
+              ),
             const SizedBox(height: 14),
             _ReviewDecisionActionsBlock(
               framed: true,
@@ -9187,6 +9184,7 @@ class _ReviewEvidenceBullet extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _ReviewActionOverflowButton extends StatelessWidget {
   const _ReviewActionOverflowButton({
     required this.title,
@@ -9759,6 +9757,7 @@ String _reviewCardSemantics(
   return '${parts.join('. ')}.';
 }
 
+// ignore: unused_element
 String _manualSubscriptionSubtitle(ManualSubscriptionEntry entry) {
   final parts = <String>[
     entry.billingCycle == ManualSubscriptionBillingCycle.monthly
@@ -9778,6 +9777,7 @@ String _manualSubscriptionSubtitle(ManualSubscriptionEntry entry) {
   return parts.join(' \u00B7 ');
 }
 
+// ignore: unused_element
 String _manualSubscriptionSemanticsSummary(ManualSubscriptionEntry entry) {
   final parts = <String>[
     entry.billingCycle == ManualSubscriptionBillingCycle.monthly
@@ -9878,3 +9878,13 @@ String _monogramForTitle(String title) {
   return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
       .toUpperCase();
 }
+
+
+
+
+
+
+
+
+
+

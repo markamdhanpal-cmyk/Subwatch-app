@@ -1,3 +1,4 @@
+import '../knowledge/merchant_knowledge_base.dart';
 import '../parsing/indian_amount_parser.dart';
 
 class RecurringBillingHeuristics {
@@ -63,14 +64,14 @@ class RecurringBillingHeuristics {
     caseSensitive: false,
   );
 
-  static final RegExp directRecurringMerchantPattern = RegExp(
-    r'\b(netflix(?:\.com)?|spotify|youtube\s*premium|youtubepremium|google\s*one|googleone|apple music|adobe(?: systems)?|jiohotstar|hotstar|disney\+?\s*hotstar|amazon prime|crunchyroll|swiggy\s*one|zomato\s*gold|sony\s*liv|sonyliv|zee5|wynk|gaana)\b',
-    caseSensitive: false,
+  static final RegExp directRecurringMerchantPattern =
+      MerchantKnowledgeBase.aliasPatternForTypeLabels(
+    <String>['direct_recurring'],
   );
 
-  static final RegExp appStoreMerchantPattern = RegExp(
-    r'\b(google play|googleplay|apple(?:\.com\/bill| services| bill)|itunes|app store)\b',
-    caseSensitive: false,
+  static final RegExp appStoreMerchantPattern =
+      MerchantKnowledgeBase.aliasPatternForTypeLabels(
+    <String>['app_store'],
   );
 
   static final RegExp merchantRoutingPattern = RegExp(

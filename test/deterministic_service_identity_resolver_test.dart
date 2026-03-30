@@ -1,6 +1,8 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
 import 'package:sub_killer/domain/entities/parsed_signal.dart';
+import 'package:sub_killer/domain/enums/merchant_resolution_confidence.dart';
+import 'package:sub_killer/domain/enums/merchant_resolution_method.dart';
 import 'package:sub_killer/domain/enums/subscription_event_type.dart';
 import 'package:sub_killer/domain/resolvers/deterministic_service_identity_resolver.dart';
 
@@ -28,13 +30,15 @@ void main() {
     }
 
     test('resolves Netflix to a stable key', () {
-      final key = resolver.resolve(
+      final resolution = resolver.resolveMerchant(
         message:
             message('Your Netflix subscription has been renewed for Rs 499.'),
         signal: signal(SubscriptionEventType.subscriptionBilled),
       );
 
-      expect(key.value, 'NETFLIX');
+      expect(resolution.resolvedServiceKey.value, 'NETFLIX');
+      expect(resolution.confidence, MerchantResolutionConfidence.high);
+      expect(resolution.resolutionMethod, MerchantResolutionMethod.exactAlias);
     });
 
     test('resolves YouTube Premium to a stable key', () {
@@ -92,14 +96,15 @@ void main() {
     });
 
     test('resolves JioHotstar bundle to a deterministic key', () {
-      final key = resolver.resolve(
+      final resolution = resolver.resolveMerchant(
         message: message(
           'Your 1-month JioHotstar subscription is now activated. Your recent recharge has unlocked this benefit.',
         ),
         signal: signal(SubscriptionEventType.bundleActivated),
       );
 
-      expect(key.value, 'JIOHOTSTAR');
+      expect(resolution.resolvedServiceKey.value, 'JIOHOTSTAR');
+      expect(resolution.resolutionMethod, MerchantResolutionMethod.exactAlias);
     });
 
     test('resolves Disney Hotstar card billing to JioHotstar', () {
@@ -136,13 +141,19 @@ void main() {
     });
 
     test('keeps weak generic message unresolved', () {
-      final key = resolver.resolve(
+      final resolution = resolver.resolveMerchant(
         message: message('Rs 100 debited for shopping.'),
         signal: signal(SubscriptionEventType.oneTimePayment),
       );
 
-      expect(key.value,
-          DeterministicServiceIdentityResolver.unresolvedServiceKey.value);
+      expect(
+        resolution.resolvedServiceKey.value,
+        DeterministicServiceIdentityResolver.unresolvedServiceKey.value,
+      );
+      expect(
+        resolution.resolutionMethod,
+        MerchantResolutionMethod.protectedUnresolved,
+      );
     });
 
     test('resolves Amazon Prime weak review message to a stable key', () {
@@ -168,14 +179,63 @@ void main() {
     });
 
     test('resolves Google Play recurring review message to a stable key', () {
-      final key = resolver.resolve(
+      final resolution = resolver.resolveMerchant(
         message: message(
           'Recurring payment of Rs 159 processed at Google Play on your card XX9123.',
         ),
         signal: signal(SubscriptionEventType.unknownReview),
       );
 
-      expect(key.value, 'GOOGLE_PLAY');
+      expect(resolution.resolvedServiceKey.value, 'GOOGLE_PLAY');
+      expect(resolution.confidence, MerchantResolutionConfidence.high);
+    });
+
+    test('resolves split-token messy alias through token matching', () {
+      final resolution = resolver.resolveMerchant(
+        message: message(
+          'Your You Tube Premium monthly membership renewed successfully for Rs 149.',
+        ),
+        signal: signal(SubscriptionEventType.subscriptionBilled),
+      );
+
+      expect(resolution.resolvedServiceKey.value, 'YOUTUBE_PREMIUM');
+      expect(resolution.resolutionMethod, MerchantResolutionMethod.tokenAlias);
+      expect(resolution.confidence, MerchantResolutionConfidence.medium);
+    });
+
+    test('resolves typo variant through fuzzy alias matching', () {
+      final resolution = resolver.resolveMerchant(
+        message: message(
+          'SBI Card XX4321 used for Rs 119 at SPOTFY on 17 Mar.',
+        ),
+        signal: signal(SubscriptionEventType.subscriptionBilled),
+      );
+
+      expect(resolution.resolvedServiceKey.value, 'SPOTIFY');
+      expect(resolution.resolutionMethod, MerchantResolutionMethod.fuzzyAlias);
+      expect(resolution.confidence, MerchantResolutionConfidence.medium);
+      expect(resolution.matchedTerms, contains('spotfy'));
+    });
+
+    test('keeps ambiguous apple-only reference unresolved', () {
+      final resolution = resolver.resolveMerchant(
+        message: message(
+          'Recurring payment of Rs 159 processed at APPLE on your card XX9123.',
+        ),
+        signal: signal(SubscriptionEventType.unknownReview),
+      );
+
+      expect(
+        resolution.resolvedServiceKey.value,
+        DeterministicServiceIdentityResolver.unresolvedServiceKey.value,
+      );
+      expect(
+        resolution.resolutionMethod,
+        anyOf(
+          MerchantResolutionMethod.ambiguousUnresolved,
+          MerchantResolutionMethod.noMatch,
+        ),
+      );
     });
 
     test('keeps generic weak subscription reminder unresolved', () {
@@ -227,14 +287,19 @@ void main() {
     test(
         'keeps a human-credible extracted plan name when no explicit hint exists',
         () {
-      final key = resolver.resolve(
+      final resolution = resolver.resolveMerchant(
         message: message(
           'Your Music Plus plan renewed successfully. Rs 149 charged.',
         ),
         signal: signal(SubscriptionEventType.subscriptionBilled),
       );
 
-      expect(key.value, 'MUSIC_PLUS');
+      expect(resolution.resolvedServiceKey.value, 'MUSIC_PLUS');
+      expect(
+        resolution.resolutionMethod,
+        MerchantResolutionMethod.extractedCandidate,
+      );
+      expect(resolution.confidence, MerchantResolutionConfidence.low);
     });
 
     test('keeps strong billed subscription identity unchanged', () {

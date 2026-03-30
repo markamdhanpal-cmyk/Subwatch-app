@@ -1,52 +1,17 @@
 import '../contracts/service_identity_resolver.dart';
+import '../entities/merchant_resolution.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
+import '../enums/merchant_resolution_confidence.dart';
+import '../enums/merchant_resolution_method.dart';
 import '../enums/subscription_event_type.dart';
+import '../knowledge/merchant_knowledge_base.dart';
 import '../value_objects/service_key.dart';
 
 class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
   const DeterministicServiceIdentityResolver();
 
   static const ServiceKey unresolvedServiceKey = ServiceKey('UNRESOLVED');
-
-  static final List<_ServiceHint> _serviceHints = <_ServiceHint>[
-    _ServiceHint(
-        'AMAZON_PRIME', RegExp(r'\bamazon prime\b', caseSensitive: false)),
-    _ServiceHint('YOUTUBE_PREMIUM',
-        RegExp(r'\byoutube ?premium\b', caseSensitive: false)),
-    _ServiceHint(
-        'GOOGLE_ONE', RegExp(r'\bgoogle ?one\b', caseSensitive: false)),
-    _ServiceHint(
-      'GOOGLE_GEMINI_PRO',
-      RegExp(r'\bgoogle gemini pro\b', caseSensitive: false),
-    ),
-    _ServiceHint(
-        'GOOGLE_PLAY', RegExp(r'\bgoogle ?play\b', caseSensitive: false)),
-    _ServiceHint(
-        'ADOBE_SYSTEMS', RegExp(r'\badobe systems\b', caseSensitive: false)),
-    _ServiceHint('ADOBE_SYSTEMS', RegExp(r'\badobe\b', caseSensitive: false)),
-    _ServiceHint(
-        'APPLE_MUSIC', RegExp(r'\bapple music\b', caseSensitive: false)),
-    _ServiceHint(
-        'APPLE_SERVICES',
-        RegExp(r'\bapple(?:\.com\/bill| services| bill)\b',
-            caseSensitive: false)),
-    _ServiceHint('SPOTIFY', RegExp(r'\bspotify\b', caseSensitive: false)),
-    _ServiceHint('JIOHOTSTAR', RegExp(r'\bjiohotstar\b', caseSensitive: false)),
-    _ServiceHint('JIOHOTSTAR',
-        RegExp(r'\b(?:disney\+?\s*)?hotstar\b', caseSensitive: false)),
-    _ServiceHint('NETFLIX', RegExp(r'\bnetflix\b', caseSensitive: false)),
-    _ServiceHint(
-        'CRUNCHYROLL', RegExp(r'\bcrunchyroll\b', caseSensitive: false)),
-    _ServiceHint(
-        'SWIGGY_ONE', RegExp(r'\bswiggy ?one\b', caseSensitive: false)),
-    _ServiceHint(
-        'ZOMATO_GOLD', RegExp(r'\bzomato ?gold\b', caseSensitive: false)),
-    _ServiceHint('SONYLIV', RegExp(r'\bsony ?liv\b', caseSensitive: false)),
-    _ServiceHint('ZEE5', RegExp(r'\bzee5\b', caseSensitive: false)),
-    _ServiceHint('WYNK', RegExp(r'\bwynk\b', caseSensitive: false)),
-    _ServiceHint('GAANA', RegExp(r'\bgaana\b', caseSensitive: false)),
-  ];
 
   static final RegExp _providerPattern = RegExp(
     r'\b(jio|airtel|vi)\b',
@@ -118,67 +83,225 @@ class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
   };
 
   @override
-  ServiceKey resolve({
+  MerchantResolution resolveMerchant({
     required MessageRecord message,
     required ParsedSignal signal,
   }) {
     if (signal.eventType == SubscriptionEventType.ignore ||
         signal.eventType == SubscriptionEventType.oneTimePayment) {
-      return unresolvedServiceKey;
+      return MerchantResolution(
+        resolvedServiceKey: unresolvedServiceKey,
+        confidence: MerchantResolutionConfidence.none,
+        resolutionMethod: MerchantResolutionMethod.protectedUnresolved,
+        matchedTerms: <String>[signal.eventType.name],
+      );
     }
 
-    final explicitHint = _matchExplicitHint(message.body);
-    if (explicitHint != null) {
-      return explicitHint;
+    final exactAliasResolution = _matchExactAlias(
+      message.body,
+      allowWeakReview: signal.eventType != SubscriptionEventType.unknownReview,
+    );
+    if (exactAliasResolution != null) {
+      return exactAliasResolution;
+    }
+
+    final tokenAliasResolution = _matchTokenAlias(
+      message.body,
+      allowWeakReview: signal.eventType != SubscriptionEventType.unknownReview,
+    );
+    if (tokenAliasResolution != null) {
+      return tokenAliasResolution;
+    }
+
+    final fuzzyAliasResolution = _matchFuzzyAlias(
+      message.body,
+      allowWeakReview: signal.eventType != SubscriptionEventType.unknownReview,
+    );
+    if (fuzzyAliasResolution != null) {
+      return fuzzyAliasResolution;
     }
 
     if (signal.eventType == SubscriptionEventType.unknownReview) {
-      return unresolvedServiceKey;
+      return MerchantResolution(
+        resolvedServiceKey: unresolvedServiceKey,
+        confidence: MerchantResolutionConfidence.none,
+        resolutionMethod: MerchantResolutionMethod.noMatch,
+      );
     }
 
-    final extractedCandidate = _extractCandidateKey(message.body);
-    if (extractedCandidate != null) {
-      return extractedCandidate;
+    final extractedCandidateResolution = _extractCandidateResolution(message.body);
+    if (extractedCandidateResolution != null) {
+      return extractedCandidateResolution;
     }
 
     if (signal.eventType == SubscriptionEventType.bundleActivated) {
       final providerFallback = _providerFallback(message.body);
       if (providerFallback != null) {
-        return providerFallback;
+        return MerchantResolution(
+          resolvedServiceKey: providerFallback,
+          confidence: MerchantResolutionConfidence.medium,
+          resolutionMethod: MerchantResolutionMethod.providerBundleFallback,
+          matchedTerms: <String>[providerFallback.displayName.toLowerCase()],
+        );
       }
     }
 
-    return unresolvedServiceKey;
+    return MerchantResolution(
+      resolvedServiceKey: unresolvedServiceKey,
+      confidence: MerchantResolutionConfidence.none,
+      resolutionMethod: MerchantResolutionMethod.noMatch,
+    );
   }
 
-  ServiceKey? _matchExplicitHint(String body) {
-    for (final hint in _serviceHints) {
-      if (hint.pattern.hasMatch(body)) {
-        return ServiceKey(hint.key);
+  @override
+  ServiceKey resolve({
+    required MessageRecord message,
+    required ParsedSignal signal,
+  }) {
+    return resolveMerchant(message: message, signal: signal).resolvedServiceKey;
+  }
+
+  MerchantResolution? _matchExactAlias(
+    String body, {
+    required bool allowWeakReview,
+  }) {
+    for (final candidate in MerchantKnowledgeBase.aliasCandidates(
+      allowWeakReview: allowWeakReview,
+    )) {
+      if (!candidate.pattern.hasMatch(body)) {
+        continue;
       }
+
+      return MerchantResolution(
+        resolvedServiceKey: ServiceKey(candidate.entry.serviceKey),
+        confidence: MerchantResolutionConfidence.high,
+        resolutionMethod: MerchantResolutionMethod.exactAlias,
+        matchedTerms: <String>[candidate.alias],
+      );
     }
 
     return null;
   }
 
-  ServiceKey? _extractCandidateKey(String body) {
-    for (final pattern in _candidatePatterns) {
-      final match = pattern.firstMatch(body);
-      if (match == null) {
+  MerchantResolution? _matchTokenAlias(
+    String body, {
+    required bool allowWeakReview,
+  }) {
+    final bodyTokens = MerchantKnowledgeBase.tokenizeLookupText(body);
+    if (bodyTokens.isEmpty) {
+      return null;
+    }
+
+    for (final candidate in MerchantKnowledgeBase.aliasCandidates(
+      allowWeakReview: allowWeakReview,
+    )) {
+      if (!_matchesAliasTokens(
+        bodyTokens: bodyTokens,
+        aliasTokens: candidate.aliasTokens,
+        normalizedAlias: candidate.normalizedAlias,
+      )) {
         continue;
       }
 
-      final candidate = match.group(1);
-      if (candidate == null) {
+      return MerchantResolution(
+        resolvedServiceKey: ServiceKey(candidate.entry.serviceKey),
+        confidence: MerchantResolutionConfidence.medium,
+        resolutionMethod: MerchantResolutionMethod.tokenAlias,
+        matchedTerms: List<String>.unmodifiable(candidate.aliasTokens),
+      );
+    }
+
+    return null;
+  }
+
+  MerchantResolution? _matchFuzzyAlias(
+    String body, {
+    required bool allowWeakReview,
+  }) {
+    final fuzzyCandidates = _candidateTexts(body);
+    if (fuzzyCandidates.isEmpty) {
+      return null;
+    }
+
+    _FuzzyResolutionMatch? bestMatch;
+    _FuzzyResolutionMatch? secondBestMatch;
+    for (final candidateText in fuzzyCandidates) {
+      final normalizedCandidate =
+          MerchantKnowledgeBase.normalizeLookupText(candidateText);
+      if (normalizedCandidate.length < 5) {
         continue;
       }
 
+      for (final aliasCandidate in MerchantKnowledgeBase.aliasCandidates(
+        allowWeakReview: allowWeakReview,
+      )) {
+        final score = _fuzzyScore(
+          candidate: normalizedCandidate,
+          target: aliasCandidate.normalizedAlias,
+        );
+        if (score == null) {
+          continue;
+        }
+
+        final nextMatch = _FuzzyResolutionMatch(
+          aliasCandidate: aliasCandidate,
+          candidateText: candidateText,
+          score: score,
+        );
+        if (bestMatch == null || score > bestMatch.score) {
+          secondBestMatch = bestMatch;
+          bestMatch = nextMatch;
+          continue;
+        }
+        if (secondBestMatch == null || score > secondBestMatch.score) {
+          secondBestMatch = nextMatch;
+        }
+      }
+    }
+
+    if (bestMatch == null) {
+      return null;
+    }
+
+    if (secondBestMatch != null &&
+        secondBestMatch.aliasCandidate.entry.serviceKey !=
+            bestMatch.aliasCandidate.entry.serviceKey &&
+        (bestMatch.score - secondBestMatch.score) < 0.08) {
+      return MerchantResolution(
+        resolvedServiceKey: unresolvedServiceKey,
+        confidence: MerchantResolutionConfidence.none,
+        resolutionMethod: MerchantResolutionMethod.ambiguousUnresolved,
+      );
+    }
+
+    final resolvedEntry = bestMatch.aliasCandidate.entry;
+    return MerchantResolution(
+      resolvedServiceKey: ServiceKey(resolvedEntry.serviceKey),
+      confidence: bestMatch.score >= 0.93
+          ? MerchantResolutionConfidence.high
+          : MerchantResolutionConfidence.medium,
+      resolutionMethod: MerchantResolutionMethod.fuzzyAlias,
+      matchedTerms: <String>[
+        bestMatch.candidateText.toLowerCase(),
+        bestMatch.aliasCandidate.alias,
+      ],
+    );
+  }
+
+  MerchantResolution? _extractCandidateResolution(String body) {
+    final seen = <String>{};
+    for (final candidate in _candidateTexts(body)) {
       final normalized = _normalizeCandidate(candidate);
-      if (normalized == null) {
+      if (normalized == null || !seen.add(normalized)) {
         continue;
       }
 
-      return ServiceKey(normalized);
+      return MerchantResolution(
+        resolvedServiceKey: ServiceKey(normalized),
+        confidence: MerchantResolutionConfidence.low,
+        resolutionMethod: MerchantResolutionMethod.extractedCandidate,
+        matchedTerms: <String>[candidate.toLowerCase()],
+      );
     }
 
     return null;
@@ -196,6 +319,36 @@ class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
     }
 
     return ServiceKey('${provider.toUpperCase()}_BUNDLE');
+  }
+
+  List<String> _candidateTexts(String body) {
+    final candidates = <String>{};
+    for (final pattern in _candidatePatterns) {
+      final match = pattern.firstMatch(body);
+      if (match == null) {
+        continue;
+      }
+
+      final candidate = match.group(1);
+      if (candidate == null || candidate.trim().isEmpty) {
+        continue;
+      }
+      candidates.add(candidate.trim());
+    }
+
+    final routingMatches = RegExp(
+      r'\bat\s+([a-z][a-z0-9&+.\- ]{2,40}?)(?=\s+(?:on|via|using|with|for|ending|xx[0-9]{2,4})\b|[.,]|$)',
+      caseSensitive: false,
+    ).allMatches(body);
+    for (final match in routingMatches) {
+      final candidate = match.group(1);
+      if (candidate == null || candidate.trim().isEmpty) {
+        continue;
+      }
+      candidates.add(candidate.trim());
+    }
+
+    return candidates.toList(growable: false);
   }
 
   String? _normalizeCandidate(String candidate) {
@@ -249,11 +402,110 @@ class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
     return _fragmentBoundaryTokens.contains(token) ||
         !RegExp(r'[a-z0-9]', caseSensitive: false).hasMatch(token);
   }
+
+  bool _matchesAliasTokens({
+    required List<String> bodyTokens,
+    required List<String> aliasTokens,
+    required String normalizedAlias,
+  }) {
+    if (aliasTokens.isEmpty) {
+      return false;
+    }
+
+    final bodyJoined = bodyTokens.join();
+    if (bodyJoined.contains(normalizedAlias) && normalizedAlias.length >= 6) {
+      return true;
+    }
+
+    final aliasJoined = aliasTokens.join();
+    if (aliasTokens.length >= 2 && bodyJoined.contains(aliasJoined)) {
+      return true;
+    }
+
+    if (aliasTokens.length == 1) {
+      if (normalizedAlias.length < 6) {
+        return false;
+      }
+
+      for (var index = 0; index < bodyTokens.length - 1; index += 1) {
+        final merged = bodyTokens[index] + bodyTokens[index + 1];
+        if (merged == normalizedAlias) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    var aliasIndex = 0;
+    for (final token in bodyTokens) {
+      if (token == aliasTokens[aliasIndex]) {
+        aliasIndex += 1;
+        if (aliasIndex == aliasTokens.length) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  double? _fuzzyScore({
+    required String candidate,
+    required String target,
+  }) {
+    if (candidate == target) {
+      return 1;
+    }
+
+    final maxLength = candidate.length > target.length
+        ? candidate.length
+        : target.length;
+    if (maxLength < 6) {
+      return null;
+    }
+
+    final distance = _levenshteinDistance(candidate, target);
+    final similarity = 1 - (distance / maxLength);
+    final maxDistance = maxLength >= 12 ? 2 : 1;
+    if (distance > maxDistance || similarity < 0.82) {
+      return null;
+    }
+
+    return similarity;
+  }
+
+  int _levenshteinDistance(String source, String target) {
+    final costs = List<int>.generate(target.length + 1, (index) => index);
+    for (var sourceIndex = 1; sourceIndex <= source.length; sourceIndex += 1) {
+      var previousDiagonal = costs.first;
+      costs[0] = sourceIndex;
+      for (var targetIndex = 1;
+          targetIndex <= target.length;
+          targetIndex += 1) {
+        final temp = costs[targetIndex];
+        final substitutionCost =
+            source[sourceIndex - 1] == target[targetIndex - 1] ? 0 : 1;
+        costs[targetIndex] = <int>[
+          costs[targetIndex] + 1,
+          costs[targetIndex - 1] + 1,
+          previousDiagonal + substitutionCost,
+        ].reduce((left, right) => left < right ? left : right);
+        previousDiagonal = temp;
+      }
+    }
+
+    return costs.last;
+  }
 }
 
-class _ServiceHint {
-  const _ServiceHint(this.key, this.pattern);
+class _FuzzyResolutionMatch {
+  const _FuzzyResolutionMatch({
+    required this.aliasCandidate,
+    required this.candidateText,
+    required this.score,
+  });
 
-  final String key;
-  final RegExp pattern;
+  final MerchantAliasCandidate aliasCandidate;
+  final String candidateText;
+  final double score;
 }

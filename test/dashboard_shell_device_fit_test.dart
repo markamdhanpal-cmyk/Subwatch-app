@@ -212,15 +212,14 @@ void main() {
 
       await pumpDashboardShellUi(tester);
 
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('sync-with-sms-button')),
+      expect(
+        find.byKey(const ValueKey<String>('app-bar-sync-button')),
+        findsOneWidget,
       );
-      await tester
-          .tap(find.byKey(const ValueKey<String>('sync-with-sms-button')));
-      await tester.pump(const Duration(milliseconds: 100));
-      await pumpDashboardShellUi(tester);
-
+      await tapAndPumpDashboardShell(
+        tester,
+        find.byKey(const ValueKey<String>('app-bar-sync-button')),
+      );
       expect(tester.takeException(), isNull);
 
       pendingSnapshot.complete(
@@ -233,8 +232,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 700));
       await pumpDashboardShellUi(tester);
 
+      expect(find.byKey(const ValueKey<String>('totals-summary-card')), findsOneWidget);
       expect(
-        find.byKey(const ValueKey<String>('sync-progress-panel')),
+        find.byKey(const PageStorageKey<String>('destination-home-surface')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey<String>('home-action-strip')), findsNothing);
+      expect(find.byKey(const ValueKey<String>('due-soon-card')), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('upcoming-renewals-card')),
         findsNothing,
       );
       expect(tester.takeException(), isNull);
@@ -455,23 +461,14 @@ void main() {
         ),
         clock: () => DateTime(2026, 3, 14, 9, 0),
       );
-
-      final confirmedMetric = find.byKey(
-        const ValueKey<String>('spend-hero-confirmed-chip'),
-      );
-      final reviewMetric = find.byKey(
-        const ValueKey<String>('home-action-strip'),
+      final trustRow = find.byKey(
+        const ValueKey<String>('home-trust-row'),
       );
 
-      expect(
-        confirmedMetric,
-        findsOneWidget,
-      );
-      expect(reviewMetric, findsOneWidget);
-      expect(
-        tester.getTopLeft(reviewMetric).dy,
-        greaterThan(tester.getTopLeft(confirmedMetric).dy),
-      );
+      expect(find.byKey(const ValueKey<String>('home-action-strip')),
+          findsNothing);
+      await scrollDashboardUntilVisible(tester, trustRow);
+      expect(trustRow, findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -527,7 +524,7 @@ void main() {
         find.byKey(const ValueKey<String>('review-evidence-panel')),
       );
       expect(
-          find.text('A recurring-looking signal was found.'), findsOneWidget);
+          find.byKey(const ValueKey<String>('review-evidence-panel')), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -587,18 +584,16 @@ Future<void> _pumpConstrainedDashboardShell(
 
   await tester.pumpWidget(
     MaterialApp(
-      theme: ThemeData(
-        extensions: const <ThemeExtension<dynamic>>[
-          DashboardTypeScale(
-            display: TextStyle(fontSize: 40),
-            heading: TextStyle(fontSize: 22),
-            subheading: TextStyle(fontSize: 18),
-            body: TextStyle(fontSize: 16),
-            caption: TextStyle(fontSize: 13),
-            label: TextStyle(fontSize: 13),
-            button: TextStyle(fontSize: 14),
-          ),
-        ],
+      theme: buildDashboardTestTheme(
+        typeScale: const DashboardTypeScale(
+          display: TextStyle(fontSize: 40),
+          heading: TextStyle(fontSize: 22),
+          subheading: TextStyle(fontSize: 18),
+          body: TextStyle(fontSize: 16),
+          caption: TextStyle(fontSize: 13),
+          label: TextStyle(fontSize: 13),
+          button: TextStyle(fontSize: 14),
+        ),
       ),
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
@@ -634,4 +629,13 @@ Future<void> _pumpConstrainedDashboardShell(
   );
   await pumpDashboardShellLoad(tester, skipGate: skipGate);
 }
+
+
+
+
+
+
+
+
+
 

@@ -13,7 +13,7 @@ class BuildDashboardUpcomingRenewalsUseCase {
     r'\bRenews on ([0-9]{1,2}) ([A-Z][a-z]{2}) ([0-9]{4})\b',
   );
   static final RegExp _rupeeAmountPattern = RegExp(
-    '(?:\u20B9\s*|Rs\.?\s*|INR\s*|Rupees\s*)([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
+    r'(?:₹\s*|Rs\.?\s*|INR\s*|Rupees\s*)([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
     caseSensitive: false,
   );
 

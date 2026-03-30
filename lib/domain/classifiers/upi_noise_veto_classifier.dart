@@ -1,6 +1,8 @@
 import '../contracts/event_classifier.dart';
+import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
+import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_event_type.dart';
 import '../parsing/indian_amount_parser.dart';
 
@@ -52,6 +54,7 @@ class UpiNoiseVetoClassifier implements EventClassifier {
     }
 
     final matchedTerms = _matchedTerms(body);
+    final amount = IndianAmountParser.extract(body);
 
     if (_matchesAny(_ignoreMarkers, body)) {
       return ParsedSignal(
@@ -59,8 +62,20 @@ class UpiNoiseVetoClassifier implements EventClassifier {
         eventType: SubscriptionEventType.ignore,
         summary: 'Plain UPI or QR payment noise vetoed.',
         detectedAt: message.receivedAt,
-        amount: IndianAmountParser.extract(body),
+        amount: amount,
         capturedTerms: matchedTerms,
+        evidenceFragments: <EvidenceFragment>[
+          EvidenceFragment(
+            type: EvidenceFragmentType.ignoreNoise,
+            sourceMessageId: message.id,
+            classifierId: classifierId,
+            strength: EvidenceFragmentStrength.strong,
+            confidence: 0.97,
+            amount: amount,
+            note: 'UPI or QR payment noise vetoed.',
+            terms: matchedTerms,
+          ),
+        ],
       );
     }
 
@@ -70,8 +85,20 @@ class UpiNoiseVetoClassifier implements EventClassifier {
         eventType: SubscriptionEventType.oneTimePayment,
         summary: 'UPI debit treated as one-time payment noise.',
         detectedAt: message.receivedAt,
-        amount: IndianAmountParser.extract(body),
+        amount: amount,
         capturedTerms: matchedTerms,
+        evidenceFragments: <EvidenceFragment>[
+          EvidenceFragment(
+            type: EvidenceFragmentType.oneTimePaymentNoise,
+            sourceMessageId: message.id,
+            classifierId: classifierId,
+            strength: EvidenceFragmentStrength.strong,
+            confidence: 0.95,
+            amount: amount,
+            note: 'UPI debit treated as one-time payment noise.',
+            terms: matchedTerms,
+          ),
+        ],
       );
     }
 
@@ -80,8 +107,20 @@ class UpiNoiseVetoClassifier implements EventClassifier {
       eventType: SubscriptionEventType.ignore,
       summary: 'Unstructured UPI payment noise vetoed conservatively.',
       detectedAt: message.receivedAt,
-      amount: IndianAmountParser.extract(body),
+      amount: amount,
       capturedTerms: matchedTerms,
+      evidenceFragments: <EvidenceFragment>[
+        EvidenceFragment(
+          type: EvidenceFragmentType.ignoreNoise,
+          sourceMessageId: message.id,
+          classifierId: classifierId,
+          strength: EvidenceFragmentStrength.medium,
+          confidence: 0.83,
+          amount: amount,
+          note: 'Unstructured payment noise vetoed conservatively.',
+          terms: matchedTerms,
+        ),
+      ],
     );
   }
 

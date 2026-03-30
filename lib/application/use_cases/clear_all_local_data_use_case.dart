@@ -5,6 +5,7 @@ import '../contracts/local_renewal_reminder_scheduler.dart';
 import '../contracts/local_renewal_reminder_store.dart';
 import '../contracts/local_service_presentation_overlay_store.dart';
 import '../contracts/review_action_store.dart';
+import '../contracts/service_evidence_bucket_store.dart';
 import '../contracts/sms_onboarding_progress_store.dart';
 import '../gateways/android_local_renewal_reminder_scheduler.dart';
 import '../stores/json_file_ledger_snapshot_store.dart';
@@ -13,6 +14,7 @@ import '../stores/json_file_local_manual_subscription_store.dart';
 import '../stores/json_file_local_renewal_reminder_store.dart';
 import '../stores/json_file_local_service_presentation_overlay_store.dart';
 import '../stores/json_file_review_action_store.dart';
+import '../stores/json_file_service_evidence_bucket_store.dart';
 import '../stores/json_file_sms_onboarding_progress_store.dart';
 
 enum ClearAllLocalDataOutcome {
@@ -37,6 +39,7 @@ class ClearAllLocalDataUseCase {
     LocalRenewalReminderStore? localRenewalReminderStore,
     LocalRenewalReminderScheduler? localRenewalReminderScheduler,
     LocalServicePresentationOverlayStore? localServicePresentationOverlayStore,
+    ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
     SmsOnboardingProgressStore? smsOnboardingProgressStore,
   }) {
     return ClearAllLocalDataUseCase(
@@ -56,6 +59,8 @@ class ClearAllLocalDataUseCase {
       localServicePresentationOverlayStore:
           localServicePresentationOverlayStore ??
               JsonFileLocalServicePresentationOverlayStore.applicationSupport(),
+      serviceEvidenceBucketStore: serviceEvidenceBucketStore ??
+          JsonFileServiceEvidenceBucketStore.applicationSupport(),
       smsOnboardingProgressStore: smsOnboardingProgressStore ??
           JsonFileSmsOnboardingProgressStore.applicationSupport(),
     );
@@ -70,6 +75,7 @@ class ClearAllLocalDataUseCase {
     required LocalRenewalReminderScheduler localRenewalReminderScheduler,
     required LocalServicePresentationOverlayStore
         localServicePresentationOverlayStore,
+    ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
     required SmsOnboardingProgressStore smsOnboardingProgressStore,
   })  : _ledgerSnapshotStore = ledgerSnapshotStore,
         _reviewActionStore = reviewActionStore,
@@ -79,6 +85,7 @@ class ClearAllLocalDataUseCase {
         _localRenewalReminderScheduler = localRenewalReminderScheduler,
         _localServicePresentationOverlayStore =
             localServicePresentationOverlayStore,
+        _serviceEvidenceBucketStore = serviceEvidenceBucketStore,
         _smsOnboardingProgressStore = smsOnboardingProgressStore;
 
   final LedgerSnapshotStore _ledgerSnapshotStore;
@@ -89,6 +96,7 @@ class ClearAllLocalDataUseCase {
   final LocalRenewalReminderScheduler _localRenewalReminderScheduler;
   final LocalServicePresentationOverlayStore
       _localServicePresentationOverlayStore;
+  final ServiceEvidenceBucketStore? _serviceEvidenceBucketStore;
   final SmsOnboardingProgressStore _smsOnboardingProgressStore;
 
   Future<ClearAllLocalDataResult> execute() async {
@@ -109,6 +117,7 @@ class ClearAllLocalDataUseCase {
     await _localManualSubscriptionStore.clear();
     await _localRenewalReminderStore.clear();
     await _localServicePresentationOverlayStore.clear();
+    await _serviceEvidenceBucketStore?.clear();
     await _smsOnboardingProgressStore.clear();
 
     return ClearAllLocalDataResult(

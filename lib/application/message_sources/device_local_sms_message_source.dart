@@ -2,29 +2,39 @@ import '../contracts/device_sms_gateway.dart';
 import '../models/raw_device_sms.dart';
 import '../../domain/contracts/local_message_source.dart';
 import '../../domain/entities/message_record.dart';
+import '../../v2/detection/bridges/canonical_input_message_record_bridge.dart';
+import '../../v2/detection/contracts/canonical_input_source.dart';
+import '../../v2/detection/mappers/raw_device_sms_canonical_input_mapper.dart';
+import '../../v2/detection/models/canonical_input.dart';
 
-class DeviceLocalSmsMessageSource implements LocalMessageSource {
+class DeviceLocalSmsMessageSource
+    implements LocalMessageSource, CanonicalInputSource {
   DeviceLocalSmsMessageSource({
     required DeviceSmsGateway gateway,
-  }) : _gateway = gateway;
+    RawDeviceSmsCanonicalInputMapper? canonicalInputMapper,
+    CanonicalInputMessageRecordBridge? messageRecordBridge,
+  })  : _gateway = gateway,
+        _canonicalInputMapper =
+            canonicalInputMapper ?? const RawDeviceSmsCanonicalInputMapper(),
+        _messageRecordBridge =
+            messageRecordBridge ?? const CanonicalInputMessageRecordBridge();
 
   final DeviceSmsGateway _gateway;
+  final RawDeviceSmsCanonicalInputMapper _canonicalInputMapper;
+  final CanonicalInputMessageRecordBridge _messageRecordBridge;
 
   @override
   Future<List<MessageRecord>> loadMessages() async {
-    final rawMessages = await _gateway.readMessages();
-
-    return List<MessageRecord>.unmodifiable(
-      rawMessages.map(_mapToMessageRecord),
-    );
+    final canonicalInputs = await loadCanonicalInputs();
+    return _messageRecordBridge.toMessageRecords(canonicalInputs);
   }
 
-  MessageRecord _mapToMessageRecord(RawDeviceSms message) {
-    return MessageRecord(
-      id: message.id,
-      sourceAddress: message.address,
-      body: message.body,
-      receivedAt: message.receivedAt,
+  @override
+  Future<List<CanonicalInput>> loadCanonicalInputs() async {
+    final rawMessages = await _gateway.readMessages();
+
+    return List<CanonicalInput>.unmodifiable(
+      rawMessages.map(_canonicalInputMapper.map),
     );
   }
 }

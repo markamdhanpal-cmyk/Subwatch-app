@@ -51,10 +51,11 @@ class EventPipelineUseCase {
         continue;
       }
 
-      final serviceKey = _serviceIdentityResolver.resolve(
+      final merchantResolution = _serviceIdentityResolver.resolveMerchant(
         message: message,
         signal: signal,
       );
+      final serviceKey = merchantResolution.resolvedServiceKey;
 
       events.add(
         SubscriptionEvent(
@@ -64,9 +65,19 @@ class EventPipelineUseCase {
           occurredAt: signal.detectedAt ?? message.receivedAt,
           sourceMessageId: message.id,
           amount: signal.amount,
+          merchantResolution: merchantResolution,
+          evidenceFragments: signal.evidenceFragments,
           evidenceTrail: EvidenceTrail(
             messageIds: <String>[message.id],
-            notes: <String>[signal.summary, ...signal.capturedTerms],
+            notes: <String>[
+              signal.summary,
+              merchantResolution.traceNote,
+              ...signal.capturedTerms,
+              ...signal.evidenceFragments.map((fragment) => fragment.traceNote),
+              ...signal.evidenceFragments
+                  .map((fragment) => fragment.note)
+                  .whereType<String>(),
+            ],
           ),
         ),
       );
