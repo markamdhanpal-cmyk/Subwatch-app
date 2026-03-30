@@ -26,6 +26,11 @@ class MandateIntentClassifier implements EventClassifier {
     caseSensitive: false,
   );
 
+  static final RegExp _cancellationPattern = RegExp(
+    r'\b(cancel(?:led|lation)?|revok(?:e|ed)|terminat(?:e|ed|ion)|deactivat(?:e|ed)|stop(?:ped)?)\b',
+    caseSensitive: false,
+  );
+
   static final RegExp _setupPattern = RegExp(
     r'\b(set[\s-]?up|setup|enroll(?:ed|ment)?|enable(?:d)?|activat(?:e|ed)|configure(?:d)?)\b',
     caseSensitive: false,
@@ -47,6 +52,43 @@ class MandateIntentClassifier implements EventClassifier {
     final hasMandateContext = _mandateContextPattern.hasMatch(body);
     final hasAutopayContext = _autopayContextPattern.hasMatch(body);
     final hasAnyRecurringContext = hasMandateContext || hasAutopayContext;
+
+    if (hasAnyRecurringContext && _cancellationPattern.hasMatch(body)) {
+      var resolveAmount = amount;
+      if (resolveAmount == null) {
+        final fallbackMatch = RegExp(r'\b(?:for|of)\s+([0-9][0-9,]*(?:\.[0-9]{1,2})?)', caseSensitive: false).firstMatch(body);
+        if (fallbackMatch != null) {
+          resolveAmount = double.tryParse(fallbackMatch.group(1)!.replaceAll(',', ''));
+        }
+      }
+
+      if (resolveAmount != null && resolveAmount >= 11) {
+        final capturedTerms = _capturedTerms(body);
+        return ParsedSignal(
+          classifierId: classifierId,
+          eventType: SubscriptionEventType.unknownReview,
+          summary: 'Recurring mandate cancellation detected for review.',
+          detectedAt: message.receivedAt,
+          amount: resolveAmount,
+          capturedTerms: capturedTerms,
+          evidenceFragments: <EvidenceFragment>[
+            EvidenceFragment(
+              type: EvidenceFragmentType.cancellationHint,
+              sourceMessageId: message.id,
+              classifierId: classifierId,
+              strength: EvidenceFragmentStrength.medium,
+              confidence: 0.85,
+              amount: resolveAmount,
+              note: 'Mandate cancellation intent routed to review.',
+              terms: capturedTerms,
+            ),
+          ],
+        );
+      } else {
+        // Drop low-value or no-amount cancellations as noise to prevent setup checks
+        return null;
+      }
+    }
 
     if (hasAnyRecurringContext &&
         amount != null &&
@@ -132,6 +174,7 @@ class MandateIntentClassifier implements EventClassifier {
     for (final pattern in <RegExp>[
       _mandateContextPattern,
       _autopayContextPattern,
+      _cancellationPattern,
       _creationPattern,
       _setupPattern,
       _executionPattern,

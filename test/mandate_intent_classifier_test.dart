@@ -1,7 +1,8 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/domain/classifiers/mandate_intent_classifier.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
 import 'package:sub_killer/domain/enums/subscription_event_type.dart';
+import 'package:sub_killer/domain/enums/evidence_fragment_type.dart';
 
 void main() {
   group('MandateIntentClassifier', () {
@@ -73,6 +74,43 @@ void main() {
 
     test('does not classify tiny debit without recurring context', () {
       final result = classifier.classify(message('Rs 1 debited for chai.'));
+
+      expect(result, isNull);
+    });
+
+    test('classifies netflix mandate cancellation > 11 as review signal', () {
+      final result = classifier.classify(
+        message('Your UPI-Mandate is successfully cancelled towards NETFLIX COM for 499.00.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.unknownReview);
+      expect(result.amount, 499);
+      expect(result.evidenceFragments.first.type, EvidenceFragmentType.cancellationHint);
+    });
+
+    test('classifies mandate cancellation exactly 11 as review signal', () {
+      final result = classifier.classify(
+        message('Mandate is revoked for INR 11.00.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.unknownReview);
+      expect(result.amount, 11);
+    });
+
+    test('ignores mandate cancellation < 11', () {
+      final result = classifier.classify(
+        message('Mandate cancelled for 5.00 INR.'),
+      );
+
+      expect(result, isNull);
+    });
+
+    test('ignores mandate cancellation at 1 rupee', () {
+      final result = classifier.classify(
+        message('Your setup auto-pay is successfully cancelled for Rs. 1.'),
+      );
 
       expect(result, isNull);
     });
