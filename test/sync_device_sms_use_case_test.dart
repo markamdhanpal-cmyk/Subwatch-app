@@ -1,8 +1,10 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
 import 'package:sub_killer/application/contracts/local_message_source_capability_provider.dart';
 import 'package:sub_killer/application/models/local_message_source_access_state.dart';
+import 'package:sub_killer/application/models/local_message_source_platform_binding.dart';
 import 'package:sub_killer/application/models/raw_device_sms.dart';
+import 'package:sub_killer/application/stores/in_memory_service_evidence_bucket_store.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 import 'package:sub_killer/application/use_cases/request_device_sms_access_use_case.dart';
 import 'package:sub_killer/application/use_cases/sync_device_sms_use_case.dart';
@@ -85,6 +87,43 @@ void main() {
               (card) => card.bucket == DashboardBucket.confirmedSubscriptions,
             )
             .map((card) => card.serviceKey.value),
+        contains('NETFLIX'),
+      );
+    });
+
+    test('android factory persists service evidence buckets during sync',
+        () async {
+      final provider = _MutableCapabilityProvider(
+        initialState: LocalMessageSourceAccessState.deviceLocalAvailable,
+        requestResult: LocalMessageSourceAccessRequestResult.granted,
+        refreshedState: LocalMessageSourceAccessState.deviceLocalAvailable,
+      );
+      final evidenceBucketStore = InMemoryServiceEvidenceBucketStore();
+      final platformBinding = LocalMessageSourcePlatformBinding(
+        capabilityProvider: provider,
+        deviceSmsGateway: _FakeDeviceSmsGateway(
+          <RawDeviceSms>[
+            RawDeviceSms(
+              id: 'raw-netflix',
+              address: 'BANK',
+              body: 'Your Netflix subscription has been renewed for Rs 499.',
+              receivedAt: DateTime(2026, 3, 12, 13, 0),
+            ),
+          ],
+        ),
+      );
+      final useCase = SyncDeviceSmsUseCase.android(
+        platformBinding: platformBinding,
+        serviceEvidenceBucketStore: evidenceBucketStore,
+      );
+
+      final result = await useCase.execute();
+      final buckets = await evidenceBucketStore.load();
+
+      expect(
+          result.requestResult, LocalMessageSourceAccessRequestResult.granted);
+      expect(
+        buckets.map((bucket) => bucket.serviceKey.value),
         contains('NETFLIX'),
       );
     });

@@ -1,6 +1,7 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/domain/classifiers/weak_signal_review_classifier.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
+import 'package:sub_killer/domain/enums/evidence_fragment_type.dart';
 import 'package:sub_killer/domain/enums/subscription_event_type.dart';
 
 void main() {
@@ -62,6 +63,49 @@ void main() {
 
       expect(result, isNotNull);
       expect(result!.eventType, SubscriptionEventType.unknownReview);
+    });
+
+    test(
+        'classifies annual renewal failure as unknownReview instead of dropping it',
+        () {
+      final result = classifier.classify(
+        message(
+          'Hi, We were unable to renew your JioHotstar Premium Annual Plan subscription. We will retry over next 15 days. Meanwhile, you can also cancel renewal through the App.',
+        ),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.unknownReview);
+      expect(
+        result.evidenceFragments.map((fragment) => fragment.type),
+        containsAll(<EvidenceFragmentType>[
+          EvidenceFragmentType.weakRecurringHint,
+          EvidenceFragmentType.renewalHint,
+          EvidenceFragmentType.cancellationHint,
+          EvidenceFragmentType.unknownReview,
+        ]),
+      );
+    });
+
+    test('classifies non-Jio annual renewal retry wording as unknownReview',
+        () {
+      final result = classifier.classify(
+        message(
+          'We were unable to renew your Netflix Premium Annual Plan subscription. We will retry over next 7 days. You can also cancel renewal in the app.',
+        ),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.unknownReview);
+      expect(
+        result.capturedTerms,
+        containsAll(<String>[
+          'unable to renew',
+          'will retry',
+          'cancel renewal',
+          'netflix'
+        ]),
+      );
     });
 
     test('does not classify plain UPI noise', () {

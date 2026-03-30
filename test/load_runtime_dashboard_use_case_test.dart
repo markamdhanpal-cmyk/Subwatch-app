@@ -1,4 +1,4 @@
-﻿import 'package:flutter/services.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
 import 'package:sub_killer/application/gateways/android_device_sms_gateway.dart';
@@ -40,7 +40,8 @@ void main() {
         LocalMessageSourceAccessState.sampleDemo,
       );
       expect(result.provenance.kind, RuntimeSnapshotProvenanceKind.freshLoad);
-      expect(result.provenance.sourceKind, RuntimeSnapshotSourceKind.sampleDemo);
+      expect(
+          result.provenance.sourceKind, RuntimeSnapshotSourceKind.sampleDemo);
       expect(
         result.cards
             .where(
@@ -116,6 +117,81 @@ void main() {
       );
     });
 
+    test('renewal-risk annual subscription sms becomes a review item',
+        () async {
+      final result = await LoadRuntimeDashboardUseCase(
+        capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+          accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+        ),
+        deviceSmsGateway: _FakeDeviceSmsGateway(
+          <RawDeviceSms>[
+            RawDeviceSms(
+              id: 'raw-jiohotstar-renewal-risk',
+              address: 'AD-JIOHTT-S',
+              body:
+                  'Hi, We were unable to renew your JioHotstar Premium Annual Plan subscription. We will retry over next 15 days. Meanwhile, you can also cancel renewal through the App.',
+              receivedAt: DateTime(2026, 3, 21, 9, 0),
+            ),
+          ],
+        ),
+      ).execute();
+
+      expect(
+        result.cards
+            .where((card) => card.bucket == DashboardBucket.needsReview)
+            .map((card) => card.serviceKey.value),
+        contains('JIOHOTSTAR'),
+      );
+      expect(
+        result.reviewQueue.map((item) => item.serviceKey.value),
+        contains('JIOHOTSTAR'),
+      );
+    });
+
+    test('mixed bundle and renewal-risk JioHotstar evidence stays in review',
+        () async {
+      final result = await LoadRuntimeDashboardUseCase(
+        capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+          accessState: LocalMessageSourceAccessState.deviceLocalAvailable,
+        ),
+        deviceSmsGateway: _FakeDeviceSmsGateway(
+          <RawDeviceSms>[
+            RawDeviceSms(
+              id: 'raw-jiohotstar-bundle',
+              address: 'JIO',
+              body:
+                  'Your 1-month JioHotstar subscription is now activated. Your recent recharge has unlocked this benefit.',
+              receivedAt: DateTime(2026, 3, 18, 9, 0),
+            ),
+            RawDeviceSms(
+              id: 'raw-jiohotstar-renewal-risk',
+              address: 'AD-JIOHTT-S',
+              body:
+                  'Hi, We were unable to renew your JioHotstar Premium Annual Plan subscription. We will retry over next 15 days. Meanwhile, you can also cancel renewal through the App.',
+              receivedAt: DateTime(2026, 3, 21, 9, 0),
+            ),
+          ],
+        ),
+      ).execute();
+
+      expect(
+        result.cards
+            .where((card) => card.bucket == DashboardBucket.needsReview)
+            .map((card) => card.serviceKey.value),
+        contains('JIOHOTSTAR'),
+      );
+      expect(
+        result.reviewQueue.map((item) => item.serviceKey.value),
+        contains('JIOHOTSTAR'),
+      );
+      expect(
+        result.cards
+            .where((card) => card.bucket == DashboardBucket.trialsAndBenefits)
+            .map((card) => card.serviceKey.value),
+        isNot(contains('JIOHOTSTAR')),
+      );
+    });
+
     test('runtime loading works when the android-facing path is selected',
         () async {
       messenger.setMockMethodCallHandler(capabilityChannel, (call) async {
@@ -128,6 +204,7 @@ void main() {
       });
       messenger.setMockMethodCallHandler(gatewayChannel, (call) async {
         expect(call.method, AndroidDeviceSmsGateway.readMessagesMethod);
+        expect(call.arguments, isA<Map<Object?, Object?>>());
 
         return <Object?>[
           <Object?, Object?>{

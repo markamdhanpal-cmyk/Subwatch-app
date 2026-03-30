@@ -23,13 +23,15 @@ class DecisionEngineV2UseCase {
         .map(
           (bucket) => decide(
             bucket,
-            scoringContext: scoringContextsByServiceKey[bucket.serviceKey.value] ??
-                const SubscriptionScoringContext(),
+            scoringContext:
+                scoringContextsByServiceKey[bucket.serviceKey.value] ??
+                    const SubscriptionScoringContext(),
           ),
         )
         .toList(growable: false)
       ..sort(
-        (left, right) => left.serviceKey.value.compareTo(right.serviceKey.value),
+        (left, right) =>
+            left.serviceKey.value.compareTo(right.serviceKey.value),
       );
     return snapshots;
   }
@@ -59,7 +61,8 @@ class DecisionEngineV2UseCase {
       reasons.add(DecisionReasonCode.mlReviewPriorityElevated);
     }
     notes.addAll(
-      subscriptionScore.contributingSignals.map((signal) => 'ml:signal=$signal'),
+      subscriptionScore.contributingSignals
+          .map((signal) => 'ml:signal=$signal'),
     );
 
     final hasPaidEvidence = bucket.billedCount > 0;
@@ -71,6 +74,8 @@ class DecisionEngineV2UseCase {
         bucket.unknownReviewCount > 0 ||
         bucket.promoCount > 0 ||
         bucket.cancellationHintCount > 0;
+    final hasLifecycleReviewSignals =
+        bucket.renewalHintCount > 0 || bucket.cancellationHintCount > 0;
     final hasContradictions = bucket.contradictions.isNotEmpty;
 
     if (bucket.ignoreNoiseCount > 0 &&
@@ -108,7 +113,8 @@ class DecisionEngineV2UseCase {
 
     if (hasPaidEvidence) {
       reasons.add(DecisionReasonCode.paidEvidenceObserved);
-      if (bucket.renewalHintCount > 0 || bucket.intervalHintsInDays.isNotEmpty) {
+      if (bucket.renewalHintCount > 0 ||
+          bucket.intervalHintsInDays.isNotEmpty) {
         reasons.add(DecisionReasonCode.recurringRenewalObserved);
       }
       if (hasContradictions) {
@@ -167,6 +173,28 @@ class DecisionEngineV2UseCase {
 
     if (hasBundleEvidence) {
       reasons.add(DecisionReasonCode.bundledBenefitObserved);
+      if (hasLifecycleReviewSignals &&
+          (bucket.weakRecurringHintCount > 0 ||
+              bucket.unknownReviewCount > 0)) {
+        reasons.add(DecisionReasonCode.weakRecurringSignalsObserved);
+        if (bucket.renewalHintCount > 0) {
+          reasons.add(DecisionReasonCode.recurringRenewalObserved);
+        }
+        if (bucket.cancellationHintCount > 0) {
+          reasons.add(DecisionReasonCode.cancellationSignalsObserved);
+        }
+        if (hasContradictions) {
+          reasons.add(DecisionReasonCode.contradictionObserved);
+          notes.addAll(bucket.contradictions);
+        }
+        return _snapshot(
+          bucket,
+          band: DecisionBand.needsReview,
+          reasons: reasons,
+          notes: notes,
+          subscriptionScore: subscriptionScore,
+        );
+      }
       if (hasContradictions) {
         reasons.add(DecisionReasonCode.contradictionObserved);
         notes.addAll(bucket.contradictions);
@@ -261,5 +289,3 @@ class DecisionEngineV2UseCase {
     );
   }
 }
-
-

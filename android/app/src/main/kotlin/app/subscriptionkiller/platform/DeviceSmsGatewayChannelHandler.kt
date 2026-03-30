@@ -18,40 +18,72 @@ class DeviceSmsGatewayChannelHandler(
             return null
         }
 
-        return readMessages()
+        return readMessages(
+            sinceMillisecondsSinceEpoch = call.argument<Number>(SINCE_ARGUMENT)?.toLong(),
+            earliestAllowedMillisecondsSinceEpoch = call.argument<Number>(EARLIEST_ALLOWED_ARGUMENT)?.toLong(),
+            maxMessageCount = call.argument<Number>(MAX_MESSAGE_COUNT_ARGUMENT)?.toInt(),
+        )
     }
 
-    private fun readMessages(): List<Map<String, Any>> {
+    private fun readMessages(
+        sinceMillisecondsSinceEpoch: Long?,
+        earliestAllowedMillisecondsSinceEpoch: Long?,
+        maxMessageCount: Int?,
+    ): List<Map<String, Any>> {
         if (!hasSmsCapability() || !hasReadSmsPermission()) {
             return emptyList()
         }
 
         return try {
-            queryMessages(context.contentResolver)
+            queryMessages(
+                contentResolver = context.contentResolver,
+                sinceMillisecondsSinceEpoch = sinceMillisecondsSinceEpoch,
+                earliestAllowedMillisecondsSinceEpoch = earliestAllowedMillisecondsSinceEpoch,
+                maxMessageCount = maxMessageCount ?: DEFAULT_MAX_MESSAGE_COUNT,
+            )
         } catch (_: SecurityException) {
             emptyList()
         }
     }
 
-    private fun queryMessages(contentResolver: ContentResolver): List<Map<String, Any>> {
+    private fun queryMessages(
+        contentResolver: ContentResolver,
+        sinceMillisecondsSinceEpoch: Long?,
+        earliestAllowedMillisecondsSinceEpoch: Long?,
+        maxMessageCount: Int,
+    ): List<Map<String, Any>> {
         val projection = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
         )
+        val lowerBoundMillisecondsSinceEpoch = listOfNotNull(
+            sinceMillisecondsSinceEpoch,
+            earliestAllowedMillisecondsSinceEpoch,
+        ).maxOrNull()
+        val selection = if (lowerBoundMillisecondsSinceEpoch == null) {
+            null
+        } else {
+            "${Telephony.Sms.DATE} >= ?"
+        }
+        val selectionArgs = if (lowerBoundMillisecondsSinceEpoch == null) {
+            null
+        } else {
+            arrayOf(lowerBoundMillisecondsSinceEpoch.toString())
+        }
 
         val messages = mutableListOf<Map<String, Any>>()
         val cursor = contentResolver.query(
             Telephony.Sms.CONTENT_URI,
             projection,
-            null,
-            null,
-            "${Telephony.Sms.DATE} DESC LIMIT $MAX_MESSAGE_COUNT",
+            selection,
+            selectionArgs,
+            "${Telephony.Sms.DATE} DESC",
         )
 
         cursor?.use {
-            while (it.moveToNext()) {
+            while (it.moveToNext() && messages.size < maxMessageCount) {
                 messages += it.toRawSmsPayload()
             }
         }
@@ -109,6 +141,10 @@ class DeviceSmsGatewayChannelHandler(
     companion object {
         const val CHANNEL_NAME = "sub_killer/device_sms_gateway"
         const val READ_MESSAGES_METHOD = "readMessages"
-        private const val MAX_MESSAGE_COUNT = 250
+        private const val SINCE_ARGUMENT = "sinceMillisecondsSinceEpoch"
+        private const val EARLIEST_ALLOWED_ARGUMENT =
+            "earliestAllowedMillisecondsSinceEpoch"
+        private const val MAX_MESSAGE_COUNT_ARGUMENT = "maxMessageCount"
+        private const val DEFAULT_MAX_MESSAGE_COUNT = 5000
     }
 }

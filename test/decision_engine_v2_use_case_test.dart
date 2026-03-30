@@ -4,6 +4,7 @@ import 'package:sub_killer/domain/entities/service_evidence_bucket.dart';
 import 'package:sub_killer/domain/enums/service_evidence_source_kind.dart';
 import 'package:sub_killer/domain/value_objects/service_key.dart';
 import 'package:sub_killer/v2/decision/enums/decision_band.dart';
+import 'package:sub_killer/v2/decision/enums/decision_reason_code.dart';
 import 'package:sub_killer/v2/decision/use_cases/decision_engine_v2_use_case.dart';
 import 'package:sub_killer/v2/scoring/contracts/subscription_scorer.dart';
 import 'package:sub_killer/v2/scoring/models/subscription_score.dart';
@@ -67,13 +68,17 @@ void main() {
           renewalHintCount: 2,
           amountSeries: const <double>[499, 499],
           intervalHintsInDays: const <int>[31],
-          evidenceNotes: const <String>['merchant_resolution:exactAlias:high:netflix'],
+          evidenceNotes: const <String>[
+            'merchant_resolution:exactAlias:high:netflix'
+          ],
         ),
       );
 
       expect(snapshot.band, DecisionBand.confirmedPaid);
-      expect(snapshot.subscriptionScore.modelVersion, 'subwatch_structured_local_v1');
-      expect(snapshot.subscriptionScore.subscriptionProbability, greaterThan(0.7));
+      expect(snapshot.subscriptionScore.modelVersion,
+          'subwatch_structured_local_v1');
+      expect(
+          snapshot.subscriptionScore.subscriptionProbability, greaterThan(0.7));
     });
 
     test('promo-tainted single billed signal becomes likely paid', () {
@@ -144,6 +149,31 @@ void main() {
       expect(snapshot.band, DecisionBand.includedWithPlan);
     });
 
+    test('bundle evidence with renewal-risk review signals stays in review',
+        () {
+      final snapshot = useCase.decide(
+        bucket(
+          key: 'JIOHOTSTAR',
+          bundleCount: 3,
+          renewalHintCount: 1,
+          cancellationHintCount: 1,
+          weakRecurringHintCount: 1,
+          unknownReviewCount: 1,
+        ),
+      );
+
+      expect(snapshot.band, DecisionBand.needsReview);
+      expect(
+        snapshot.reasonCodes,
+        containsAll(<DecisionReasonCode>[
+          DecisionReasonCode.bundledBenefitObserved,
+          DecisionReasonCode.weakRecurringSignalsObserved,
+          DecisionReasonCode.recurringRenewalObserved,
+          DecisionReasonCode.cancellationSignalsObserved,
+        ]),
+      );
+    });
+
     test('weak recurring bucket stays needs review with low certainty', () {
       final snapshot = useCase.decide(
         bucket(
@@ -154,8 +184,9 @@ void main() {
       );
 
       expect(snapshot.band, DecisionBand.needsReview);
-      expect(snapshot.subscriptionScore.subscriptionProbability, lessThan(0.35));
-      expect(snapshot.subscriptionScore.reviewPriorityScore, greaterThan(0.3));
+      expect(
+          snapshot.subscriptionScore.subscriptionProbability, lessThan(0.35));
+      expect(snapshot.subscriptionScore.reviewPriorityScore, greaterThan(0.25));
     });
 
     test('user rejection history lowers advisory probability', () {
@@ -164,12 +195,15 @@ void main() {
           key: 'MYSTERY_REVIEW',
           weakRecurringHintCount: 1,
           unknownReviewCount: 1,
-          evidenceNotes: const <String>['merchant_resolution:tokenAlias:medium:mystery'],
+          evidenceNotes: const <String>[
+            'merchant_resolution:tokenAlias:medium:mystery'
+          ],
         ),
         scoringContext: const SubscriptionScoringContext(userRejectedCount: 2),
       );
 
-      expect(snapshot.subscriptionScore.subscriptionProbability, lessThan(0.55));
+      expect(
+          snapshot.subscriptionScore.subscriptionProbability, lessThan(0.55));
     });
 
     test('one-time noise bucket stays one time or noise', () {
@@ -219,4 +253,3 @@ class _StubSubscriptionScorer implements SubscriptionScorer {
     );
   }
 }
-

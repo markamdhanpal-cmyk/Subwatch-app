@@ -11,6 +11,19 @@ class WeakSignalReviewClassifier implements EventClassifier {
 
   static const String classifierId = 'weak_signal_review';
 
+  static final RegExp _renewalFailurePattern = RegExp(
+    r'\b(?:unable|failed|unsuccessful)\s+to\s+renew\b|\brenewal\b.*\b(?:failed|unsuccessful|declined|pending)\b',
+    caseSensitive: false,
+  );
+  static final RegExp _retryPattern = RegExp(
+    r'\b(?:will\s+retry|retry(?:ing)?(?:\s+over|\s+within)?\s+next)\b',
+    caseSensitive: false,
+  );
+  static final RegExp _cancellationPattern = RegExp(
+    r'\bcancel(?:\s+your)?\s+renewal\b',
+    caseSensitive: false,
+  );
+
   static final List<RegExp> _positivePatterns = <RegExp>[
     RegExp(
         r'\b(?:membership|subscription)\b.*\b(?:due soon|shortly|renew shortly|may renew|set to renew|will renew|renewing on|reminder|next cycle)\b',
@@ -38,11 +51,24 @@ class WeakSignalReviewClassifier implements EventClassifier {
         RecurringBillingHeuristics.hasBillingContext(body);
     final hasRecurringContext =
         RecurringBillingHeuristics.hasRecurringContext(body);
+    final hasSubscriptionContext =
+        RecurringBillingHeuristics.hasSubscriptionContext(body);
+    final hasPlanContext = RecurringBillingHeuristics.hasPlanContext(body);
     final hasCardContext = RecurringBillingHeuristics.hasCardContext(body);
     final hasAppStoreMerchant =
         RecurringBillingHeuristics.hasAppStoreMerchant(body);
     final hasDirectRecurringMerchant =
         RecurringBillingHeuristics.hasDirectRecurringMerchant(body);
+    final hasRenewalFailureLanguage = _renewalFailurePattern.hasMatch(body);
+    final hasRetryLanguage = _retryPattern.hasMatch(body);
+    final hasCancellationLanguage = _cancellationPattern.hasMatch(body);
+    final hasRenewalRiskLanguage = hasRenewalFailureLanguage ||
+        hasRetryLanguage ||
+        hasCancellationLanguage;
+    final hasReviewableLifecycleContext = hasSubscriptionContext ||
+        (hasPlanContext && hasRecurringContext) ||
+        hasDirectRecurringMerchant ||
+        hasAppStoreMerchant;
 
     RegExp? pattern;
     for (final candidate in _positivePatterns) {
@@ -59,8 +85,12 @@ class WeakSignalReviewClassifier implements EventClassifier {
                 (hasDirectRecurringMerchant &&
                     hasCardContext &&
                     hasRecurringContext));
+    final hasLifecycleReviewEvidence =
+        hasRenewalRiskLanguage && hasReviewableLifecycleContext;
 
-    if (pattern == null && !hasMerchantReviewEvidence) {
+    if (pattern == null &&
+        !hasMerchantReviewEvidence &&
+        !hasLifecycleReviewEvidence) {
       return null;
     }
 
@@ -69,42 +99,77 @@ class WeakSignalReviewClassifier implements EventClassifier {
         : RecurringBillingHeuristics.capturedTerms(
             body,
             <RegExp>[
+              _renewalFailurePattern,
+              _retryPattern,
+              _cancellationPattern,
               RecurringBillingHeuristics.directRecurringMerchantPattern,
               RecurringBillingHeuristics.appStoreMerchantPattern,
+              RecurringBillingHeuristics.subscriptionContextPattern,
+              RecurringBillingHeuristics.planContextPattern,
+              RecurringBillingHeuristics.recurringContextPattern,
               RecurringBillingHeuristics.billingPattern,
               RecurringBillingHeuristics.cardContextPattern,
-              RecurringBillingHeuristics.recurringContextPattern,
             ],
           );
+
+    final weakRecurringHintStrength =
+        hasMerchantReviewEvidence || hasLifecycleReviewEvidence
+            ? EvidenceFragmentStrength.medium
+            : EvidenceFragmentStrength.weak;
+    final weakRecurringHintConfidence =
+        hasMerchantReviewEvidence || hasLifecycleReviewEvidence ? 0.72 : 0.58;
+    final evidenceFragments = <EvidenceFragment>[
+      EvidenceFragment(
+        type: EvidenceFragmentType.weakRecurringHint,
+        sourceMessageId: message.id,
+        classifierId: classifierId,
+        strength: weakRecurringHintStrength,
+        confidence: weakRecurringHintConfidence,
+        note: hasLifecycleReviewEvidence
+            ? 'Renewal-risk subscription wording detected.'
+            : 'Recurring-looking wording detected.',
+        terms: capturedTerms,
+      ),
+      if (hasRenewalRiskLanguage)
+        EvidenceFragment(
+          type: EvidenceFragmentType.renewalHint,
+          sourceMessageId: message.id,
+          classifierId: classifierId,
+          strength: EvidenceFragmentStrength.medium,
+          confidence: 0.68,
+          note: 'Renewal-risk lifecycle wording detected.',
+          terms: capturedTerms,
+        ),
+      if (hasCancellationLanguage || hasRenewalFailureLanguage)
+        EvidenceFragment(
+          type: EvidenceFragmentType.cancellationHint,
+          sourceMessageId: message.id,
+          classifierId: classifierId,
+          strength: EvidenceFragmentStrength.weak,
+          confidence: 0.64,
+          note: 'Cancellation or failed-renewal wording detected.',
+          terms: capturedTerms,
+        ),
+      EvidenceFragment(
+        type: EvidenceFragmentType.unknownReview,
+        sourceMessageId: message.id,
+        classifierId: classifierId,
+        strength: EvidenceFragmentStrength.medium,
+        confidence: 0.7,
+        note: 'Insufficient trust for confirmed subscription truth.',
+        terms: capturedTerms,
+      ),
+    ];
 
     return ParsedSignal(
       classifierId: classifierId,
       eventType: SubscriptionEventType.unknownReview,
-      summary: 'Recurring-looking message routed to review.',
+      summary: hasLifecycleReviewEvidence
+          ? 'Renewal-risk subscription signal routed to review.'
+          : 'Recurring-looking message routed to review.',
       detectedAt: message.receivedAt,
       capturedTerms: capturedTerms,
-      evidenceFragments: <EvidenceFragment>[
-        EvidenceFragment(
-          type: EvidenceFragmentType.weakRecurringHint,
-          sourceMessageId: message.id,
-          classifierId: classifierId,
-          strength: hasMerchantReviewEvidence
-              ? EvidenceFragmentStrength.medium
-              : EvidenceFragmentStrength.weak,
-          confidence: hasMerchantReviewEvidence ? 0.72 : 0.58,
-          note: 'Recurring-looking wording detected.',
-          terms: capturedTerms,
-        ),
-        EvidenceFragment(
-          type: EvidenceFragmentType.unknownReview,
-          sourceMessageId: message.id,
-          classifierId: classifierId,
-          strength: EvidenceFragmentStrength.medium,
-          confidence: 0.7,
-          note: 'Insufficient trust for confirmed subscription truth.',
-          terms: capturedTerms,
-        ),
-      ],
+      evidenceFragments: evidenceFragments,
     );
   }
 }
