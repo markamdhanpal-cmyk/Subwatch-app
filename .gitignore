@@ -28,3 +28,20 @@ full_test_log_utf8.txt
 single_test_dump.txt
 test_results.json
 dump.txt
+
+
+# Local signoff and capture artifacts
+*.pid
+*_out.txt
+_device_capture.err
+_device_capture.out
+signoff_artifacts/
+analyze.log
+golden_harness.log
+india_fixture_pack.log
+shadow_migration.log
+local_ingestion.log
+dashboard_device_fit.log
+dashboard_text_scale.log
+dashboard_accessibility.log
+
