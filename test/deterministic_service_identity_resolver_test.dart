@@ -302,6 +302,55 @@ void main() {
       expect(resolution.confidence, MerchantResolutionConfidence.low);
     });
 
+    test('resolves JioHotstar from sender ID prefix even with weak body', () {
+      final messageRecord = MessageRecord(
+        id: '123',
+        sourceAddress: 'AD-JIOHTT-S',
+        body: 'Your subscription was renewed.',
+        receivedAt: receivedAt,
+      );
+      final resolution = resolver.resolveMerchant(
+        message: messageRecord,
+        signal: signal(SubscriptionEventType.subscriptionBilled),
+      );
+
+      expect(resolution.resolvedServiceKey.value, 'JIOHOTSTAR');
+      expect(resolution.resolutionMethod, MerchantResolutionMethod.senderIdPrefix);
+      expect(resolution.confidence, MerchantResolutionConfidence.high);
+    });
+
+    test('resolves Netflix via body when sender prefix does not match', () {
+      final messageRecord = MessageRecord(
+        id: '124',
+        sourceAddress: 'BZ-UNKNOWN',
+        body: 'Your Netflix subscription has been renewed for Rs 499.',
+        receivedAt: receivedAt,
+      );
+      final resolution = resolver.resolveMerchant(
+        message: messageRecord,
+        signal: signal(SubscriptionEventType.subscriptionBilled),
+      );
+
+      expect(resolution.resolvedServiceKey.value, 'NETFLIX');
+      expect(resolution.resolutionMethod, MerchantResolutionMethod.exactAlias);
+    });
+
+    test('unrelated sender prefix does not falsely resolve', () {
+      final messageRecord = MessageRecord(
+        id: '125',
+        sourceAddress: 'JY-JIOINF',
+        body: 'Your subscription was renewed.',
+        receivedAt: receivedAt,
+      );
+      final resolution = resolver.resolveMerchant(
+        message: messageRecord,
+        signal: signal(SubscriptionEventType.subscriptionBilled),
+      );
+
+      expect(resolution.resolvedServiceKey.value, isNot('JIOHOTSTAR'));
+      expect(resolution.resolutionMethod, isNot(MerchantResolutionMethod.senderIdPrefix));
+    });
+
     test('keeps strong billed subscription identity unchanged', () {
       final key = resolver.resolve(
         message:

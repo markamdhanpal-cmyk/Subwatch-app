@@ -1,5 +1,6 @@
 enum MerchantResolutionMethod {
   protectedUnresolved,
+  senderIdPrefix,
   exactAlias,
   tokenAlias,
   fuzzyAlias,

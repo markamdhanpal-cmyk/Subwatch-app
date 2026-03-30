@@ -27,6 +27,7 @@ class MerchantKnowledgeEntry {
     required this.displayName,
     required this.aliases,
     required this.category,
+    this.senderIdPrefixes = const <String>[],
     this.planHints = const <String>[],
     this.billingHints = const <String>[],
     this.includedBundleHints = const <String>[],
@@ -38,6 +39,7 @@ class MerchantKnowledgeEntry {
   final String displayName;
   final List<String> aliases;
   final MerchantCategory category;
+  final List<String> senderIdPrefixes;
   final List<String> planHints;
   final List<String> billingHints;
   final List<String> includedBundleHints;
@@ -70,6 +72,7 @@ class MerchantKnowledgeBase {
       displayName: 'Netflix',
       aliases: <String>['netflix', 'netflix.com'],
       category: MerchantCategory.videoStreaming,
+      senderIdPrefixes: <String>['NETFLX', 'NTFLIX'],
       planHints: <String>['premium', 'mobile', 'basic'],
       billingHints: <String>['subscription', 'renewed', 'monthly'],
       typeLabels: <String>['direct_recurring', 'india_first'],
@@ -88,6 +91,7 @@ class MerchantKnowledgeBase {
       displayName: 'JioHotstar',
       aliases: <String>['jiohotstar', 'disney hotstar', 'disney+ hotstar', 'hotstar'],
       category: MerchantCategory.videoStreaming,
+      senderIdPrefixes: <String>['JIOHTT'],
       planHints: <String>['super', 'premium', 'mobile'],
       billingHints: <String>['subscription', 'renewed', 'membership'],
       includedBundleHints: <String>['recharge', 'complimentary', 'benefit', 'free'],
@@ -259,6 +263,34 @@ class MerchantKnowledgeBase {
 
   static MerchantKnowledgeEntry? findByServiceKey(String serviceKey) {
     return _entriesByServiceKey[serviceKey];
+  }
+
+  static MerchantKnowledgeEntry? matchSenderIdPrefix(
+    String senderAddress, {
+    Iterable<String>? requiredTypeLabels,
+    bool allowWeakReview = true,
+    bool allowBundleSignals = true,
+  }) {
+    if (senderAddress.isEmpty) return null;
+    final upperAddress = senderAddress.toUpperCase();
+    final labels = requiredTypeLabels == null
+        ? null
+        : Set<String>.from(requiredTypeLabels);
+
+    for (final entry in entries) {
+      if (entry.senderIdPrefixes.isEmpty) continue;
+      
+      if (labels != null && !entry.typeLabels.any(labels.contains)) continue;
+      if (!allowWeakReview && !entry.resolutionMetadata.resolveOnWeakReview) continue;
+      if (!allowBundleSignals && entry.resolutionMetadata.resolveOnBundleSignals) continue;
+
+      for (final prefix in entry.senderIdPrefixes) {
+        if (upperAddress.contains(prefix.toUpperCase())) {
+          return entry;
+        }
+      }
+    }
+    return null;
   }
 
   static String? displayNameFor(String serviceKey) {

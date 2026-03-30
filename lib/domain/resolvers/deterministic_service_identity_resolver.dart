@@ -97,6 +97,14 @@ class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
       );
     }
 
+    final senderPrefixResolution = _matchSenderPrefix(
+      message.sourceAddress,
+      allowWeakReview: signal.eventType != SubscriptionEventType.unknownReview,
+    );
+    if (senderPrefixResolution != null) {
+      return senderPrefixResolution;
+    }
+
     final exactAliasResolution = _matchExactAlias(
       message.body,
       allowWeakReview: signal.eventType != SubscriptionEventType.unknownReview,
@@ -159,6 +167,25 @@ class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
     required ParsedSignal signal,
   }) {
     return resolveMerchant(message: message, signal: signal).resolvedServiceKey;
+  }
+
+  MerchantResolution? _matchSenderPrefix(
+    String senderAddress, {
+    required bool allowWeakReview,
+  }) {
+    final entry = MerchantKnowledgeBase.matchSenderIdPrefix(
+      senderAddress,
+      allowWeakReview: allowWeakReview,
+    );
+    if (entry != null) {
+      return MerchantResolution(
+        resolvedServiceKey: ServiceKey(entry.serviceKey),
+        confidence: MerchantResolutionConfidence.high,
+        resolutionMethod: MerchantResolutionMethod.senderIdPrefix,
+        matchedTerms: <String>[senderAddress],
+      );
+    }
+    return null;
   }
 
   MerchantResolution? _matchExactAlias(
