@@ -23,6 +23,18 @@ class WeakSignalReviewClassifier implements EventClassifier {
     r'\bcancel(?:\s+your)?\s+renewal\b',
     caseSensitive: false,
   );
+  static final RegExp _suspensionPattern = RegExp(
+    r'\b(?:suspend(?:ed)?|deactivate(?:d)?|blocked|on\s+hold)\b',
+    caseSensitive: false,
+  );
+  static final RegExp _trialEndingPattern = RegExp(
+    r'\b(?:free\s+)?trial\b.*\b(?:ending|ends|expires?|expiring|is\s+up)\b',
+    caseSensitive: false,
+  );
+  static final RegExp _expiryPattern = RegExp(
+    r'\b(?:expires?|expiring|expiry)\b.*\b(?:on|soon|shortly|on|in)\b',
+    caseSensitive: false,
+  );
 
   static final List<RegExp> _positivePatterns = <RegExp>[
     RegExp(
@@ -62,9 +74,16 @@ class WeakSignalReviewClassifier implements EventClassifier {
     final hasRenewalFailureLanguage = _renewalFailurePattern.hasMatch(body);
     final hasRetryLanguage = _retryPattern.hasMatch(body);
     final hasCancellationLanguage = _cancellationPattern.hasMatch(body);
+    final hasSuspensionLanguage = _suspensionPattern.hasMatch(body);
+    final hasTrialEndingLanguage = _trialEndingPattern.hasMatch(body);
+    final hasExpiryLanguage = _expiryPattern.hasMatch(body);
+
     final hasRenewalRiskLanguage = hasRenewalFailureLanguage ||
         hasRetryLanguage ||
-        hasCancellationLanguage;
+        hasCancellationLanguage ||
+        hasSuspensionLanguage ||
+        hasTrialEndingLanguage ||
+        hasExpiryLanguage;
     final hasReviewableLifecycleContext = hasSubscriptionContext ||
         (hasPlanContext && hasRecurringContext) ||
         hasDirectRecurringMerchant ||
@@ -102,6 +121,9 @@ class WeakSignalReviewClassifier implements EventClassifier {
               _renewalFailurePattern,
               _retryPattern,
               _cancellationPattern,
+              _suspensionPattern,
+              _trialEndingPattern,
+              _expiryPattern,
               RecurringBillingHeuristics.directRecurringMerchantPattern,
               RecurringBillingHeuristics.appStoreMerchantPattern,
               RecurringBillingHeuristics.subscriptionContextPattern,
@@ -140,14 +162,28 @@ class WeakSignalReviewClassifier implements EventClassifier {
           note: 'Renewal-risk lifecycle wording detected.',
           terms: capturedTerms,
         ),
-      if (hasCancellationLanguage || hasRenewalFailureLanguage)
+      if (hasCancellationLanguage || hasRenewalFailureLanguage || hasSuspensionLanguage)
         EvidenceFragment(
           type: EvidenceFragmentType.cancellationHint,
           sourceMessageId: message.id,
           classifierId: classifierId,
           strength: EvidenceFragmentStrength.weak,
           confidence: 0.64,
-          note: 'Cancellation or failed-renewal wording detected.',
+          note: hasSuspensionLanguage
+              ? 'Subscription suspension signal detected.'
+              : 'Cancellation or failed-renewal wording detected.',
+          terms: capturedTerms,
+        ),
+      if (hasTrialEndingLanguage || hasExpiryLanguage)
+        EvidenceFragment(
+          type: EvidenceFragmentType.renewalHint,
+          sourceMessageId: message.id,
+          classifierId: classifierId,
+          strength: EvidenceFragmentStrength.medium,
+          confidence: 0.65,
+          note: hasTrialEndingLanguage
+              ? 'Free trial ending signal detected.'
+              : 'Subscription expiry signal detected.',
           terms: capturedTerms,
         ),
       EvidenceFragment(

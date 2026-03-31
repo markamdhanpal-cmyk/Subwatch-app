@@ -33,7 +33,6 @@ Widget _buildDashboardHomeScreen({
 }) {
   final homeAction = _HomeActionCopy.fromState(
     sourceStatus: sourceStatus,
-    reviewCount: data.reviewQueue.length,
     dueSoonCount: dueSoon.items.length,
   );
   final visibleSubscriptionCount = data.cards
@@ -63,10 +62,8 @@ Widget _buildDashboardHomeScreen({
       _HomeActionStrip(
         copy: homeAction,
         subscriptionCount: visibleSubscriptionCount,
-        reviewCount: data.reviewQueue.length,
         dueSoonCount: dueSoon.items.length,
         sourceStatus: sourceStatus,
-        onReview: shell._openReviewDestination,
         onSync: () => shell._handleSyncEntry(sourceStatus),
         onOpenRenewals: shell._scrollHomeToRenewals,
         onOpenSubscriptions: () async {

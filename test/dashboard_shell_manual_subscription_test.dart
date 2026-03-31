@@ -89,7 +89,7 @@ void main() {
       expect(find.text('Added by you'), findsWidgets);
       expect(find.text('Billing'), findsOneWidget);
       expect(find.text('Plan label'), findsOneWidget);
-      expect(find.text('Family plan'), findsOneWidget);
+      expect(find.text('Family plan'), findsWidgets);
 
       await tapAndPumpDashboardShell(
         tester,

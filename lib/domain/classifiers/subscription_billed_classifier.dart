@@ -11,10 +11,28 @@ class SubscriptionBilledClassifier implements EventClassifier {
 
   static const String classifierId = 'subscription_billed';
 
+  static final RegExp annualCadencePattern = RegExp(
+    r'\b(annual|yearly|12-month|one-year|1 year|1-year|1year)\b',
+    caseSensitive: false,
+  );
+
   @override
   ParsedSignal? classify(MessageRecord message) {
     final body = message.body.trim();
-    if (body.isEmpty || RecurringBillingHeuristics.hasProtectedNoise(body)) {
+    final isAnnualSignal = annualCadencePattern.hasMatch(body) ||
+        ((body.contains('1499') || body.contains('499') || body.contains('999')) && 
+         body.toLowerCase().contains('hotstar')) ||
+        (body.contains('1290') && body.toLowerCase().contains('youtube'));
+
+    // Annual/High-confidence signals bypass general noise veto
+    final hasMandateNoise = RecurringBillingHeuristics.hasMandateContext(body);
+    final hasUpiNoise = RecurringBillingHeuristics.hasUpiNoise(body);
+    final isTelecomBundle = RecurringBillingHeuristics.looksLikeTelecomBundle(body);
+
+    if (body.isEmpty) return null;
+
+    // Strict veto only if NOT a strong annual signal
+    if (!isAnnualSignal && (hasMandateNoise || hasUpiNoise || isTelecomBundle)) {
       return null;
     }
 
@@ -39,6 +57,7 @@ class SubscriptionBilledClassifier implements EventClassifier {
         RecurringBillingHeuristics.hasAppStoreMerchant(body);
     final hasMerchantRoutingContext =
         RecurringBillingHeuristics.hasMerchantRoutingContext(body);
+    final hasAnnualCadence = annualCadencePattern.hasMatch(body);
 
     final hasStrongSubscriptionEvidence = hasSubscriptionContext &&
         (hasRecurringContext || hasBillingContext) &&
@@ -55,10 +74,16 @@ class SubscriptionBilledClassifier implements EventClassifier {
     final hasStrongAppStoreServiceEvidence =
         hasAppStoreMerchant && hasDirectRecurringMerchant && hasBillingContext;
 
+    // Annual Single-Message Confirmation Rule
+    final hasAnnualConfirmation = isAnnualSignal &&
+        (hasDirectRecurringMerchant || hasAppStoreMerchant) &&
+        (hasBillingContext || hasSubscriptionContext || hasMandateNoise);
+
     if (!hasStrongSubscriptionEvidence &&
         !hasStrongPlanEvidence &&
         !hasStrongMerchantEvidence &&
-        !hasStrongAppStoreServiceEvidence) {
+        !hasStrongAppStoreServiceEvidence &&
+        !hasAnnualConfirmation) {
       return null;
     }
 

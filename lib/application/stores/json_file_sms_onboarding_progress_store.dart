@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../contracts/sms_onboarding_progress_store.dart';
+import 'atomic_json_file_writer.dart';
 
 class JsonFileSmsOnboardingProgressStore implements SmsOnboardingProgressStore {
   factory JsonFileSmsOnboardingProgressStore.applicationSupport({
@@ -32,12 +33,8 @@ class JsonFileSmsOnboardingProgressStore implements SmsOnboardingProgressStore {
   Future<bool> readCompleted() async {
     try {
       final file = await _dataFile(createDirectory: false);
-      if (!await file.exists()) {
-        return false;
-      }
-
-      final raw = await file.readAsString();
-      if (raw.trim().isEmpty) {
+      final raw = await AtomicJsonFileWriter.read(file);
+      if (raw == null) {
         return false;
       }
 
@@ -67,7 +64,7 @@ class JsonFileSmsOnboardingProgressStore implements SmsOnboardingProgressStore {
       final payload = jsonEncode(<String, Object?>{
         'completed': completed,
       });
-      await file.writeAsString(payload, flush: true);
+      await AtomicJsonFileWriter.write(file, payload);
     } on MissingPluginException {
       return;
     } on MissingPlatformDirectoryException {

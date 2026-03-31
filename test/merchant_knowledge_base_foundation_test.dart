@@ -56,6 +56,25 @@ void main() {
     test('service key display names prefer knowledge-base titles', () {
       expect(const ServiceKey('JIOHOTSTAR').displayName, 'JioHotstar');
       expect(const ServiceKey('GOOGLE_PLAY').displayName, 'Google Play');
+      expect(const ServiceKey('AIRTEL_XSTREAM').displayName, 'Airtel Xstream');
+    });
+
+    test('resolves Airtel Xstream and Airtel Black from aliases', () {
+      final xstream = MerchantKnowledgeBase.matchKnownMerchant('Your airtel xstream subscription is successful.');
+      final black = MerchantKnowledgeBase.matchKnownMerchant('Airtel Black bill for XX123 is generated.');
+
+      expect(xstream?.serviceKey, 'AIRTEL_XSTREAM');
+      expect(black?.serviceKey, 'AIRTEL_BLACK');
+    });
+
+    test('resolves merchants from specific sender ID prefixes', () {
+      final swiggy = MerchantKnowledgeBase.matchSenderIdPrefix('AD-SWIGGY');
+      final google = MerchantKnowledgeBase.matchSenderIdPrefix('G-GOOGLE');
+      final zomato = MerchantKnowledgeBase.matchSenderIdPrefix('JM-ZOMATO');
+
+      expect(swiggy?.serviceKey, 'SWIGGY_ONE');
+      expect(google?.serviceKey, 'GOOGLE_ONE');
+      expect(zomato?.serviceKey, 'ZOMATO_GOLD');
     });
   });
 }

@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../contracts/local_control_overlay_store.dart';
 import '../models/local_control_overlay_models.dart';
+import 'atomic_json_file_writer.dart';
 
 class JsonFileLocalControlOverlayStore implements LocalControlOverlayStore {
   factory JsonFileLocalControlOverlayStore.applicationSupport({
@@ -33,12 +34,8 @@ class JsonFileLocalControlOverlayStore implements LocalControlOverlayStore {
   Future<List<LocalControlDecision>> list() async {
     try {
       final file = await _dataFile(createDirectory: false);
-      if (!await file.exists()) {
-        return const <LocalControlDecision>[];
-      }
-
-      final raw = await file.readAsString();
-      if (raw.trim().isEmpty) {
+      final raw = await AtomicJsonFileWriter.read(file);
+      if (raw == null) {
         return const <LocalControlDecision>[];
       }
 
@@ -83,7 +80,7 @@ class JsonFileLocalControlOverlayStore implements LocalControlOverlayStore {
 
       final file = await _dataFile(createDirectory: true);
       final payload = next.map((item) => item.toJson()).toList(growable: false);
-      await file.writeAsString(jsonEncode(payload), flush: true);
+      await AtomicJsonFileWriter.write(file, jsonEncode(payload));
     } on MissingPluginException {
       return;
     } on MissingPlatformDirectoryException {
@@ -106,7 +103,7 @@ class JsonFileLocalControlOverlayStore implements LocalControlOverlayStore {
 
       final file = await _dataFile(createDirectory: true);
       final payload = next.map((item) => item.toJson()).toList(growable: false);
-      await file.writeAsString(jsonEncode(payload), flush: true);
+      await AtomicJsonFileWriter.write(file, jsonEncode(payload));
       return true;
     } on MissingPluginException {
       return false;

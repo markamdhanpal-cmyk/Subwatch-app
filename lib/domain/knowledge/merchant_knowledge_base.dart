@@ -177,6 +177,7 @@ class MerchantKnowledgeBase {
       displayName: 'Google One',
       aliases: <String>['google one', 'googleone'],
       category: MerchantCategory.cloudStorage,
+      senderIdPrefixes: <String>['GOOGLE', 'G-ONE'],
       planHints: <String>['100 gb', '200 gb', '2 tb'],
       billingHints: <String>['plan', 'upcoming payment', 'subscription'],
       typeLabels: <String>['direct_recurring'],
@@ -224,6 +225,7 @@ class MerchantKnowledgeBase {
       displayName: 'Swiggy One',
       aliases: <String>['swiggy one'],
       category: MerchantCategory.foodMembership,
+      senderIdPrefixes: <String>['SWIGGY'],
       planHints: <String>['one', 'membership'],
       billingHints: <String>['membership', 'subscription'],
       typeLabels: <String>['direct_recurring', 'india_first'],
@@ -233,8 +235,31 @@ class MerchantKnowledgeBase {
       displayName: 'Zomato Gold',
       aliases: <String>['zomato gold'],
       category: MerchantCategory.foodMembership,
+      senderIdPrefixes: <String>['ZOMATO'],
       planHints: <String>['gold', 'membership'],
       billingHints: <String>['membership', 'subscription'],
+      typeLabels: <String>['direct_recurring', 'india_first'],
+    ),
+    MerchantKnowledgeEntry(
+      serviceKey: 'AIRTEL_XSTREAM',
+      displayName: 'Airtel Xstream',
+      aliases: <String>['airtel xstream', 'xstream'],
+      category: MerchantCategory.videoStreaming,
+      senderIdPrefixes: <String>[],
+      planHints: <String>['premium', 'mobile'],
+      billingHints: <String>['subscription', 'renewed'],
+      includedBundleHints: <String>['recharge', 'complimentary', 'benefit', 'free'],
+      typeLabels: <String>['direct_recurring', 'bundle_candidate', 'india_first'],
+      resolutionMetadata: MerchantResolutionMetadata(resolveOnBundleSignals: true),
+    ),
+    MerchantKnowledgeEntry(
+      serviceKey: 'AIRTEL_BLACK',
+      displayName: 'Airtel Black',
+      aliases: <String>['airtel black'],
+      category: MerchantCategory.foodMembership, // Actually a combo bill, but keeping categorized
+      senderIdPrefixes: <String>[],
+      planHints: <String>['black'],
+      billingHints: <String>['bill', 'generated'],
       typeLabels: <String>['direct_recurring', 'india_first'],
     ),
   ];
@@ -273,6 +298,21 @@ class MerchantKnowledgeBase {
     return _entriesByServiceKey[serviceKey];
   }
 
+  static String extractSenderToken(String senderAddress) {
+    if (senderAddress.isEmpty) return '';
+    final upper = senderAddress.toUpperCase();
+
+    // DLT pattern: [2-letter-prefix]-[TOKEN]-[1-letter-suffix] or [2-letter-prefix]-[TOKEN]
+    // Examples: AD-JIOHTT-S -> JIOHTT, VX-GOOGLE -> GOOGLE
+    final parts = upper.split('-');
+    if (parts.length >= 2) {
+      // Middle part (for 3 parts) or second part (for 2 parts) is the token
+      return parts[1];
+    }
+
+    return upper; // Fallback to raw if no hyphen (e.g. "BANK")
+  }
+
   static MerchantKnowledgeEntry? matchSenderIdPrefix(
     String senderAddress, {
     Iterable<String>? requiredTypeLabels,
@@ -280,20 +320,21 @@ class MerchantKnowledgeBase {
     bool allowBundleSignals = true,
   }) {
     if (senderAddress.isEmpty) return null;
-    final upperAddress = senderAddress.toUpperCase();
+    final senderToken = extractSenderToken(senderAddress);
+
     final labels = requiredTypeLabels == null
         ? null
         : Set<String>.from(requiredTypeLabels);
 
     for (final entry in entries) {
       if (entry.senderIdPrefixes.isEmpty) continue;
-      
+
       if (labels != null && !entry.typeLabels.any(labels.contains)) continue;
       if (!allowWeakReview && !entry.resolutionMetadata.resolveOnWeakReview) continue;
       if (!allowBundleSignals && entry.resolutionMetadata.resolveOnBundleSignals) continue;
 
       for (final prefix in entry.senderIdPrefixes) {
-        if (upperAddress.contains(prefix.toUpperCase())) {
+        if (senderToken == prefix.toUpperCase()) {
           return entry;
         }
       }

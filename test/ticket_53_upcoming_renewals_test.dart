@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/build_dashboard_upcoming_renewals_use_case.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
@@ -92,7 +92,7 @@ void main() {
         ),
         _card(
           key: 'JIOHOTSTAR',
-          title: 'Jiohotstar',
+          title: 'JioHotstar',
           bucket: DashboardBucket.needsReview,
           state: ResolverState.possibleSubscription,
           subtitle: 'Needs confirmation - Renews on 15 Mar 2026 - Rs 149',

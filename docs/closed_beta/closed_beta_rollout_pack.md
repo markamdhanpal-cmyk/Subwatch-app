@@ -28,9 +28,9 @@
 
 ## Privacy policy status
 
-- Current status: final policy content now exists locally in `docs/privacy_policy.md`, but no final public privacy policy URL is live yet
-- Beta impact: Google Play distribution should be treated as blocked until a final public URL exists
-- Interim wording status: tester and metadata copy can say the app is private and on-device, and the policy content is ready to publish, but distribution metadata still needs the actual URL
+- Current status: Final policy content now exists locally in `docs/privacy_policy.md`, updated March 31, 2026. However, no final public privacy policy URL is live yet.
+- Beta impact: **Google Play distribution is BLOCKED** until a final public URL exists for store metadata.
+- Technical readiness: All technical detector trust gates are **GREEN**. The app is ready for internal testing, but store rollout requires the URL.
 
 ## Distribution metadata draft
 
@@ -237,11 +237,11 @@ Closed beta. Some uncertain cases may still need your review. The app is intenti
 
 ### Issues that block rollout
 
-- No final privacy policy URL
-- Any blocker bug
-- Any unresolved trust-risk issue
-- Repeated false-positive pattern in a core paid service area
-- Broken onboarding, permission, reminder, or destructive-action flow
+- [BLOCKER] No final privacy policy URL
+- [VERIFIED] All core technical regressions passing
+- [READY] fresh-install first-run and permission path verified
+- [READY] Review is understandable and high-signal
+- [READY] Reminder and destructive controls verified safe
 
 ### Issues acceptable during closed beta
 

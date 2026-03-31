@@ -18,10 +18,10 @@ class EventPipelineUseCase {
   })  : _classifiers = List.unmodifiable(
           classifiers ??
               const <EventClassifier>[
+                SubscriptionBilledClassifier(),
                 UpiNoiseVetoClassifier(),
                 MandateIntentClassifier(),
                 TelecomBundleClassifier(),
-                SubscriptionBilledClassifier(),
                 WeakSignalReviewClassifier(),
               ],
         ),

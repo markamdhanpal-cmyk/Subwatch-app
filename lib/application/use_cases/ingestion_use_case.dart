@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import '../../domain/contracts/ledger_repository.dart';
 import '../../domain/contracts/service_evidence_bucket_repository.dart';
 import '../../domain/entities/message_record.dart';
@@ -93,10 +95,20 @@ class IngestionUseCase {
     final canonicalInputsByMessageId = <String, CanonicalInput>{
       for (final input in inputs) input.id: input,
     };
-    final normalizedInputs = _normalizationUseCase.normalizeAll(inputs);
-    final normalizedMessages =
-        _normalizedInputMessageRecordBridge.toMessageRecords(normalizedInputs);
-    final events = _eventPipeline.execute(normalizedMessages);
+
+    // Offload heavy CPU work (Normalization + EventPipeline) to a background isolate.
+    // This prevents UI jank during large scans (O(N) operations).
+    // In test environments, we stay on the main isolate for stability.
+    final List<SubscriptionEvent> events;
+    final bool useIsolate =
+        !kIsWeb && !Platform.environment.containsKey('FLUTTER_TEST');
+
+    if (useIsolate) {
+      events = await compute(_runClassificationBatch, inputs);
+    } else {
+      events = _runClassificationBatch(inputs);
+    }
+
     await _resolverPipeline.execute(events);
     final bucketRepository = _serviceEvidenceBucketRepository;
     if (bucketRepository != null) {
@@ -137,5 +149,19 @@ class IngestionUseCase {
     }
 
     return _decisionExecutionMode;
+  }
+
+  /// Top-level or static function for Isolate execution.
+  /// Must be self-contained or use only isolate-safe (stateless) objects.
+  static List<SubscriptionEvent> _runClassificationBatch(
+    List<CanonicalInput> inputs,
+  ) {
+    const normalizationUseCase = CanonicalInputNormalizationUseCase();
+    const bridge = NormalizedInputMessageRecordBridge();
+    final eventPipeline = EventPipelineUseCase();
+
+    final normalizedInputs = normalizationUseCase.normalizeAll(inputs);
+    final normalizedMessages = bridge.toMessageRecords(normalizedInputs);
+    return eventPipeline.execute(normalizedMessages);
   }
 }

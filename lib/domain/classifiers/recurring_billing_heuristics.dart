@@ -34,6 +34,11 @@ class RecurringBillingHeuristics {
     caseSensitive: false,
   );
 
+  static final RegExp renewalRiskPattern = RegExp(
+    r'\b(unable to renew|failed to renew|unsuccessful renewal|will retry|retry over next|renewal failed|renewal pending|cancel renewal|payment failed for renewal)\b',
+    caseSensitive: false,
+  );
+
   static final RegExp subscriptionContextPattern = RegExp(
     r'\b(subscription|monthly subscription|subscription payment|membership)\b',
     caseSensitive: false,
@@ -94,6 +99,11 @@ class RecurringBillingHeuristics {
   }
 
   static bool looksLikeTelecomBundle(String body) {
+    // Escape Hatch: Renewal-risk / Failure language
+    if (renewalRiskPattern.hasMatch(body)) {
+      return false;
+    }
+
     if (telecomProviderPattern.hasMatch(body) &&
         telecomBenefitPattern.hasMatch(body)) {
           

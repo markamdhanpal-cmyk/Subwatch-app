@@ -45,9 +45,9 @@ class DeviceLocalSmsMessageSource
         return false;
       }
 
-      final senderUpper = msg.address.toUpperCase();
+      final senderToken = MerchantKnowledgeBase.extractSenderToken(msg.address);
       for (final prefix in MerchantKnowledgeBase.suppressedSenderPrefixes) {
-        if (senderUpper.contains(prefix)) {
+        if (senderToken == prefix.toUpperCase()) {
           return false;
         }
       }

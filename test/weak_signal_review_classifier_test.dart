@@ -159,5 +159,52 @@ void main() {
 
       expect(result, isNull);
     });
+
+    test('classifies subscription suspended as unknownReview', () {
+      final result = classifier.classify(
+        message('Your Netflix subscription has been suspended due to payment failure.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.unknownReview);
+      expect(result.summary, contains('Renewal-risk'));
+      expect(result.evidenceFragments.any((f) => f.note?.contains('suspension') ?? false), isTrue);
+    });
+
+    test('classifies free trial ending as unknownReview', () {
+      final result = classifier.classify(
+        message('Your Google One free trial ends in 3 days. Renew now to keep your 100 GB storage.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.unknownReview);
+      expect(result.evidenceFragments.any((f) => f.note?.contains('trial ending') ?? false), isTrue);
+    });
+
+    test('classifies subscription expiring as unknownReview', () {
+      final result = classifier.classify(
+        message('Your Amazon Prime membership expires on 20th June 2024.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.unknownReview);
+      expect(result.evidenceFragments.any((f) => f.note?.contains('expiry') ?? false), isTrue);
+    });
+
+    test('does not classify loan suspension noise', () {
+      final result = classifier.classify(
+        message('Your Personal Loan account has been suspended. Please contact branch.'),
+      );
+
+      expect(result, isNull);
+    });
+
+    test('does not classify credit card expiry noise', () {
+      final result = classifier.classify(
+        message('Your SBI Credit Card XX4321 expires on 05/29. Request a new one in the app.'),
+      );
+
+      expect(result, isNull);
+    });
   });
 }

@@ -47,23 +47,19 @@ void main() {
     );
     expect(find.byKey(const ValueKey<String>('home-trust-row')),
         findsOneWidget);
-    expect(find.text('Sample preview'), findsOneWidget);
+    expect(find.text('Sample preview'), findsWidgets);
 
     await openDashboardDestination(tester, 'review');
     expect(find.text('Review'), findsWidgets);
-    expect(
-      find.descendant(
-        of: reviewQueueSection,
-        matching: find.text('Jiohotstar'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.text(
-        'Looks recurring, but still uncertain',
-      ),
-      findsOneWidget,
-    );
+      expect(
+        find.bySemanticsLabel(
+          RegExp(
+            r'JioHotstar\. The signals conflict, so this still needs your review\. Review actions below\.',
+          ),
+        ),
+        findsOneWidget,
+      );
+    expect(find.textContaining('The signals conflict'), findsOneWidget);
 
     await openDashboardDestination(tester, 'subscriptions');
     final reviewSection = find.byKey(
@@ -79,8 +75,8 @@ void main() {
       findsWidgets,
     );
     expect(
-      tester.getTopLeft(reviewSection).dy,
-      lessThan(tester.getTopLeft(confirmedSection).dy),
+      tester.getTopLeft(confirmedSection).dy,
+      lessThan(tester.getTopLeft(reviewSection).dy),
     );
     expect(
       find.descendant(of: confirmedSection, matching: find.text('Netflix')),
@@ -132,6 +128,10 @@ void main() {
     expect(
       find.byKey(const ValueKey<String>('settings-open-privacy')),
       findsOneWidget,
+    );
+    await scrollDashboardUntilVisible(
+      tester,
+      find.byKey(const ValueKey<String>('settings-open-about')),
     );
     expect(
       find.byKey(const ValueKey<String>('settings-open-about')),
@@ -242,13 +242,14 @@ void main() {
     await pumpDashboardShellUi(tester);
 
     expect(find.text('Why SubWatch flagged this'), findsOneWidget);
-    await scrollDashboardUntilVisible(
+    await tapAndPumpDashboardShell(
       tester,
       find.text('Why SubWatch flagged this'),
     );
-    expect(find.text('A recurring-looking signal was found.'), findsOneWidget);
+    expect(find.textContaining('wording that suggests recurring access'), findsNothing);
+    expect(find.textContaining('signals point in different directions'), findsOneWidget);
     expect(
-      find.text('The evidence is still too weak to confirm it automatically.'),
+      find.textContaining('signals that do not agree with each other'),
       findsOneWidget,
     );
   });

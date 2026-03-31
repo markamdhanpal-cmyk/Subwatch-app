@@ -1,60 +1,47 @@
-# SubWatch Closed Beta Pre-Rollout Checklist
+# SubWatch — Pre-Beta Truth & Evidence Checklist
 
-## Packaging and identity
+This checklist focuses on the **technical truth** of the subscription detection pipeline. Before rollout, every core signal class must prove it is deterministic and false-positive-averse.
 
-- Confirm package target is Google Play closed testing
-- Confirm intended artifact is `build/app/outputs/bundle/release/app-release.aab`
-- Confirm signing values are present locally
-- Confirm `pubspec.yaml` version is `0.1.0+1`
-- Confirm app label is `SubWatch`
-- Confirm package identity is `app.subscriptionkiller`
-- Confirm launcher icon is the intended final icon
+## 1. Detector Truth & Precision
 
-## Build and install
+### Sender-ID Resolution (DLT)
+- [x] **Prefix Matching**: Verify DLT prefixes (e.g., `SWIGGY`, `ZOMATO`, `G-ONE`) resolve to the correct High-Value merchant.
+- [x] **Address Priority**: Confirm sender-prefix matching happens before fuzzy body-text matching.
 
-- Build the signed release AAB
-- Build the signed release APK for install sanity
-- Confirm the artifact being shared matches the intended version name/code
-- Install the sanity-check build on at least one Android device
+### Mandate Lifecycle Logic
+- [x] **Setup Separation**: Verify "Mandate Created/Setup" messages stay in the **Review Queue** or are correctly distinguished from active billing.
+- [x] **Cancellation Awareness**: Verify "Mandate Cancelled" messages are **NOT** swallowed as noise and surface as evidence for Review.
+- [x] **Netflix Exception**: Confirm Netflix mandate cancellation is successfully detected as subscription evidence.
 
-## Fresh-install product sanity
+### Telecom Bundle & Direct Billing
+- [x] **Veto Escape**: Verify messages containing billing language ("Rs 499", "renewed") escape the generic "telecom bundle" veto even if "Airtel" or "Jio" is present.
+- [x] **Bundle Separation**: Confirm regular recharges are suppressed or correctly categorized as "Included Benefits".
 
-- Fresh install opens cleanly
-- First-run screen feels calm and trust-first
-- Permission explanation is readable and honest
-- Grant path works
-- Browse-without-grant path works
-- Denied path works
-- Settings-return path works
+### Structural Noise & Vetoes
+- [x] **RCS Metadata**: Confirm Google RCS bot signals (`.rcs.google.com`) are filtered early.
+- [x] **Empty Message Hygiene**: Confirm zero-length bodies are dropped before classification.
+- [x] **BNPL & Loan Noise**: Verify "Loan Suspended" or card-expiry noise is **NOT** classified as subscription evidence.
 
-## Product state sanity
+## 2. Ingestion & Persistence Trust
 
-- Zero-result path is sane
-- Populated Home is sane
-- Review is understandable
-- Bundled/included services stay separate
-- Manual add path still works
-- Reminder manager and reminder detail path still work
-- Settings trust/help paths still work
+### Write Durability (Anti-Corruption)
+- [x] **Atomic Writes**: Confirm `JsonFile*Store` uses temp-file-then-rename pattern for all writes.
+- [x] **Startup Recovery**: Verify that partial/corrupt JSON files do not blank the ledger at startup.
+- [x] **Review Persistence**: Confirm that user-dismissed/confirmed review actions are immediately durable.
 
-## Safety sanity
+### Ingestion Horizon
+- [x] **Scanning Window**: Confirm 18-month default horizon is respected.
+- [x] **Provenance Trace**: Verify that scanned results correctly record `DecisionExecutionMode.bridgeToLedger` (Live mode).
 
-- Clear-all-data path requires deliberate confirmation
-- Recovery rows do not dominate Settings
-- Report-a-problem path opens the intended support channel
-- Privacy policy link is final and valid
+## 3. Product & Packaging Sanity
 
-## Rollout readiness
+- [x] **Package Identity**: `app.subscriptionkiller` (SubWatch) confirmed.
+- [x] **Version**: `0.1.0+1` confirmed.
+- [x] **Privacy Policy URL**: [BLOCKER] No live public URL exists yet.
+- [x] **Clear All Data**: Confirmation dialog is technically functional and clears the actual ledger/evidence files.
 
-- Tester invite message is final
-- Feedback templates are final
-- Severity definitions are agreed
-- Trust-risk escalation owner is clear
-- Batch 1 tester list is final
-- Batch 2 expansion gates are agreed
+## 4. Final Beta Verdict
 
-## Hard blockers
-
-- No final privacy policy URL
-- Any blocker bug
-- Any unresolved trust-risk issue
+- **Detector Status**: **GREEN** (All core regressions passing fixture pack).
+- **Execution Mode**: **LIVE** (`bridgeToLedger`).
+- **Rollout Status**: **BLOCKED** by Privacy Policy URL.

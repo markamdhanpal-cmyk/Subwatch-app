@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../contracts/local_renewal_reminder_store.dart';
 import '../models/local_renewal_reminder_models.dart';
+import 'atomic_json_file_writer.dart';
 
 class JsonFileLocalRenewalReminderStore
     implements LocalRenewalReminderStore {
@@ -34,12 +35,8 @@ class JsonFileLocalRenewalReminderStore
   Future<List<LocalRenewalReminderPreference>> list() async {
     try {
       final file = await _dataFile(createDirectory: false);
-      if (!await file.exists()) {
-        return const <LocalRenewalReminderPreference>[];
-      }
-
-      final raw = await file.readAsString();
-      if (raw.trim().isEmpty) {
+      final raw = await AtomicJsonFileWriter.read(file);
+      if (raw == null) {
         return const <LocalRenewalReminderPreference>[];
       }
 
@@ -84,7 +81,7 @@ class JsonFileLocalRenewalReminderStore
       final file = await _dataFile(createDirectory: true);
       final payload =
           next.map((item) => item.toJson()).toList(growable: false);
-      await file.writeAsString(jsonEncode(payload), flush: true);
+      await AtomicJsonFileWriter.write(file, jsonEncode(payload));
     } on MissingPluginException {
       return;
     } on MissingPlatformDirectoryException {
@@ -108,7 +105,7 @@ class JsonFileLocalRenewalReminderStore
       final file = await _dataFile(createDirectory: true);
       final payload =
           next.map((item) => item.toJson()).toList(growable: false);
-      await file.writeAsString(jsonEncode(payload), flush: true);
+      await AtomicJsonFileWriter.write(file, jsonEncode(payload));
       return true;
     } on MissingPluginException {
       return false;

@@ -43,7 +43,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const ValueKey<String>('review-item-details-sheet-JIOHOTSTAR')),
-          matching: find.text('Jiohotstar'),
+          matching: find.text('JioHotstar'),
         ),
         findsOneWidget,
       );
@@ -56,7 +56,7 @@ void main() {
       );
       await settleDashboard(tester);
       expect(
-        find.text('Jiohotstar added to your subscriptions.'),
+        find.text('JioHotstar added to your subscriptions.'),
         findsOneWidget,
       );
 

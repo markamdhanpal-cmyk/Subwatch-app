@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/review_item_action_models.dart';
@@ -84,7 +84,7 @@ void main() {
         ReviewItemDecision(
           targetKey: 'JIOHOTSTAR',
           serviceKey: 'JIOHOTSTAR',
-          title: 'Jiohotstar',
+          title: 'JioHotstar',
           action: ReviewItemAction.confirmSubscription,
           decidedAt: DateTime(2026, 3, 13, 10, 0),
         ),

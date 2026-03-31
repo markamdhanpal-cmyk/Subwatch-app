@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/dashboard_service_view_models.dart';
 import 'package:sub_killer/application/models/local_service_presentation_overlay_models.dart';
@@ -70,7 +70,7 @@ void main() {
       _card(
         key: 'JIOHOTSTAR',
         bucket: DashboardBucket.needsReview,
-        title: 'Jiohotstar',
+        title: 'JioHotstar',
       ),
       _card(
         key: 'GEMINI',
@@ -105,7 +105,7 @@ void main() {
     expect(observedOnly.sections, hasLength(1));
     expect(
       observedOnly.cardsForBucket(DashboardBucket.needsReview).single.title,
-      'Jiohotstar',
+      'JioHotstar',
     );
   });
 
@@ -247,7 +247,7 @@ void main() {
       find
           .widgetWithText(
             CheckedPopupMenuItem<DashboardServiceFilterMode>,
-            'Trials & benefits',
+            'Included with your plan',
           )
           .last,
     );

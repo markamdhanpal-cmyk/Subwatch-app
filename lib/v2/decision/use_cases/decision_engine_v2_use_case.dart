@@ -73,7 +73,8 @@ class DecisionEngineV2UseCase {
     final hasReviewSignals = bucket.weakRecurringHintCount > 0 ||
         bucket.unknownReviewCount > 0 ||
         bucket.promoCount > 0 ||
-        bucket.cancellationHintCount > 0;
+        bucket.cancellationHintCount > 0 ||
+        bucket.renewalHintCount > 0;
     final hasLifecycleReviewSignals =
         bucket.renewalHintCount > 0 || bucket.cancellationHintCount > 0;
     final hasContradictions = bucket.contradictions.isNotEmpty;
@@ -239,8 +240,11 @@ class DecisionEngineV2UseCase {
     }
 
     if (hasReviewSignals) {
-      if (bucket.weakRecurringHintCount > 0 || bucket.unknownReviewCount > 0) {
+      if (bucket.weakRecurringHintCount > 0 || bucket.unknownReviewCount > 0 || bucket.renewalHintCount > 0) {
         reasons.add(DecisionReasonCode.weakRecurringSignalsObserved);
+        if (bucket.renewalHintCount > 0) {
+          reasons.add(DecisionReasonCode.recurringRenewalObserved);
+        }
       }
       if (bucket.promoCount > 0) {
         reasons.add(DecisionReasonCode.promoSignalsObserved);

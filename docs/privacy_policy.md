@@ -1,6 +1,6 @@
 # SubWatch Privacy Policy
 
-Last updated: 27 March 2026
+Last updated: 31 March 2026
 
 SubWatch is a private, on-device Android app that helps you review real paid subscriptions from SMS. It is built to be conservative: uncertain cases stay in Review instead of being over-confirmed, and bundled or included access stays separate from paid subscriptions.
 

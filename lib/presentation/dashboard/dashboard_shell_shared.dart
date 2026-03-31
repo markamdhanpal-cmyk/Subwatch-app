@@ -399,16 +399,7 @@ class _TotalsSummaryCard extends StatelessWidget {
       ),
     ];
 
-    if (presentation.reviewCount > 0) {
-      badges.add(
-        DashboardBadge(
-          label: presentation.reviewCount == 1
-              ? '1 in review'
-              : '${presentation.reviewCount} in review',
-          tone: DashboardBadgeTone.caution,
-        ),
-      );
-    } else if (presentation.totalMissingAmountSources > 0) {
+    if (presentation.totalMissingAmountSources > 0) {
       badges.add(
         DashboardBadge(
           label: presentation.totalMissingAmountSources == 1
@@ -453,11 +444,6 @@ class _TotalsSummaryCard extends StatelessWidget {
     if (sourceStatus.tone == RuntimeLocalMessageSourceTone.demo) {
       return 'Preview only until you scan this phone.';
     }
-    if (presentation.reviewCount > 0) {
-      return presentation.reviewCount == 1
-          ? '1 unclear item is still being kept out of this total.'
-          : '${presentation.reviewCount} unclear items are still being kept out of this total.';
-    }
     if (presentation.hasEstimatedSpend) {
       return presentation.summaryCopy;
     }
@@ -465,7 +451,7 @@ class _TotalsSummaryCard extends StatelessWidget {
   }
 
   String _emptyHeadline() {
-    if (presentation.reviewCount > 0) {
+    if (presentation.totalMissingAmountSources > 0) {
       return 'Nothing confirmed yet';
     }
     switch (sourceStatus.tone) {
@@ -483,10 +469,10 @@ class _TotalsSummaryCard extends StatelessWidget {
   }
 
   String _emptySupportCopy() {
-    if (presentation.reviewCount > 0) {
-      return presentation.reviewCount == 1
-          ? '1 item is still in Review, so Home is waiting for stronger proof.'
-          : '${presentation.reviewCount} items are still in Review, so Home is waiting for stronger proof.';
+    if (presentation.totalMissingAmountSources > 0) {
+      return presentation.totalMissingAmountSources == 1
+          ? '1 item is missing an amount, so Home is waiting for stronger proof.'
+          : '${presentation.totalMissingAmountSources} items are missing amounts, so Home is waiting for stronger proof.';
     }
     switch (sourceStatus.tone) {
       case RuntimeLocalMessageSourceTone.caution:
@@ -575,10 +561,8 @@ class _HomeActionStrip extends StatelessWidget {
   const _HomeActionStrip({
     required this.copy,
     required this.subscriptionCount,
-    required this.reviewCount,
     required this.dueSoonCount,
     required this.sourceStatus,
-    required this.onReview,
     required this.onSync,
     required this.onOpenRenewals,
     required this.onOpenSubscriptions,
@@ -587,10 +571,8 @@ class _HomeActionStrip extends StatelessWidget {
 
   final _HomeActionCopy? copy;
   final int subscriptionCount;
-  final int reviewCount;
   final int dueSoonCount;
   final RuntimeLocalMessageSourceStatus sourceStatus;
-  final Future<void> Function() onReview;
   final Future<void> Function() onSync;
   final Future<void> Function() onOpenRenewals;
   final Future<void> Function() onOpenSubscriptions;
@@ -610,7 +592,6 @@ class _HomeActionStrip extends StatelessWidget {
         ),
       ),
       onPressed: switch (copy!.primaryActionKind) {
-        _HomeActionKind.review => onReview,
         _HomeActionKind.sync => onSync,
         _HomeActionKind.renewals => onOpenRenewals,
       },
@@ -772,20 +753,10 @@ class _HomeActionStrip extends StatelessWidget {
                 icon: const Icon(Icons.subscriptions_rounded),
                 label: Text(
                   subscriptionCount <= 0
-                      ? 'Subscriptions'
-                      : 'Subscriptions ($subscriptionCount)',
+                       ? 'Subscriptions'
+                       : 'Subscriptions ($subscriptionCount)',
                 ),
               ),
-              if (reviewCount > 0 &&
-                  copy!.primaryActionKind != _HomeActionKind.review)
-                TextButton.icon(
-                  style: DashboardButtonStyles.quietCompact(context),
-                  onPressed: onReview,
-                  icon: const Icon(Icons.fact_check_rounded),
-                  label: Text(
-                    reviewCount == 1 ? 'Review (1)' : 'Review ($reviewCount)',
-                  ),
-                ),
               TextButton.icon(
                 style: DashboardButtonStyles.quietCompact(context),
                 onPressed: onOpenSettings,
@@ -816,8 +787,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   IconData _primaryActionIcon() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return Icons.fact_check_rounded;
       case _HomeActionKind.renewals:
         return Icons.calendar_month_rounded;
       case _HomeActionKind.sync:
@@ -829,8 +798,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   IconData _resultBadgeIcon() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return Icons.verified_user_outlined;
       case _HomeActionKind.renewals:
         return Icons.calendar_month_rounded;
       case _HomeActionKind.sync:
@@ -840,8 +807,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   String _resultBadgeLabel() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return 'Protects your summary';
       case _HomeActionKind.renewals:
         return 'Keeps timing clear';
       case _HomeActionKind.sync:
@@ -851,8 +816,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   String _reasonSummary() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return 'Unclear recurring-looking messages stay outside your confirmed list until you decide.';
       case _HomeActionKind.renewals:
         return 'The fastest useful step is to check what renews first.';
       case _HomeActionKind.sync:
@@ -864,8 +827,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   String _currentHeadline() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return reviewCount == 1 ? '1 item is still separate' : '$reviewCount items are still separate';
       case _HomeActionKind.renewals:
         return dueSoonCount == 1 ? '1 renewal needs a quick look' : '$dueSoonCount renewals need a quick look';
       case _HomeActionKind.sync:
@@ -877,8 +838,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   String _currentDetail() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return 'Uncertain items stay separate for now.';
       case _HomeActionKind.renewals:
         return 'The next charge still needs a quick glance.';
       case _HomeActionKind.sync:
@@ -890,8 +849,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   String _afterHeadline() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return 'You decide what belongs';
       case _HomeActionKind.renewals:
         return 'You see what hits first';
       case _HomeActionKind.sync:
@@ -903,8 +860,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   String _afterDetail() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return 'You can confirm, separate, or dismiss with one decision flow.';
       case _HomeActionKind.renewals:
         return 'The renewal list shows what needs attention first.';
       case _HomeActionKind.sync:
@@ -922,8 +877,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   Color _afterAccentColor() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return DashboardShellPalette.success;
       case _HomeActionKind.renewals:
         return DashboardShellPalette.accent;
       case _HomeActionKind.sync:
@@ -933,8 +886,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   IconData _completionIcon() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return Icons.shield_outlined;
       case _HomeActionKind.renewals:
         return Icons.bolt_rounded;
       case _HomeActionKind.sync:
@@ -944,8 +895,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   Color _completionColor() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return DashboardShellPalette.success;
       case _HomeActionKind.renewals:
         return DashboardShellPalette.accent;
       case _HomeActionKind.sync:
@@ -955,8 +904,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   String _completionTitle() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return 'Why this helps';
       case _HomeActionKind.renewals:
         return 'Quick payoff';
       case _HomeActionKind.sync:
@@ -966,8 +913,6 @@ class _HomeActionStrip extends StatelessWidget {
 
   String _completionDetail() {
     switch (copy!.primaryActionKind) {
-      case _HomeActionKind.review:
-        return 'False positives stay out of your recurring list until you make the call.';
       case _HomeActionKind.renewals:
         return 'A quick renewal check keeps the week easier to plan.';
       case _HomeActionKind.sync:
@@ -1033,7 +978,6 @@ class _HomeActionCompareTile extends StatelessWidget {
 }
 
 enum _HomeActionKind {
-  review,
   renewals,
   sync,
 }
@@ -1051,7 +995,6 @@ class _HomeActionCopy {
 
   static _HomeActionCopy? fromState({
     required RuntimeLocalMessageSourceStatus sourceStatus,
-    required int reviewCount,
     required int dueSoonCount,
   }) {
     switch (sourceStatus.tone) {
@@ -1078,9 +1021,6 @@ class _HomeActionCopy {
           primaryActionLabel: sourceStatus.actionLabel,
         );
       case RuntimeLocalMessageSourceTone.fresh:
-        if (reviewCount > 0) {
-          return _reviewState(reviewCount);
-        }
         if (dueSoonCount > 0) {
           return _renewalState(dueSoonCount);
         }
@@ -1088,18 +1028,6 @@ class _HomeActionCopy {
       case RuntimeLocalMessageSourceTone.unavailable:
         return null;
     }
-  }
-
-  static _HomeActionCopy _reviewState(int reviewCount) {
-    return _HomeActionCopy(
-      badgeLabel: 'Needs review',
-      badgeIcon: Icons.rule_folder_outlined,
-      badgeBackgroundColor: DashboardShellPalette.cautionSoft,
-      badgeForegroundColor: DashboardShellPalette.caution,
-      title: reviewCount == 1 ? '1 item waiting' : '$reviewCount items waiting',
-      primaryActionKind: _HomeActionKind.review,
-      primaryActionLabel: reviewCount == 1 ? 'Review item' : 'Review items',
-    );
   }
 
   static _HomeActionCopy _renewalState(int dueSoonCount) {

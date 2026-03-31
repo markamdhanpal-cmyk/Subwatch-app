@@ -113,8 +113,10 @@ class LoadRuntimeDashboardUseCase {
     final repository = ledgerRepository ?? InMemoryLedgerRepository();
     final evidenceBucketRepository = InMemoryServiceEvidenceBucketRepository();
     const projection = DeterministicDashboardProjection();
-    final binding =
-        platformBinding ?? LocalMessageSourcePlatformBinding.sampleDemo();
+    final binding = platformBinding ??
+        (defaultTargetPlatform == TargetPlatform.android
+            ? LocalMessageSourcePlatformBinding.android()
+            : LocalMessageSourcePlatformBinding.sampleDemo());
 
     return LoadRuntimeDashboardUseCase._(
       ledgerRepository: repository,

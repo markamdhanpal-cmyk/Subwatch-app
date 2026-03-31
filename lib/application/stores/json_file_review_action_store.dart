@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../contracts/review_action_store.dart';
 import '../models/review_item_action_models.dart';
+import 'atomic_json_file_writer.dart';
 
 class JsonFileReviewActionStore implements ReviewActionStore {
   factory JsonFileReviewActionStore.applicationSupport({
@@ -33,12 +34,8 @@ class JsonFileReviewActionStore implements ReviewActionStore {
   Future<List<ReviewItemDecision>> list() async {
     try {
       final file = await _dataFile(createDirectory: false);
-      if (!await file.exists()) {
-        return const <ReviewItemDecision>[];
-      }
-
-      final raw = await file.readAsString();
-      if (raw.trim().isEmpty) {
+      final raw = await AtomicJsonFileWriter.read(file);
+      if (raw == null) {
         return const <ReviewItemDecision>[];
       }
 
@@ -83,7 +80,7 @@ class JsonFileReviewActionStore implements ReviewActionStore {
 
       final file = await _dataFile(createDirectory: true);
       final payload = next.map((item) => item.toJson()).toList(growable: false);
-      await file.writeAsString(jsonEncode(payload), flush: true);
+      await AtomicJsonFileWriter.write(file, jsonEncode(payload));
     } on MissingPluginException {
       return;
     } on MissingPlatformDirectoryException {
@@ -106,7 +103,7 @@ class JsonFileReviewActionStore implements ReviewActionStore {
 
       final file = await _dataFile(createDirectory: true);
       final payload = next.map((item) => item.toJson()).toList(growable: false);
-      await file.writeAsString(jsonEncode(payload), flush: true);
+      await AtomicJsonFileWriter.write(file, jsonEncode(payload));
       return true;
     } on MissingPluginException {
       return false;

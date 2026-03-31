@@ -52,7 +52,7 @@ void main() {
         expect(netflixSemantics.label, contains('Double tap for details'));
 
         await openDashboardDestination(tester, 'review');
-        await scrollDashboardUntilVisible(tester, find.text('Jiohotstar'));
+        await scrollDashboardUntilVisible(tester, find.text('JioHotstar'));
 
         expect(
           find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),

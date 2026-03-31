@@ -8,6 +8,7 @@ import '../contracts/ledger_snapshot_store.dart';
 import '../models/persisted_service_ledger_entry.dart';
 import '../models/runtime_snapshot_provenance.dart';
 import '../../domain/entities/service_ledger_entry.dart';
+import 'atomic_json_file_writer.dart';
 
 class JsonFileLedgerSnapshotStore implements LedgerSnapshotStore {
   factory JsonFileLedgerSnapshotStore.applicationSupport({
@@ -56,12 +57,8 @@ class JsonFileLedgerSnapshotStore implements LedgerSnapshotStore {
   Future<LedgerSnapshotRecord?> loadRecord() async {
     try {
       final file = await _snapshotFile(createDirectory: false);
-      if (!await file.exists()) {
-        return null;
-      }
-
-      final raw = await file.readAsString();
-      if (raw.trim().isEmpty) {
+      final raw = await AtomicJsonFileWriter.read(file);
+      if (raw == null) {
         return null;
       }
 
@@ -128,7 +125,7 @@ class JsonFileLedgerSnapshotStore implements LedgerSnapshotStore {
         if (record.metadata != null) 'metadata': record.metadata!.toJson(),
       };
 
-      await file.writeAsString(jsonEncode(payload), flush: true);
+      await AtomicJsonFileWriter.write(file, jsonEncode(payload));
     } on MissingPluginException {
       return;
     } on MissingPlatformDirectoryException {

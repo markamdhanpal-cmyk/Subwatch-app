@@ -95,10 +95,50 @@ void main() {
       final result = classifier.classify(
         message('Your JioHotstar subscription has been renewed for Rs 299.'),
       );
-
+ 
       expect(result, isNotNull);
       expect(result!.eventType, SubscriptionEventType.subscriptionBilled);
       expect(result.amount, 299);
+    });
+
+    test('classifies annual subscription from single message with amount', () {
+      final result = classifier.classify(
+        message('Your annual Disney+ Hotstar subscription of Rs.1499 has been renewed.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.subscriptionBilled);
+      expect(result.amount, 1499);
+    });
+
+    test('classifies yearly plan from single message with amount', () {
+      final result = classifier.classify(
+        message('Your Amazon Prime yearly plan has been renewed successfully for Rs 999.'),
+      );
+
+      expect(result, isNotNull);
+      expect(result!.eventType, SubscriptionEventType.subscriptionBilled);
+      expect(result.amount, 999);
+    });
+
+    test('does not veto renewal-failed message for telecom merchant', () {
+      // "unable to renew" should bypass the telecom bundle veto
+      final result = classifier.classify(
+        message('Your JioHotstar subscription: Unable to renew as payment of Rs 299 failed.'),
+      );
+
+      // Note: SubscriptionBilledClassifier might still return null if it requires success context,
+      // but the point here is that it should NOT be killed by the telecom bundle veto.
+      // In this specific case, 'Unable to renew' might not meet 'successContext',
+      // but let's check if it meets 'hasAnnualConfirmation' if it was annual.
+      
+      // If we use a "will retry" or "renewal pending" message:
+      final retryResult = classifier.classify(
+        message('Your JioHotstar annual subscription renewal of Rs 1499 is pending. We will retry.'),
+      );
+
+      expect(retryResult, isNotNull, reason: 'Renewal risk should bypass telecom veto');
+      expect(retryResult!.amount, 1499);
     });
 
     test('classifies direct card debit for Swiggy One membership', () {

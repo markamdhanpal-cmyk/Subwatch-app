@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../contracts/service_evidence_bucket_store.dart';
 import '../models/persisted_service_evidence_bucket.dart';
 import '../../domain/entities/service_evidence_bucket.dart';
+import 'atomic_json_file_writer.dart';
 
 class JsonFileServiceEvidenceBucketStore implements ServiceEvidenceBucketStore {
   factory JsonFileServiceEvidenceBucketStore.applicationSupport({
@@ -35,12 +36,8 @@ class JsonFileServiceEvidenceBucketStore implements ServiceEvidenceBucketStore {
   Future<List<ServiceEvidenceBucket>> load() async {
     try {
       final file = await _dataFile(createDirectory: false);
-      if (!await file.exists()) {
-        return const <ServiceEvidenceBucket>[];
-      }
-
-      final raw = await file.readAsString();
-      if (raw.trim().isEmpty) {
+      final raw = await AtomicJsonFileWriter.read(file);
+      if (raw == null) {
         return const <ServiceEvidenceBucket>[];
       }
 
@@ -84,21 +81,18 @@ class JsonFileServiceEvidenceBucketStore implements ServiceEvidenceBucketStore {
         ..sort(
           (left, right) => left.serviceKey.value.compareTo(right.serviceKey.value),
         );
-      await file.writeAsString(
-        jsonEncode(
-          <String, Object?>{
-            'schemaVersion': schemaVersion,
-            'savedAt': DateTime.now().toIso8601String(),
-            'buckets': payload
-                .map(
-                  (bucket) => PersistedServiceEvidenceBucket.fromDomain(bucket)
-                      .toJson(),
-                )
-                .toList(growable: false),
-          },
-        ),
-        flush: true,
-      );
+      await AtomicJsonFileWriter.write(file, jsonEncode(
+        <String, Object?>{
+          'schemaVersion': schemaVersion,
+          'savedAt': DateTime.now().toIso8601String(),
+          'buckets': payload
+              .map(
+                (bucket) => PersistedServiceEvidenceBucket.fromDomain(bucket)
+                    .toJson(),
+              )
+              .toList(growable: false),
+        },
+      ));
     } on MissingPluginException {
       return;
     } on MissingPlatformDirectoryException {

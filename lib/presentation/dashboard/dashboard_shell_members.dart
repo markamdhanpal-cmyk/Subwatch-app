@@ -948,7 +948,7 @@ extension _DashboardShellMembers on _DashboardShellState {
   }
 
   Future<void> _openReviewDestination() async {
-    _selectDestination(_DashboardDestination.review);
+    _selectDestination(_DashboardDestination.home);
   }
 
   void _openSettingsDestination() {

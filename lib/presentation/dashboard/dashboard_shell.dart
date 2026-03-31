@@ -56,7 +56,6 @@ part 'screens/subscriptions_screen.dart';
 enum _DashboardDestination {
   home,
   subscriptions,
-  review,
   settings,
 }
 
@@ -355,12 +354,6 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
                   label: 'Subscriptions',
                 ),
                 NavigationDestination(
-                  key: ValueKey<String>('destination-review'),
-                  icon: Icon(Icons.fact_check_outlined),
-                  selectedIcon: Icon(Icons.fact_check_rounded),
-                  label: 'Review',
-                ),
-                NavigationDestination(
                   key: ValueKey<String>('destination-settings'),
                   icon: Icon(Icons.settings_outlined),
                   selectedIcon: Icon(Icons.settings_rounded),
@@ -377,8 +370,6 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
         return 'SubWatch';
       case _DashboardDestination.subscriptions:
         return 'Subscriptions';
-      case _DashboardDestination.review:
-        return 'Review';
       case _DashboardDestination.settings:
         return 'Settings';
     }
@@ -390,8 +381,6 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
         return null;
       case _DashboardDestination.subscriptions:
         return 'Your list';
-      case _DashboardDestination.review:
-        return null;
       case _DashboardDestination.settings:
         return null;
     }
@@ -405,7 +394,6 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
       itemBuilders: <LazyIndexedStackItemBuilder>[
         (_) => _DashboardHomeScreen(shell: this),
         (_) => _DashboardSubscriptionsScreen(shell: this),
-        (_) => _DashboardReviewScreen(shell: this),
         (_) => _DashboardSettingsScreen(shell: this),
       ],
     );

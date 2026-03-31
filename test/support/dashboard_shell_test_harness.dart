@@ -364,7 +364,9 @@ Future<void> pumpDashboardShellLoad(
   // animations are disabled or if the future isn't tracked by the microtask queue.
   int retries = 0;
   while (retries < 50) {
-    await tester.pump(const Duration(milliseconds: 50));
+    await tester.runAsync(() async {
+      await tester.pump(const Duration(milliseconds: 50));
+    });
 
     // Check if we've reached a stable state (either gate or home)
     final getStartedFinder =
@@ -439,7 +441,9 @@ Future<void> pumpDashboardShellLoad(
 Future<void> settleDashboard(WidgetTester tester,
     {int maxIterations = 10}) async {
   for (int i = 0; i < maxIterations; i++) {
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.runAsync(() async {
+      await tester.pump(const Duration(milliseconds: 100));
+    });
   }
   final scrollables = find.byType(Scrollable).evaluate().length;
   debugPrint('settleDashboard: finished. Found $scrollables Scrollables.');

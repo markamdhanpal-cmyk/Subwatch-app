@@ -30,9 +30,7 @@ void main() {
         findsNothing,
       );
 
-      await scrollDashboardUntilVisible(tester, find.text('Jiohotstar'));
-
-      expect(find.text('It looks recurring, but billing is still unproven'), findsOneWidget);
+      expect(find.textContaining('The signals conflict'), findsOneWidget);
       expect(find.text('Confirm'), findsWidgets);
       expect(find.text('Bundle'), findsWidgets);
       expect(find.text('Not mine'), findsWidgets);
@@ -41,13 +39,13 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.bySemanticsLabel('Why SubWatch flagged Jiohotstar'),
+        find.bySemanticsLabel('Why SubWatch flagged JioHotstar'),
         findsOneWidget,
       );
       expect(
         find.bySemanticsLabel(
           RegExp(
-            r'Jiohotstar\. It looks recurring, but billing is still unproven\. Review actions below\.',
+            r'JioHotstar\. The signals conflict, so this still needs your review\. Review actions below\.',
           ),
         ),
         findsOneWidget,
@@ -85,9 +83,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Why SubWatch flagged this'), findsOneWidget);
-    expect(find.text('We saw wording that suggests recurring access.'), findsOneWidget);
+    expect(find.textContaining('signals point in different directions'), findsOneWidget);
     expect(
-      find.text('No strong billed renewal has been confirmed yet.'),
+      find.textContaining('No strong billed renewal has been confirmed yet.'),
       findsOneWidget,
     );
     expect(find.text('How to decide'), findsNothing);
