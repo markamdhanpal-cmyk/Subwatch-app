@@ -27,7 +27,7 @@ void main() {
     final confirmedSection = find.byKey(
       const ValueKey<String>('section-confirmedSubscriptions'),
     );
-    final reviewQueueSection = find.byKey(
+    find.byKey(
       const ValueKey<String>('section-reviewQueue'),
     );
 

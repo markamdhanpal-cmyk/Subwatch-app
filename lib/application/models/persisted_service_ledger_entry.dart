@@ -1,5 +1,6 @@
 import '../../domain/entities/evidence_trail.dart';
 import '../../domain/entities/service_ledger_entry.dart';
+import '../../domain/enums/billing_cadence.dart';
 import '../../domain/enums/resolver_state.dart';
 import '../../domain/enums/subscription_event_type.dart';
 import '../../domain/value_objects/service_key.dart';
@@ -12,6 +13,8 @@ class PersistedServiceLedgerEntry {
     required this.totalBilled,
     this.lastEventType,
     this.lastEventAt,
+    this.lastBilledAmount,
+    this.billingCadence,
   });
 
   factory PersistedServiceLedgerEntry.fromDomain(ServiceLedgerEntry entry) {
@@ -22,6 +25,8 @@ class PersistedServiceLedgerEntry {
       lastEventType: entry.lastEventType?.name,
       lastEventAt: entry.lastEventAt?.toIso8601String(),
       totalBilled: entry.totalBilled,
+      lastBilledAmount: entry.lastBilledAmount,
+      billingCadence: entry.billingCadence.name,
     );
   }
 
@@ -35,6 +40,8 @@ class PersistedServiceLedgerEntry {
       lastEventType: json['lastEventType'] as String?,
       lastEventAt: json['lastEventAt'] as String?,
       totalBilled: (json['totalBilled'] as num?)?.toDouble() ?? 0,
+      lastBilledAmount: (json['lastBilledAmount'] as num?)?.toDouble(),
+      billingCadence: json['billingCadence'] as String?,
     );
   }
 
@@ -44,6 +51,8 @@ class PersistedServiceLedgerEntry {
   final String? lastEventType;
   final String? lastEventAt;
   final double totalBilled;
+  final double? lastBilledAmount;
+  final String? billingCadence;
 
   ServiceLedgerEntry toDomain() {
     return ServiceLedgerEntry(
@@ -57,6 +66,13 @@ class PersistedServiceLedgerEntry {
             ),
       lastEventAt: lastEventAt == null ? null : DateTime.parse(lastEventAt!),
       totalBilled: totalBilled,
+      lastBilledAmount: lastBilledAmount,
+      billingCadence: billingCadence == null
+          ? BillingCadence.unknown
+          : BillingCadence.values.firstWhere(
+              (value) => value.name == billingCadence,
+              orElse: () => BillingCadence.unknown,
+            ),
     );
   }
 
@@ -68,6 +84,8 @@ class PersistedServiceLedgerEntry {
       'lastEventType': lastEventType,
       'lastEventAt': lastEventAt,
       'totalBilled': totalBilled,
+      'lastBilledAmount': lastBilledAmount,
+      'billingCadence': billingCadence,
     };
   }
 }

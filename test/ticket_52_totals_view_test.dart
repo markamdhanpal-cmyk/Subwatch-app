@@ -12,6 +12,7 @@ import 'package:sub_killer/application/use_cases/build_dashboard_totals_summary_
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 import 'package:sub_killer/application/use_cases/select_local_message_source_use_case.dart';
 import 'package:sub_killer/domain/entities/dashboard_card.dart';
+import 'package:sub_killer/domain/enums/billing_cadence.dart';
 import 'package:sub_killer/domain/enums/dashboard_bucket.dart';
 import 'package:sub_killer/domain/enums/resolver_state.dart';
 import 'package:sub_killer/domain/value_objects/service_key.dart';
@@ -31,6 +32,8 @@ void main() {
             bucket: DashboardBucket.confirmedSubscriptions,
             state: ResolverState.activePaid,
             subtitle: 'Confirmed paid subscription - \u20B9499',
+            structuredAmount: 499,
+            structuredCadence: BillingCadence.monthly,
           ),
           _card(
             key: 'YOUTUBE',
@@ -69,18 +72,24 @@ void main() {
           bucket: DashboardBucket.confirmedSubscriptions,
           state: ResolverState.activePaid,
           subtitle: 'Confirmed paid subscription - Annual plan - Rs 1,200',
+          structuredAmount: 1200,
+          structuredCadence: BillingCadence.annual,
         ),
         _card(
           key: 'QUARTERLY',
           bucket: DashboardBucket.confirmedSubscriptions,
           state: ResolverState.activePaid,
           subtitle: 'Confirmed paid subscription - Quarterly - Rs 300',
+          structuredAmount: 300,
+          structuredCadence: BillingCadence.quarterly,
         ),
         _card(
           key: 'MONTHLY',
           bucket: DashboardBucket.confirmedSubscriptions,
           state: ResolverState.activePaid,
           subtitle: 'Confirmed paid subscription - Monthly - Rs 150',
+          structuredAmount: 150,
+          structuredCadence: BillingCadence.monthly,
         ),
       ],
       manualSubscriptions: <ManualSubscriptionEntry>[
@@ -115,18 +124,24 @@ void main() {
           bucket: DashboardBucket.confirmedSubscriptions,
           state: ResolverState.activePaid,
           subtitle: 'Confirmed paid subscription - \u20B9 499',
+          structuredAmount: 499,
+          structuredCadence: BillingCadence.monthly,
         ),
         _card(
           key: 'SPOTIFY',
           bucket: DashboardBucket.confirmedSubscriptions,
           state: ResolverState.activePaid,
           subtitle: 'Confirmed paid subscription - Rs. 149',
+          structuredAmount: 149,
+          structuredCadence: BillingCadence.monthly,
         ),
         _card(
           key: 'GOOGLE_ONE',
           bucket: DashboardBucket.confirmedSubscriptions,
           state: ResolverState.activePaid,
           subtitle: 'Confirmed paid subscription - INR 299',
+          structuredAmount: 299,
+          structuredCadence: BillingCadence.monthly,
         ),
       ],
     );
@@ -220,7 +235,7 @@ void main() {
     );
     expect(find.text('Monthly spend estimate'), findsOneWidget);
     expect(find.text('\u20B9499'), findsOneWidget);
-    expect(find.text('Confirmed'), findsOneWidget);
+    expect(find.text('1 confirmed'), findsOneWidget);
     expect(find.text('Review'), findsWidgets);
     expect(find.text('What SubWatch found'), findsNothing);
     expect(find.text('Current view'), findsNothing);
@@ -291,6 +306,8 @@ DashboardCard _card({
   required DashboardBucket bucket,
   required ResolverState state,
   required String subtitle,
+  double? structuredAmount,
+  BillingCadence structuredCadence = BillingCadence.unknown,
 }) {
   return DashboardCard(
     serviceKey: ServiceKey(key),
@@ -298,6 +315,8 @@ DashboardCard _card({
     title: key,
     subtitle: subtitle,
     state: state,
+    structuredAmount: structuredAmount,
+    structuredCadence: structuredCadence,
   );
 }
 

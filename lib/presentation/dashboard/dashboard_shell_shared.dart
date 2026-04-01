@@ -2151,6 +2151,13 @@ class _SubscriptionDetailsSheet extends StatelessWidget {
           badgeBackground: DashboardShellPalette.registerPaper,
           badgeForeground: DashboardShellPalette.benefitGold,
         ),
+      DashboardBucket.endedSubscriptions => const _BucketStyle(
+          badgeLabel: 'Ended',
+          background: DashboardShellPalette.nestedPaper,
+          border: DashboardShellPalette.outlineStrong,
+          badgeBackground: DashboardShellPalette.registerPaper,
+          badgeForeground: DashboardShellPalette.mutedInk,
+        ),
       DashboardBucket.hidden => const _BucketStyle(
           badgeLabel: 'Hidden',
           background: DashboardShellPalette.recoverySoft,
@@ -9536,6 +9543,8 @@ String _fallbackAmountLabel(DashboardBucket bucket) {
       return 'Included access';
     case DashboardBucket.hidden:
       return 'Not available';
+    case DashboardBucket.endedSubscriptions:
+      return 'Completed';
   }
 }
 
@@ -9548,6 +9557,8 @@ String _fallbackRenewalLabel(DashboardBucket bucket) {
       return 'Renewal date not shown';
     case DashboardBucket.hidden:
       return 'Not available';
+    case DashboardBucket.endedSubscriptions:
+      return 'History';
   }
 }
 
@@ -9560,6 +9571,8 @@ String _fallbackFrequencyLabel(DashboardBucket bucket) {
       return 'Included with another plan';
     case DashboardBucket.hidden:
       return 'Not available';
+    case DashboardBucket.endedSubscriptions:
+      return 'No longer active';
   }
 }
 
@@ -9596,23 +9609,13 @@ String _demoDueSoonFallback(
   final previewCard = confirmedCards.first;
   final previewDate =
       _formatPreviewDate(recordedAt.add(const Duration(days: 5)));
-  final amountLabel = _extractVisibleAmountLabel(previewCard.subtitle);
+  final amountLabel = previewCard.amountLabel;
   if (amountLabel == null) {
     return 'Example: ${previewCard.title} would appear here around $previewDate once a renewal date is clear.';
   }
   return 'Example: ${previewCard.title} on $previewDate for $amountLabel once the next renewal date is clear.';
 }
 
-String? _extractVisibleAmountLabel(String subtitle) {
-  final match = RegExp(
-    '(?:\u20B9\s*|Rs\.?\s*|INR\s*|Rupees\s*)([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
-    caseSensitive: false,
-  ).firstMatch(subtitle);
-  if (match == null) {
-    return null;
-  }
-  return '\u20B9${match.group(1)!}';
-}
 
 String _formatPreviewDate(DateTime value) {
   const months = <String>[
@@ -9640,7 +9643,7 @@ String _subscriptionRowSemantics(
 }) {
   final visibleTitle = servicePresentationState.displayTitle;
   final amount = metadata.amountLabel;
-  final frequency = card.subtitle;
+  final frequency = metadata.frequencyLabel;
 
   final parts = <String>[
     visibleTitle,
@@ -9803,16 +9806,6 @@ String _monogramForTitle(String title) {
     }
     return word.toUpperCase();
   }
-  return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
+  return ''
       .toUpperCase();
 }
-
-
-
-
-
-
-
-
-
-

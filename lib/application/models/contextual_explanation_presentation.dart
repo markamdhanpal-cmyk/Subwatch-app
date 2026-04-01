@@ -60,6 +60,17 @@ class ContextualExplanationPresentation {
             'Hiding only changes this phone view.',
           ],
         );
+      case DashboardBucket.endedSubscriptions:
+        return const ContextualExplanationPresentation(
+          actionLabel: 'Why it ended',
+          title: 'Why this is in history',
+          description: 'This subscription looks cancelled or expired.',
+          bullets: <String>[
+            'Ended items do not count toward totals.',
+            'You can stay updated if you resubscribe.',
+            'History stays separate for your records.',
+          ],
+        );
     }
   }
 

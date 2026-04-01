@@ -2,6 +2,7 @@ import '../contracts/dashboard_projection.dart';
 import '../entities/dashboard_card.dart';
 import '../entities/review_item.dart';
 import '../entities/service_ledger_entry.dart';
+import '../enums/billing_cadence.dart';
 import '../enums/dashboard_bucket.dart';
 import '../enums/resolver_state.dart';
 
@@ -24,6 +25,9 @@ class DeterministicDashboardProjection implements DashboardProjection {
           state: entry.state,
           amountLabel: _amountLabelForEntry(entry),
           frequencyLabel: _frequencyLabelForEntry(entry),
+          structuredAmount: entry.lastBilledAmount,
+          structuredCadence: entry.billingCadence,
+          structuredNextRenewalDate: entry.nextRenewalDate,
         ),
       ),
     );
@@ -59,9 +63,10 @@ class DeterministicDashboardProjection implements DashboardProjection {
         return DashboardBucket.needsReview;
       case ResolverState.activeBundled:
         return DashboardBucket.trialsAndBenefits;
+      case ResolverState.cancelled:
+        return DashboardBucket.endedSubscriptions;
       case ResolverState.ignored:
       case ResolverState.oneTimeOnly:
-      case ResolverState.cancelled:
         return DashboardBucket.hidden;
     }
   }
@@ -109,34 +114,40 @@ class DeterministicDashboardProjection implements DashboardProjection {
       case ResolverState.oneTimeOnly:
         return 'One-time payment';
       case ResolverState.cancelled:
-        return 'Cancelled';
+        return 'Ended or cancelled';
     }
   }
 
   String? _amountLabelForEntry(ServiceLedgerEntry entry) {
-    if (entry.totalBilled <= 0) {
+    final amount = (entry.lastBilledAmount != null && entry.lastBilledAmount! > 0)
+        ? entry.lastBilledAmount!
+        : entry.totalBilled;
+
+    if (amount <= 0) {
       return null;
     }
 
-    final wholeUnits = entry.totalBilled.toStringAsFixed(0);
+    final wholeUnits = amount.toStringAsFixed(0);
     return '\u20B9$wholeUnits';
   }
 
+  /// Derives frequency label from structured [BillingCadence] enum.
+  /// This is presentation-only — the enum is the source of truth.
   String? _frequencyLabelForEntry(ServiceLedgerEntry entry) {
-    final notes = entry.evidenceTrail.notes.join(' ').toLowerCase();
-    if (notes.contains('quarterly')) {
-      return 'Quarterly';
+    switch (entry.billingCadence) {
+      case BillingCadence.weekly:
+        return 'Weekly';
+      case BillingCadence.monthly:
+        return 'Monthly';
+      case BillingCadence.quarterly:
+        return 'Quarterly';
+      case BillingCadence.semiAnnual:
+        return 'Every 6 months';
+      case BillingCadence.annual:
+        return 'Yearly';
+      case BillingCadence.unknown:
+        return null;
     }
-    if (notes.contains('annual') || notes.contains('yearly')) {
-      return 'Yearly';
-    }
-    if (notes.contains('monthly')) {
-      return 'Monthly';
-    }
-    if (notes.contains('weekly')) {
-      return 'Weekly';
-    }
-    return null;
   }
 
   ReviewItem _reviewItemForEntry(ServiceLedgerEntry entry) {

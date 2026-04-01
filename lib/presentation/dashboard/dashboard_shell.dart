@@ -57,6 +57,7 @@ enum _DashboardDestination {
   home,
   subscriptions,
   settings,
+  review,
 }
 
 class DashboardShell extends StatefulWidget {
@@ -334,12 +335,12 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
           ? null
           : NavigationBar(
               key: const ValueKey<String>('top-level-navigation'),
-              selectedIndex: _selectedDestination.index,
-              labelBehavior:
-                  NavigationDestinationLabelBehavior.onlyShowSelected,
               onDestinationSelected: (index) {
                 _selectDestination(_DashboardDestination.values[index]);
               },
+              selectedIndex: _selectedDestination == _DashboardDestination.review
+                  ? 0
+                  : _selectedDestination.index,
               destinations: const <NavigationDestination>[
                 NavigationDestination(
                   key: ValueKey<String>('destination-home'),
@@ -372,6 +373,8 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
         return 'Subscriptions';
       case _DashboardDestination.settings:
         return 'Settings';
+      case _DashboardDestination.review:
+        return 'Review';
     }
   }
 
@@ -383,6 +386,8 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
         return 'Your list';
       case _DashboardDestination.settings:
         return null;
+      case _DashboardDestination.review:
+        return 'Possible subscriptions';
     }
   }
 
@@ -395,6 +400,7 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
         (_) => _DashboardHomeScreen(shell: this),
         (_) => _DashboardSubscriptionsScreen(shell: this),
         (_) => _DashboardSettingsScreen(shell: this),
+        (_) => _DashboardReviewScreen(shell: this),
       ],
     );
 

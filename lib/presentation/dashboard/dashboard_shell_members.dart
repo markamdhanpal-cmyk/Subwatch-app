@@ -948,7 +948,7 @@ extension _DashboardShellMembers on _DashboardShellState {
   }
 
   Future<void> _openReviewDestination() async {
-    _selectDestination(_DashboardDestination.home);
+    _selectDestination(_DashboardDestination.review);
   }
 
   void _openSettingsDestination() {
@@ -1203,9 +1203,10 @@ extension _DashboardShellMembers on _DashboardShellState {
   }) {
     return switch (bucket) {
       DashboardBucket.confirmedSubscriptions => 0,
-      DashboardBucket.needsReview => 1,
+      DashboardBucket.endedSubscriptions => 1,
       DashboardBucket.trialsAndBenefits => 2,
-      DashboardBucket.hidden => 3,
+      DashboardBucket.needsReview => 3,
+      DashboardBucket.hidden => 4,
     };
   }
 
@@ -1213,6 +1214,8 @@ extension _DashboardShellMembers on _DashboardShellState {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
         return 'Recurring charges SubWatch can stand behind.';
+      case DashboardBucket.endedSubscriptions:
+        return 'No longer active or payment has stopped.';
       case DashboardBucket.needsReview:
         return 'Kept separate until the signal is strong enough.';
       case DashboardBucket.trialsAndBenefits:
@@ -1572,6 +1575,8 @@ extension _DashboardShellMembers on _DashboardShellState {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
         return Icons.verified_outlined;
+      case DashboardBucket.endedSubscriptions:
+        return Icons.event_busy_rounded;
       case DashboardBucket.needsReview:
         return Icons.shield_moon_outlined;
       case DashboardBucket.trialsAndBenefits:
@@ -1591,6 +1596,14 @@ extension _DashboardShellMembers on _DashboardShellState {
           badgeBackground: DashboardShellPalette.registerPaper,
           badgeForeground: DashboardShellPalette.success,
         );
+      case DashboardBucket.endedSubscriptions:
+        return const _BucketStyle(
+          badgeLabel: 'Ended',
+          background: DashboardShellPalette.nestedPaper,
+          border: DashboardShellPalette.outlineStrong,
+          badgeBackground: DashboardShellPalette.registerPaper,
+          badgeForeground: DashboardShellPalette.mutedInk,
+        );
       case DashboardBucket.needsReview:
         return const _BucketStyle(
           badgeLabel: 'Needs review',
@@ -1602,8 +1615,8 @@ extension _DashboardShellMembers on _DashboardShellState {
       case DashboardBucket.trialsAndBenefits:
         return const _BucketStyle(
           badgeLabel: 'Included',
-          background: DashboardShellPalette.benefitGoldSoft,
-          border: Color(0xFFD7BF7F),
+          background: Color(0xFF18211C),
+          border: Color(0xFF314339),
           badgeBackground: DashboardShellPalette.registerPaper,
           badgeForeground: DashboardShellPalette.benefitGold,
         );
@@ -1611,7 +1624,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return const _BucketStyle(
           badgeLabel: 'Hidden',
           background: DashboardShellPalette.recoverySoft,
-          border: Color(0xFFA8B9D4),
+          border: Color(0xFF536A81),
           badgeBackground: DashboardShellPalette.registerPaper,
           badgeForeground: DashboardShellPalette.recovery,
         );
@@ -1775,6 +1788,8 @@ extension _DashboardShellMembers on _DashboardShellState {
         return 'Included with your plan';
       case DashboardBucket.hidden:
         return 'Hidden items';
+      case DashboardBucket.endedSubscriptions:
+        return 'History';
     }
   }
 
@@ -1788,6 +1803,8 @@ extension _DashboardShellMembers on _DashboardShellState {
         return 'No included services found';
       case DashboardBucket.hidden:
         return 'Nothing hidden';
+      case DashboardBucket.endedSubscriptions:
+        return 'No history found';
     }
   }
 
@@ -1801,6 +1818,8 @@ extension _DashboardShellMembers on _DashboardShellState {
         return 'No included services right now.';
       case DashboardBucket.hidden:
         return 'No hidden items here.';
+      case DashboardBucket.endedSubscriptions:
+        return 'Ended subscriptions appear here.';
     }
   }
 

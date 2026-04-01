@@ -34,33 +34,48 @@ class RecurringBillingHeuristics {
     caseSensitive: false,
   );
 
+  static final RegExp cancellationPattern = RegExp(
+    r'\b(unsubscribed|cancelled|deactivated|stopped renewal|turned off auto-renew|subscription ended|subscription expired)\b',
+    caseSensitive: false,
+  );
+
   static final RegExp renewalRiskPattern = RegExp(
     r'\b(unable to renew|failed to renew|unsuccessful renewal|will retry|retry over next|renewal failed|renewal pending|cancel renewal|payment failed for renewal)\b',
     caseSensitive: false,
   );
 
+  static final RegExp stopPaymentPattern = RegExp(
+    r'\b(stop payment|request to stop|blocked|stop renewal|stop monthly)\b',
+    caseSensitive: false,
+  );
+
+  static final RegExp activeStatusPattern = RegExp(
+    r'\b(is active|status: active|active for)\b',
+    caseSensitive: false,
+  );
+
   static final RegExp subscriptionContextPattern = RegExp(
-    r'\b(subscription|monthly subscription|subscription payment|membership)\b',
+    r'\b(subscription|monthly subscription|subscription payment|membership|memberships)\b',
     caseSensitive: false,
   );
 
   static final RegExp planContextPattern = RegExp(
-    r'\b(plan|monthly plan|pass|membership)\b',
+    r'\b(plan|monthly plan|pass|membership|passes|valid till|validity|vaidhta|expires? on|active till)\b',
     caseSensitive: false,
   );
 
   static final RegExp recurringContextPattern = RegExp(
-    r'\b(recurring|renew(?:ed|al)?|monthly|annual|yearly|next billing|membership|premium)\b',
+    r'\b(recurring|renew(?:ed|al)?|monthly|annual|yearly|next billing|membership|premium|agla billing|agla renewal)\b',
     caseSensitive: false,
   );
 
   static final RegExp billingPattern = RegExp(
-    r'\b(charged|billed|debited|payment|spent|used|processed|deducted)\b',
+    r'\b(charged|billed|debited|payment|spent|used|processed|deducted|renew(?:ed|al)?|kati hai|nikale gaye|shulk|bhugtan)\b',
     caseSensitive: false,
   );
 
   static final RegExp successPattern = RegExp(
-    r'\b(successful|successfully|approved|completed|processed)\b',
+    r'\b(successful|successfully|approved|completed|processed|ho gaya|ho chuka|safal)\b',
     caseSensitive: false,
   );
 
@@ -87,7 +102,12 @@ class RecurringBillingHeuristics {
   static bool hasProtectedNoise(String body) {
     return hasMandateContext(body) ||
         hasUpiNoise(body) ||
-        looksLikeTelecomBundle(body);
+        looksLikeTelecomBundle(body) ||
+        isStopRequest(body);
+  }
+
+  static bool isStopRequest(String body) {
+    return stopPaymentPattern.hasMatch(body);
   }
 
   static bool hasMandateContext(String body) {
@@ -95,31 +115,40 @@ class RecurringBillingHeuristics {
   }
 
   static bool hasUpiNoise(String body) {
-    return upiNoisePattern.hasMatch(body);
+    if (!upiNoisePattern.hasMatch(body)) return false;
+
+    // Safety: If there is clear mandate/autopay language, don't treat UPI as noise.
+    if (hasMandateContext(body)) return false;
+
+    return true;
   }
 
   static bool looksLikeTelecomBundle(String body) {
+    final lowerBody = body.toLowerCase();
+
     // Escape Hatch: Renewal-risk / Failure language
-    if (renewalRiskPattern.hasMatch(body)) {
+    if (renewalRiskPattern.hasMatch(lowerBody)) {
       return false;
     }
 
-    if (telecomProviderPattern.hasMatch(body) &&
-        telecomBenefitPattern.hasMatch(body)) {
-          
-      // Escape Hatch: Direct-billed subscription
+    final hasTelecomProvider = telecomProviderPattern.hasMatch(lowerBody);
+    final hasTelecomBenefitMarker = telecomBenefitPattern.hasMatch(lowerBody);
+
+    if (hasTelecomProvider && hasTelecomBenefitMarker) {
+      // Direct detection of validity/recharge language suggests a telecom recharge, NOT a standalone sub.
+      final hasRechargeLanguage = RegExp(
+        r'\b(recharge|pack|complimentary|free|unlocked|benefit|validity|vaidhta|expires? on|active till)\b',
+        caseSensitive: false,
+      ).hasMatch(lowerBody);
+
+      // Escape Hatch: Direct-billed subscription with no recharge/validity keywords
       final amount = extractAmount(body);
       if (isCredibleAmount(amount)) {
         final hasBillingLang = hasBillingContext(body) || hasSubscriptionContext(body);
         final hasSuccessRenewCharge = hasSuccessContext(body) || hasRecurringContext(body);
         
-        final hasExplicitBundleRechargeNoise = RegExp(
-          r'\b(recharge|pack|complimentary|free|unlocked|benefit)\b',
-          caseSensitive: false,
-        ).hasMatch(body);
-
-        if (hasBillingLang && hasSuccessRenewCharge && !hasExplicitBundleRechargeNoise) {
-          // Strong billing evidence exists, do not veto as bundle noise
+        if (hasBillingLang && hasSuccessRenewCharge && !hasRechargeLanguage) {
+          // Strong billing evidence exists, and no recharge/validity noise
           return false;
         }
       }
@@ -127,8 +156,8 @@ class RecurringBillingHeuristics {
       return true;
     }
 
-    return telecomCoBrandedBundlePattern.hasMatch(body) &&
-        telecomBundleMarkerPattern.hasMatch(body);
+    return telecomCoBrandedBundlePattern.hasMatch(lowerBody) &&
+        telecomBundleMarkerPattern.hasMatch(lowerBody);
   }
 
   static bool hasSubscriptionContext(String body) {
@@ -182,14 +211,12 @@ class RecurringBillingHeuristics {
     final terms = <String>{};
 
     for (final pattern in patterns) {
-      final match = pattern.firstMatch(input);
-      if (match == null) {
-        continue;
-      }
-
-      final term = match.group(0);
-      if (term != null) {
-        terms.add(term.toLowerCase());
+      final matches = pattern.allMatches(input);
+      for (final match in matches) {
+        final term = match.group(0);
+        if (term != null) {
+          terms.add(term.toLowerCase());
+        }
       }
     }
 

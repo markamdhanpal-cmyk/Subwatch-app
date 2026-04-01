@@ -22,7 +22,7 @@ class MandateIntentClassifier implements EventClassifier {
   );
 
   static final RegExp _creationPattern = RegExp(
-    r'\b(create(?:d)?|register(?:ed)?|authori[sz](?:e|ed|ation)|approve(?:d)?)\b',
+    r'\b(create(?:d)?|register(?:ed)?|authori[sz](?:e|ed|ation)|approve(?:d)?|is\s+active|status:\s+active|active\s+for)\b',
     caseSensitive: false,
   );
 
@@ -51,6 +51,8 @@ class MandateIntentClassifier implements EventClassifier {
     final amount = IndianAmountParser.extract(body);
     final hasMandateContext = _mandateContextPattern.hasMatch(body);
     final hasAutopayContext = _autopayContextPattern.hasMatch(body);
+    final hasAnyRecurringContext = hasMandateContext || hasAutopayContext;
+
     final hasAnyRecurringContext = hasMandateContext || hasAutopayContext;
 
     if (hasAnyRecurringContext && _cancellationPattern.hasMatch(body)) {

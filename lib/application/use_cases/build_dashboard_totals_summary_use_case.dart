@@ -1,28 +1,12 @@
 import '../models/dashboard_totals_summary_presentation.dart';
 import '../models/manual_subscription_models.dart';
 import '../../domain/entities/dashboard_card.dart';
+import '../../domain/enums/billing_cadence.dart';
 import '../../domain/enums/dashboard_bucket.dart';
 import '../../domain/enums/resolver_state.dart';
 
 class BuildDashboardTotalsSummaryUseCase {
   const BuildDashboardTotalsSummaryUseCase();
-
-  static final RegExp _rupeeAmountPattern = RegExp(
-    r'(?:\u20B9\s*|Rs\.?\s*|INR\s*|Rupees\s*)([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\b',
-    caseSensitive: false,
-  );
-  static final RegExp _yearlyPattern = RegExp(
-    r'\b(?:yearly|annual|annually|per year|year plan|annual plan)\b',
-    caseSensitive: false,
-  );
-  static final RegExp _quarterlyPattern = RegExp(
-    r'\b(?:quarterly|every 3 months|per quarter|quarter plan)\b',
-    caseSensitive: false,
-  );
-  static final RegExp _monthlyPattern = RegExp(
-    r'\b(?:monthly|per month|month plan)\b',
-    caseSensitive: false,
-  );
 
   DashboardTotalsSummaryPresentation execute({
     required List<DashboardCard> cards,
@@ -51,18 +35,21 @@ class BuildDashboardTotalsSummaryUseCase {
     var monthlyTotalAmount = 0.0;
 
     for (final card in confirmedPaidCards) {
-      final amount = _extractTrustedVisibleAmount(card.subtitle);
-      if (amount == null) {
+      // Use structured amount directly — no more subtitle parsing.
+      final amount = card.structuredAmount;
+      if (amount == null || amount <= 0) {
         excludedWithoutTrustedAmountCount += 1;
         continue;
       }
 
-      final cadence = _cadenceForSubtitle(card.subtitle);
-      if (cadence == _BillingCadence.unknown) {
+      // Use structured cadence directly — no more subtitle regex.
+      final cadence = card.structuredCadence;
+      if (cadence == BillingCadence.unknown) {
         inferredMonthlyCount += 1;
       }
-      if (cadence == _BillingCadence.quarterly ||
-          cadence == _BillingCadence.yearly) {
+      if (cadence == BillingCadence.quarterly ||
+          cadence == BillingCadence.semiAnnual ||
+          cadence == BillingCadence.annual) {
         cadenceConvertedCount += 1;
       }
 
@@ -100,26 +87,21 @@ class BuildDashboardTotalsSummaryUseCase {
     );
   }
 
-  double? _extractTrustedVisibleAmount(String subtitle) {
-    final match = _rupeeAmountPattern.firstMatch(subtitle);
-    if (match == null) {
-      return null;
-    }
-
-    return double.tryParse(match.group(1)!.replaceAll(',', ''));
-  }
-
   double _monthlyEquivalentForAmount(
     double amount, {
-    required _BillingCadence cadence,
+    required BillingCadence cadence,
   }) {
     switch (cadence) {
-      case _BillingCadence.yearly:
+      case BillingCadence.annual:
         return amount / 12;
-      case _BillingCadence.quarterly:
+      case BillingCadence.semiAnnual:
+        return amount / 6;
+      case BillingCadence.quarterly:
         return amount / 3;
-      case _BillingCadence.monthly:
-      case _BillingCadence.unknown:
+      case BillingCadence.weekly:
+        return amount * 4.33; // approximate weeks per month
+      case BillingCadence.monthly:
+      case BillingCadence.unknown:
         return amount;
     }
   }
@@ -133,24 +115,5 @@ class BuildDashboardTotalsSummaryUseCase {
         return amount / 12;
     }
   }
-
-  _BillingCadence _cadenceForSubtitle(String subtitle) {
-    if (_yearlyPattern.hasMatch(subtitle)) {
-      return _BillingCadence.yearly;
-    }
-    if (_quarterlyPattern.hasMatch(subtitle)) {
-      return _BillingCadence.quarterly;
-    }
-    if (_monthlyPattern.hasMatch(subtitle)) {
-      return _BillingCadence.monthly;
-    }
-    return _BillingCadence.unknown;
-  }
 }
 
-enum _BillingCadence {
-  monthly,
-  quarterly,
-  yearly,
-  unknown,
-}

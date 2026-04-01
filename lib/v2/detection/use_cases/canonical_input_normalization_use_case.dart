@@ -15,7 +15,7 @@ class CanonicalInputNormalizationUseCase implements CanonicalInputNormalizer {
     caseSensitive: false,
   );
   static final RegExp _currencyAmountPattern = RegExp(
-    r'(?:\u20B9\s*|rs\.?\s*|inr\s*|rupees\s*)([0-9][0-9,]*(?:\.[0-9]{1,2})?)',
+    r'(?:[\u20B9\u20A8\u0AF1]|rs\.?|inr|rupees|amt\.?|amount|total)\s*[:\-]?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)(?:\s*/-)?',
     caseSensitive: false,
   );
   static final RegExp _promoPattern = RegExp(

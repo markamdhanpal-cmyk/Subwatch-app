@@ -1,5 +1,6 @@
 import '../../../domain/entities/evidence_trail.dart';
 import '../../../domain/entities/service_ledger_entry.dart';
+import '../../../domain/enums/billing_cadence.dart';
 import '../../../domain/enums/resolver_state.dart';
 import '../../../domain/enums/subscription_event_type.dart';
 import '../enums/decision_band.dart';
@@ -20,9 +21,93 @@ class DecisionSnapshotLedgerBridge {
         currentEntry: currentEntry,
       ),
       lastEventType: _eventTypeFor(snapshot.band, snapshot),
-      lastEventAt: snapshot.decidedAt,
-      totalBilled: _totalBilledFor(snapshot, currentEntry),
+      lastEventAt: snapshot.lastBilledAt,
+      totalBilled: snapshot.bridgeTotalBilled,
+      lastBilledAmount: _lastBilledAmountFor(snapshot, currentEntry),
+      billingCadence: _inferCadence(snapshot, currentEntry),
+      nextRenewalDate: _inferNextRenewalDate(snapshot, currentEntry),
     );
+  }
+
+  BillingCadence _inferCadence(
+    DecisionSnapshot snapshot,
+    ServiceLedgerEntry? currentEntry,
+  ) {
+    if (currentEntry != null &&
+        currentEntry.billingCadence != BillingCadence.unknown) {
+      return currentEntry.billingCadence;
+    }
+
+    // 1. Try notes first (highest trust for explicit markers)
+    final fromNotes = BillingCadence.fromNotes(snapshot.notes);
+    if (fromNotes != BillingCadence.unknown) {
+      return fromNotes;
+    }
+
+    // 2. Try interval hints from the bucket
+    final intervals = snapshot.sourceBucket.intervalHintsInDays;
+    if (intervals.isNotEmpty) {
+      // Use the last interval as it is the most recent "beat"
+      final fromInterval = BillingCadence.fromIntervalDays(intervals.last);
+      if (fromInterval != BillingCadence.unknown) {
+        return fromInterval;
+      }
+    }
+
+    return BillingCadence.unknown;
+  }
+
+  DateTime? _inferNextRenewalDate(
+    DecisionSnapshot snapshot,
+    ServiceLedgerEntry? currentEntry,
+  ) {
+    // If the ledger already has a next renewal date, keep it for now
+    // (though in the future we might want to refresh it if we see a newer event)
+    if (currentEntry?.nextRenewalDate != null) {
+      return currentEntry!.nextRenewalDate;
+    }
+
+    final lastBilled = snapshot.lastBilledAt;
+    if (lastBilled == null) {
+      return null;
+    }
+
+    final cadence = _inferCadence(snapshot, currentEntry);
+    if (cadence == BillingCadence.unknown) {
+      return null;
+    }
+
+    // Project next renewal based on cadence
+    switch (cadence) {
+      case BillingCadence.weekly:
+        return lastBilled.add(const Duration(days: 7));
+      case BillingCadence.monthly:
+        return DateTime(
+          lastBilled.year,
+          lastBilled.month + 1,
+          lastBilled.day,
+        );
+      case BillingCadence.quarterly:
+        return DateTime(
+          lastBilled.year,
+          lastBilled.month + 3,
+          lastBilled.day,
+        );
+      case BillingCadence.semiAnnual:
+        return DateTime(
+          lastBilled.year,
+          lastBilled.month + 6,
+          lastBilled.day,
+        );
+      case BillingCadence.annual:
+        return DateTime(
+          lastBilled.year + 1,
+          lastBilled.month,
+          lastBilled.day,
+        );
+      case BillingCadence.unknown:
+        return null;
+    }
   }
 
   ResolverState _stateFor(DecisionBand band) {
@@ -71,21 +156,20 @@ class DecisionSnapshotLedgerBridge {
     }
   }
 
-  double _totalBilledFor(
+  double? _lastBilledAmountFor(
     DecisionSnapshot snapshot,
     ServiceLedgerEntry? currentEntry,
   ) {
-    if (snapshot.band != DecisionBand.confirmedPaid &&
-        snapshot.band != DecisionBand.likelyPaid) {
-      return 0;
+    if (currentEntry?.lastBilledAmount != null) {
+      return currentEntry!.lastBilledAmount;
     }
 
-    final currentTotal = currentEntry?.totalBilled ?? 0;
-    if (currentTotal > 0) {
-      return currentTotal;
+    final amounts = snapshot.sourceBucket.amountSeries;
+    if (amounts.isNotEmpty) {
+      return amounts.last;
     }
 
-    return snapshot.bridgeTotalBilled;
+    return null;
   }
 
   EvidenceTrail _mergeEvidence({

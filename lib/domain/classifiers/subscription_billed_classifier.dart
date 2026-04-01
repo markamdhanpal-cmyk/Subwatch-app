@@ -19,71 +19,60 @@ class SubscriptionBilledClassifier implements EventClassifier {
   @override
   ParsedSignal? classify(MessageRecord message) {
     final body = message.body.trim();
+    if (body.isEmpty) return null;
+
     final isAnnualSignal = annualCadencePattern.hasMatch(body) ||
         ((body.contains('1499') || body.contains('499') || body.contains('999')) && 
          body.toLowerCase().contains('hotstar')) ||
         (body.contains('1290') && body.toLowerCase().contains('youtube'));
 
-    // Annual/High-confidence signals bypass general noise veto
     final hasMandateNoise = RecurringBillingHeuristics.hasMandateContext(body);
     final hasUpiNoise = RecurringBillingHeuristics.hasUpiNoise(body);
     final isTelecomBundle = RecurringBillingHeuristics.looksLikeTelecomBundle(body);
-
-    if (body.isEmpty) return null;
-
-    // Strict veto only if NOT a strong annual signal
-    if (!isAnnualSignal && (hasMandateNoise || hasUpiNoise || isTelecomBundle)) {
-      return null;
-    }
 
     final amount = RecurringBillingHeuristics.extractAmount(body);
     if (!RecurringBillingHeuristics.isCredibleAmount(amount)) {
       return null;
     }
 
-    final hasSubscriptionContext =
-        RecurringBillingHeuristics.hasSubscriptionContext(body);
+    final hasSubscriptionContext = RecurringBillingHeuristics.hasSubscriptionContext(body);
     final hasPlanContext = RecurringBillingHeuristics.hasPlanContext(body);
-    final hasRecurringContext =
-        RecurringBillingHeuristics.hasRecurringContext(body);
-    final hasBillingContext =
-        RecurringBillingHeuristics.hasBillingContext(body);
-    final hasSuccessContext =
-        RecurringBillingHeuristics.hasSuccessContext(body);
-    final hasCardContext = RecurringBillingHeuristics.hasCardContext(body);
-    final hasDirectRecurringMerchant =
-        RecurringBillingHeuristics.hasDirectRecurringMerchant(body);
-    final hasAppStoreMerchant =
-        RecurringBillingHeuristics.hasAppStoreMerchant(body);
-    final hasMerchantRoutingContext =
-        RecurringBillingHeuristics.hasMerchantRoutingContext(body);
-    final hasAnnualCadence = annualCadencePattern.hasMatch(body);
+    final hasRecurringContext = RecurringBillingHeuristics.hasRecurringContext(body);
+    final hasBillingContext = RecurringBillingHeuristics.hasBillingContext(body);
+    final hasSuccessContext = RecurringBillingHeuristics.hasSuccessContext(body);
+    final hasDirectRecurringMerchant = RecurringBillingHeuristics.hasDirectRecurringMerchant(body);
+    final hasAppStoreMerchant = RecurringBillingHeuristics.hasAppStoreMerchant(body);
 
     final hasStrongSubscriptionEvidence = hasSubscriptionContext &&
         (hasRecurringContext || hasBillingContext) &&
         (hasSuccessContext || hasRecurringContext || hasBillingContext);
+        
     final hasStrongPlanEvidence = hasPlanContext &&
         hasRecurringContext &&
         (hasBillingContext || hasSuccessContext);
-    final hasStrongMerchantEvidence = hasDirectRecurringMerchant &&
-        hasBillingContext &&
-        (hasSuccessContext ||
-            hasRecurringContext ||
-            hasCardContext ||
-            hasMerchantRoutingContext);
-    final hasStrongAppStoreServiceEvidence =
-        hasAppStoreMerchant && hasDirectRecurringMerchant && hasBillingContext;
 
-    // Annual Single-Message Confirmation Rule
     final hasAnnualConfirmation = isAnnualSignal &&
         (hasDirectRecurringMerchant || hasAppStoreMerchant) &&
         (hasBillingContext || hasSubscriptionContext || hasMandateNoise);
 
-    if (!hasStrongSubscriptionEvidence &&
-        !hasStrongPlanEvidence &&
-        !hasStrongMerchantEvidence &&
-        !hasStrongAppStoreServiceEvidence &&
-        !hasAnnualConfirmation) {
+    final hasHighConfidenceKeywords = (hasBillingContext && hasSuccessContext) || 
+                                     (hasBillingContext && hasRecurringContext) ||
+                                     (hasRecurringContext && hasSuccessContext);
+
+    final containsIncluded = body.toLowerCase().contains('included') || body.toLowerCase().contains('benefit');
+
+    final isStrongSignal = (hasAnnualConfirmation ||
+        (hasDirectRecurringMerchant && (hasBillingContext || hasSuccessContext || hasRecurringContext) && !containsIncluded) ||
+        (hasStrongSubscriptionEvidence && !isTelecomBundle && !containsIncluded) ||
+        (hasStrongPlanEvidence && !isTelecomBundle && !containsIncluded) ||
+        (hasAppStoreMerchant && (hasSubscriptionContext || hasPlanContext)) ||
+        (hasHighConfidenceKeywords && (hasSubscriptionContext || hasPlanContext || hasRecurringContext) && !isTelecomBundle && !containsIncluded && !hasAppStoreMerchant)) && !RecurringBillingHeuristics.isStopRequest(body);
+
+    if (!isStrongSignal && (hasMandateNoise || hasUpiNoise || isTelecomBundle)) {
+      return null;
+    }
+
+    if (!isStrongSignal) {
       return null;
     }
 
@@ -97,33 +86,8 @@ class SubscriptionBilledClassifier implements EventClassifier {
         RecurringBillingHeuristics.successPattern,
         RecurringBillingHeuristics.directRecurringMerchantPattern,
         RecurringBillingHeuristics.appStoreMerchantPattern,
-        RecurringBillingHeuristics.cardContextPattern,
       ],
     );
-
-    final evidenceFragments = <EvidenceFragment>[
-      EvidenceFragment(
-        type: EvidenceFragmentType.billedSuccess,
-        sourceMessageId: message.id,
-        classifierId: classifierId,
-        strength: EvidenceFragmentStrength.strong,
-        confidence: 0.95,
-        amount: amount,
-        note: 'Strong recurring billing evidence detected.',
-        terms: capturedTerms,
-      ),
-      if (hasRecurringContext || body.toLowerCase().contains('renew'))
-        EvidenceFragment(
-          type: EvidenceFragmentType.renewalHint,
-          sourceMessageId: message.id,
-          classifierId: classifierId,
-          strength: EvidenceFragmentStrength.medium,
-          confidence: 0.8,
-          amount: amount,
-          note: 'Renewal or recurring wording present.',
-          terms: capturedTerms,
-        ),
-    ];
 
     return ParsedSignal(
       classifierId: classifierId,
@@ -132,7 +96,18 @@ class SubscriptionBilledClassifier implements EventClassifier {
       detectedAt: message.receivedAt,
       amount: amount,
       capturedTerms: capturedTerms,
-      evidenceFragments: evidenceFragments,
+      evidenceFragments: <EvidenceFragment>[
+        EvidenceFragment(
+          type: EvidenceFragmentType.billedSuccess,
+          sourceMessageId: message.id,
+          classifierId: classifierId,
+          strength: EvidenceFragmentStrength.strong,
+          confidence: 0.95,
+          amount: amount,
+          note: 'Strong recurring billing evidence detected.',
+          terms: capturedTerms,
+        ),
+      ],
     );
   }
 }

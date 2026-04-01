@@ -69,7 +69,12 @@ class BuildDashboardUpcomingRenewalsUseCase {
   }
 
   DashboardUpcomingRenewalItemPresentation? _toItem(DashboardCard card) {
-    final renewalDate = _extractRenewalDate(card.subtitle);
+    // 1. Try structured date from the ledger/card first
+    DateTime? renewalDate = card.structuredNextRenewalDate;
+
+    // 2. Fallback to subtitle parsing if no structured date (brittle but preserves legacy support)
+    renewalDate ??= _extractRenewalDate(card.subtitle);
+
     if (renewalDate == null) {
       return null;
     }
@@ -79,7 +84,11 @@ class BuildDashboardUpcomingRenewalsUseCase {
       serviceTitle: card.title,
       renewalDate: renewalDate,
       renewalDateLabel: _formatRenewalDate(renewalDate),
-      amountLabel: card.amountLabel ?? _extractAmountLabel(card.subtitle),
+      // Use structured amount label if available, fallback to formatting the structured amount, then parsing
+      amountLabel: card.amountLabel ??
+          (card.structuredAmount != null
+              ? '\u20B9${card.structuredAmount!.toStringAsFixed(0)}'
+              : _extractAmountLabel(card.subtitle)),
     );
   }
 

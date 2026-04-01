@@ -8,8 +8,8 @@ class BuildDashboardServiceViewUseCase {
 
   static const List<DashboardBucket> _visibleBucketOrder = <DashboardBucket>[
     DashboardBucket.confirmedSubscriptions,
-    DashboardBucket.needsReview,
     DashboardBucket.trialsAndBenefits,
+    DashboardBucket.endedSubscriptions,
   ];
 
   DashboardServiceViewResult execute({

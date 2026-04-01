@@ -123,7 +123,7 @@ void main() {
 
     test('does not veto renewal-failed message for telecom merchant', () {
       // "unable to renew" should bypass the telecom bundle veto
-      final result = classifier.classify(
+      classifier.classify(
         message('Your JioHotstar subscription: Unable to renew as payment of Rs 299 failed.'),
       );
 

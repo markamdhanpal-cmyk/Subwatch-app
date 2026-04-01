@@ -32,16 +32,10 @@ class IngestionUseCase {
     BuildShadowDecisionComparisonUseCase? buildShadowDecisionComparisonUseCase,
     DecisionExecutionMode decisionExecutionMode =
         DecisionExecutionMode.bridgeToLedger,
-  })  : _eventPipeline = eventPipeline,
-        _resolverPipeline = resolverPipeline,
-        _normalizationUseCase =
-            normalizationUseCase ?? const CanonicalInputNormalizationUseCase(),
+  })  : _resolverPipeline = resolverPipeline,
         _messageRecordCanonicalInputMapper =
             messageRecordCanonicalInputMapper ??
                 const MessageRecordCanonicalInputMapper(),
-        _normalizedInputMessageRecordBridge =
-            normalizedInputMessageRecordBridge ??
-                const NormalizedInputMessageRecordBridge(),
         _ledgerRepository = ledgerRepository,
         _serviceEvidenceBucketRepository = serviceEvidenceBucketRepository,
         _accumulateServiceEvidenceBucketsUseCase =
@@ -55,12 +49,8 @@ class IngestionUseCase {
                 const BuildShadowDecisionComparisonUseCase(),
         _decisionExecutionMode = decisionExecutionMode;
 
-  final EventPipelineUseCase _eventPipeline;
   final ResolverPipelineUseCase _resolverPipeline;
-  final CanonicalInputNormalizationUseCase _normalizationUseCase;
   final MessageRecordCanonicalInputMapper _messageRecordCanonicalInputMapper;
-  final NormalizedInputMessageRecordBridge
-      _normalizedInputMessageRecordBridge;
   final LedgerRepository? _ledgerRepository;
   final ServiceEvidenceBucketRepository? _serviceEvidenceBucketRepository;
   final AccumulateServiceEvidenceBucketsUseCase

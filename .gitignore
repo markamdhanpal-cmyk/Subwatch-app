@@ -45,3 +45,11 @@ dashboard_device_fit.log
 dashboard_text_scale.log
 dashboard_accessibility.log
 
+# ADB / UI Inspector dumps & screenshots
+*.xml
+screen.png
+screen_permission.png
+tmp/
+test_classifier_debug.dart
+view.xml
+

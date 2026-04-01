@@ -434,10 +434,10 @@ class LoadRuntimeDashboardUseCase {
           await messageSource.loadMessages(),
         );
       }
-      await _ledgerRepository.replaceAll(ingestionResult.ledgerEntries);
-      await _serviceEvidenceBucketStore?.save(
-        await _serviceEvidenceBucketRepository.list(),
-      );
+      debugPrint('LoadRuntimeDashboardUseCase: ingestion results=${ingestionResult.ledgerEntries.length} entries');
+      for (final entry in ingestionResult.ledgerEntries) {
+        debugPrint('LEDGER: ${entry.serviceKey.value} | State: ${entry.state} | Total: ${entry.totalBilled}');
+      }
       await snapshotStore?.saveRecord(
         LedgerSnapshotRecord(
           entries: ingestionResult.ledgerEntries,

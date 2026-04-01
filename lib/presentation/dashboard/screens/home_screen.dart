@@ -83,12 +83,13 @@ Widget _buildDashboardHomeScreen({
       ),
       const SizedBox(height: DashboardSpacing.large),
     ],
-    _HomeTrustRow(
-      sourceStatus: sourceStatus,
-      totalsSummary: totalsSummary,
-      data: data,
-      onOpenTrustSheet: shell._showHowSubWatchWorksSheet,
-    ),
+      _HomeTrustRow(
+        sourceStatus: sourceStatus,
+        totalsSummary: totalsSummary,
+        data: data,
+        onOpenTrustSheet: shell._showHowSubWatchWorksSheet,
+      ),
+    const SizedBox(height: DashboardSpacing.large),
   ];
 
   return ListView(

@@ -5,6 +5,7 @@ import '../../domain/classifiers/subscription_billed_classifier.dart';
 import '../../domain/classifiers/telecom_bundle_classifier.dart';
 import '../../domain/classifiers/upi_noise_veto_classifier.dart';
 import '../../domain/classifiers/weak_signal_review_classifier.dart';
+import '../../domain/classifiers/lifecycle_event_classifier.dart';
 import '../../domain/entities/evidence_trail.dart';
 import '../../domain/entities/message_record.dart';
 import '../../domain/entities/parsed_signal.dart';
@@ -20,6 +21,7 @@ class EventPipelineUseCase {
               const <EventClassifier>[
                 SubscriptionBilledClassifier(),
                 UpiNoiseVetoClassifier(),
+                LifecycleEventClassifier(),
                 MandateIntentClassifier(),
                 TelecomBundleClassifier(),
                 WeakSignalReviewClassifier(),

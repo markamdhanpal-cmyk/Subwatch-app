@@ -1,4 +1,5 @@
 import '../../../domain/entities/service_evidence_bucket.dart';
+import '../../../domain/enums/billing_cadence.dart';
 import '../../../domain/enums/merchant_resolution_confidence.dart';
 import '../../../domain/enums/service_evidence_source_kind.dart';
 import '../contracts/subscription_scorer.dart';
@@ -173,12 +174,34 @@ class LocalSubscriptionScorer implements SubscriptionScorer {
       return 0;
     }
 
-    final stableIntervals = intervals.where((days) => days >= 27 && days <= 35).length;
-    if (stableIntervals == intervals.length) {
+    // 1. Map all intervals to their corresponding structured cadence.
+    final cadences = intervals.map(BillingCadence.fromIntervalDays).toList();
+
+    // 2. Find the most frequent non-unknown cadence in the series.
+    final counts = <BillingCadence, int>{};
+    for (final cadence in cadences) {
+      if (cadence != BillingCadence.unknown) {
+        counts[cadence] = (counts[cadence] ?? 0) + 1;
+      }
+    }
+
+    if (counts.isEmpty) {
+      // All intervals are irregular (none match a known cadence window).
+      return 0;
+    }
+
+    // 3. Identify the dominant cadence.
+    final dominantCadence =
+        counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+
+    // 4. Calculate stability: how many intervals match this dominant cadence.
+    final stableCount = cadences.where((c) => c == dominantCadence).length;
+
+    if (stableCount == intervals.length) {
       return 1;
     }
 
-    final stableRatio = stableIntervals / intervals.length;
+    final stableRatio = stableCount / intervals.length;
     return stableRatio >= 0.5 ? 0.65 : 0.25;
   }
 

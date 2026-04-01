@@ -6,5 +6,6 @@ enum SubscriptionEventType {
   mandateExecutedMicro,
   subscriptionBilled,
   bundleActivated,
+  subscriptionCancelled,
   unknownReview,
 }

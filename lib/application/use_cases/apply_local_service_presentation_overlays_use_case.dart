@@ -53,6 +53,8 @@ class ApplyLocalServicePresentationOverlaysUseCase {
                   state: card.state,
                   amountLabel: card.amountLabel,
                   frequencyLabel: card.frequencyLabel,
+                  structuredAmount: card.structuredAmount,
+                  structuredCadence: card.structuredCadence,
                 ),
           isPinned: state.isPinned,
         );
