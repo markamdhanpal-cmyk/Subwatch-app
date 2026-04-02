@@ -1,5 +1,7 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
+
+import 'support/test_temp_dir.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/persisted_service_ledger_entry.dart';
@@ -17,9 +19,7 @@ void main() {
     late JsonFileLedgerSnapshotStore store;
 
     setUp(() async {
-      tempDirectory = await Directory.systemTemp.createTemp(
-        'sub-killer-ledger-store-',
-      );
+      tempDirectory = await createWorkspaceTempDirectory('sub-killer-ledger-store');
       store = JsonFileLedgerSnapshotStore.applicationSupport(
         directoryProvider: () async => tempDirectory,
       );
@@ -113,6 +113,33 @@ void main() {
       expect(await store.load(), isEmpty);
       expect(await store.loadRecord(), isNull);
     });
+    test('demotes legacy low-confidence extracted-candidate keys on load',
+        () async {
+      final file = File(
+        '${tempDirectory.path}${Platform.pathSeparator}${JsonFileLedgerSnapshotStore.defaultFileName}',
+      );
+      await file.writeAsString(
+        jsonEncode(<Object?>[
+          PersistedServiceLedgerEntry.fromDomain(
+            _entry(
+              serviceKey: 'MODI',
+              state: ResolverState.pendingConversion,
+              evidenceTrail: EvidenceTrail(
+                notes: const <String>[
+                  'merchant_resolution:extractedCandidate:low:modi',
+                ],
+              ),
+            ),
+          ).toJson(),
+        ]),
+        flush: true,
+      );
+
+      final restoredEntries = await store.load();
+
+      expect(restoredEntries, hasLength(1));
+      expect(restoredEntries.single.serviceKey.value, 'UNRESOLVED');
+    });
 
     test('loads legacy entry-only snapshot files without metadata', () async {
       final file = File(
@@ -165,3 +192,4 @@ ServiceLedgerEntry _entry({
     totalBilled: totalBilled,
   );
 }
+

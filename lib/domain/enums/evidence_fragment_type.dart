@@ -5,10 +5,13 @@ enum EvidenceFragmentType {
   autopaySetup,
   microCharge,
   bundledBenefit,
+  endedLifecycle,
   cancellationHint,
   promoOnly,
   weakRecurringHint,
   unknownReview,
+  otpNoise,
+  telecomRechargeNoise,
   oneTimePaymentNoise,
   ignoreNoise,
 }

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 
@@ -19,6 +19,10 @@ void main() {
     expect(
       find.byKey(const ValueKey<String>('top-level-navigation')),
       findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('destination-review')),
+      findsNothing,
     );
     expect(find.text('Overview'), findsNothing);
     expect(
@@ -54,26 +58,6 @@ void main() {
       find.byKey(const ValueKey<String>('totals-summary-card')),
       findsNothing,
     );
-
-    await openDashboardDestination(tester, 'review');
-
-    expect(
-      find.byKey(const ValueKey<String>('section-reviewQueue')),
-      findsWidgets,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('service-search-input')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('section-confirmedSubscriptions')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('settings-overview-panel')),
-      findsNothing,
-    );
-
     await openDashboardDestination(tester, 'settings');
 
     expect(find.text('On this device'), findsNothing);
@@ -101,11 +85,9 @@ void main() {
       find.byKey(const ValueKey<String>('totals-summary-card')),
       findsOneWidget,
     );
-    // home-renewals-zone only appears if there is data.
-    // In this empty state test, we expect it not to be found.
     expect(
       find.byKey(const ValueKey<String>('home-renewals-zone')),
-      findsNothing,
+      findsOneWidget,
     );
 
     expect(
@@ -127,3 +109,4 @@ void main() {
     );
   });
 }
+

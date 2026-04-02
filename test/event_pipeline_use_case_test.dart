@@ -24,7 +24,7 @@ void main() {
 
       expect(result, isNotNull);
       expect(result!.eventType, SubscriptionEventType.oneTimePayment);
-      expect(result.classifierId, 'upi_noise_veto');
+      expect(result.classifierId, 'merged_event_pipeline');
     });
 
     test('resolves mandate intent through the pipeline', () {
@@ -49,7 +49,8 @@ void main() {
       expect(result.classifierId, 'telecom_bundle');
     });
 
-    test('resolves strong billed subscription evidence through the pipeline', () {
+    test('resolves strong billed subscription evidence through the pipeline',
+        () {
       final result = pipeline.classify(
         message('Your Netflix subscription has been renewed for Rs 499.'),
       );
@@ -64,9 +65,7 @@ void main() {
         message('Your subscription may renew shortly.'),
       );
 
-      expect(result, isNotNull);
-      expect(result!.eventType, SubscriptionEventType.unknownReview);
-      expect(result.classifierId, 'weak_signal_review');
+      expect(result, isNull);
     });
 
     test('executes with deterministic service identity resolution', () {
@@ -77,7 +76,8 @@ void main() {
       expect(events, hasLength(1));
       expect(events.single.serviceKey.value, 'NETFLIX');
       expect(events.single.merchantResolution, isNotNull);
-      expect(events.single.merchantResolution!.resolvedServiceKey.value, 'NETFLIX');
+      expect(events.single.merchantResolution!.resolvedServiceKey.value,
+          'NETFLIX');
       expect(
         events.single.evidenceTrail.notes,
         contains(startsWith('merchant_resolution:exactAlias:high:')),
@@ -85,7 +85,8 @@ void main() {
     });
 
     test('returns null for unmatched generic message', () {
-      final result = pipeline.classify(message('Hello, your profile was updated.'));
+      final result =
+          pipeline.classify(message('Hello, your profile was updated.'));
 
       expect(result, isNull);
     });

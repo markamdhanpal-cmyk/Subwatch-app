@@ -16,10 +16,13 @@ class ServiceEvidenceBucket {
     this.autopaySetupCount = 0,
     this.microChargeCount = 0,
     this.bundleCount = 0,
+    this.endedLifecycleCount = 0,
     this.promoCount = 0,
     this.cancellationHintCount = 0,
     this.weakRecurringHintCount = 0,
     this.unknownReviewCount = 0,
+    this.otpNoiseCount = 0,
+    this.telecomRechargeNoiseCount = 0,
     this.oneTimePaymentNoiseCount = 0,
     this.ignoreNoiseCount = 0,
     List<double> amountSeries = const <double>[],
@@ -57,10 +60,13 @@ class ServiceEvidenceBucket {
   final int autopaySetupCount;
   final int microChargeCount;
   final int bundleCount;
+  final int endedLifecycleCount;
   final int promoCount;
   final int cancellationHintCount;
   final int weakRecurringHintCount;
   final int unknownReviewCount;
+  final int otpNoiseCount;
+  final int telecomRechargeNoiseCount;
   final int oneTimePaymentNoiseCount;
   final int ignoreNoiseCount;
   final List<double> amountSeries;
@@ -79,10 +85,13 @@ class ServiceEvidenceBucket {
     int? autopaySetupCount,
     int? microChargeCount,
     int? bundleCount,
+    int? endedLifecycleCount,
     int? promoCount,
     int? cancellationHintCount,
     int? weakRecurringHintCount,
     int? unknownReviewCount,
+    int? otpNoiseCount,
+    int? telecomRechargeNoiseCount,
     int? oneTimePaymentNoiseCount,
     int? ignoreNoiseCount,
     List<double>? amountSeries,
@@ -102,12 +111,16 @@ class ServiceEvidenceBucket {
       autopaySetupCount: autopaySetupCount ?? this.autopaySetupCount,
       microChargeCount: microChargeCount ?? this.microChargeCount,
       bundleCount: bundleCount ?? this.bundleCount,
+      endedLifecycleCount: endedLifecycleCount ?? this.endedLifecycleCount,
       promoCount: promoCount ?? this.promoCount,
       cancellationHintCount:
           cancellationHintCount ?? this.cancellationHintCount,
       weakRecurringHintCount:
           weakRecurringHintCount ?? this.weakRecurringHintCount,
       unknownReviewCount: unknownReviewCount ?? this.unknownReviewCount,
+      otpNoiseCount: otpNoiseCount ?? this.otpNoiseCount,
+      telecomRechargeNoiseCount:
+          telecomRechargeNoiseCount ?? this.telecomRechargeNoiseCount,
       oneTimePaymentNoiseCount:
           oneTimePaymentNoiseCount ?? this.oneTimePaymentNoiseCount,
       ignoreNoiseCount: ignoreNoiseCount ?? this.ignoreNoiseCount,

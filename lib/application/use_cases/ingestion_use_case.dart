@@ -41,9 +41,8 @@ class IngestionUseCase {
         _accumulateServiceEvidenceBucketsUseCase =
             accumulateServiceEvidenceBucketsUseCase ??
                 const AccumulateServiceEvidenceBucketsUseCase(),
-        _applyV2DecisionSnapshotsUseCase =
-            applyV2DecisionSnapshotsUseCase ??
-                const ApplyV2DecisionSnapshotsUseCase(),
+        _applyV2DecisionSnapshotsUseCase = applyV2DecisionSnapshotsUseCase ??
+            const ApplyV2DecisionSnapshotsUseCase(),
         _buildShadowDecisionComparisonUseCase =
             buildShadowDecisionComparisonUseCase ??
                 const BuildShadowDecisionComparisonUseCase(),
@@ -99,8 +98,12 @@ class IngestionUseCase {
       events = _runClassificationBatch(inputs);
     }
 
-    await _resolverPipeline.execute(events);
     final bucketRepository = _serviceEvidenceBucketRepository;
+    final shouldRunLegacyResolver = bucketRepository == null ||
+        _decisionExecutionMode == DecisionExecutionMode.shadowCompareAndBridge;
+    if (shouldRunLegacyResolver) {
+      await _resolverPipeline.execute(events);
+    }
     if (bucketRepository != null) {
       await _accumulateServiceEvidenceBucketsUseCase.execute(
         events: events,
@@ -109,23 +112,23 @@ class IngestionUseCase {
       );
       final ledgerRepository = _ledgerRepository;
       if (ledgerRepository != null) {
-        final legacyEntries =
-            _decisionExecutionMode == DecisionExecutionMode.shadowCompareAndBridge
-                ? await ledgerRepository.list()
-                : const <ServiceLedgerEntry>[];
+        final legacyEntries = _decisionExecutionMode ==
+                DecisionExecutionMode.shadowCompareAndBridge
+            ? await ledgerRepository.list()
+            : const <ServiceLedgerEntry>[];
         final snapshots = await _applyV2DecisionSnapshotsUseCase.execute(
           bucketRepository: bucketRepository,
           ledgerRepository: ledgerRepository,
           mode: _decisionModeForApply(),
         );
-        if (_decisionExecutionMode == DecisionExecutionMode.shadowCompareAndBridge) {
+        if (_decisionExecutionMode ==
+            DecisionExecutionMode.shadowCompareAndBridge) {
           final bridgedEntries = await ledgerRepository.list();
           _lastShadowComparison = _buildShadowDecisionComparisonUseCase.execute(
             legacyEntries: legacyEntries,
             v2Entries: bridgedEntries,
-            comparedAt: snapshots.isEmpty
-                ? DateTime.now()
-                : snapshots.last.decidedAt,
+            comparedAt:
+                snapshots.isEmpty ? DateTime.now() : snapshots.last.decidedAt,
           );
         }
       }
@@ -134,7 +137,8 @@ class IngestionUseCase {
   }
 
   DecisionExecutionMode _decisionModeForApply() {
-    if (_decisionExecutionMode == DecisionExecutionMode.shadowCompareAndBridge) {
+    if (_decisionExecutionMode ==
+        DecisionExecutionMode.shadowCompareAndBridge) {
       return DecisionExecutionMode.bridgeToLedger;
     }
 

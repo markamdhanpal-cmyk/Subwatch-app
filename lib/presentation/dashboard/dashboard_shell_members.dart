@@ -304,7 +304,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         return;
       }
       _showFeedbackSnackBar(
-        'Review couldn\'t be updated. Your current view stayed the same.',
+        'Possible item couldn\'t be updated. Your current view stayed the same.',
       );
     }
   }
@@ -408,7 +408,7 @@ extension _DashboardShellMembers on _DashboardShellState {
             _handleUndoLocalControlOverlay(
               targetKey: targetKey,
               title: item.title,
-              restoredLabel: 'returned to Review',
+              restoredLabel: 'returned to Possible',
             );
           },
         ),
@@ -754,7 +754,7 @@ extension _DashboardShellMembers on _DashboardShellState {
     return switch (result) {
       LocalMessageSourceAccessRequestResult.granted =>
         snapshot.reviewQueue.isNotEmpty && confirmedCount == 0
-            ? 'Scan finished. Some items still need review.'
+            ? 'Scan finished. Some items are marked Possible.'
             : confirmedCount == 0
                 ? 'Scan finished. No paid subscriptions confirmed yet.'
                 : 'Scan finished. Results updated.',
@@ -777,7 +777,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         '$title added to your subscriptions.',
       ReviewItemActionOutcome.markedAsBenefit =>
         '$title kept as included access.',
-      ReviewItemActionOutcome.dismissed => '$title removed from Review.',
+      ReviewItemActionOutcome.dismissed => '$title removed from Possible.',
       ReviewItemActionOutcome.notAllowed =>
         'SubWatch still needs a clearer service name.',
     };
@@ -807,9 +807,9 @@ extension _DashboardShellMembers on _DashboardShellState {
     String title,
   ) {
     final message = switch (outcome) {
-      ReviewItemUndoOutcome.restored => '$title returned to Review.',
+      ReviewItemUndoOutcome.restored => '$title returned to Possible.',
       ReviewItemUndoOutcome.notFound =>
-        'Nothing changed. No review item was restored.',
+        'Nothing changed. No possible item was restored.',
     };
 
     _showFeedbackSnackBar(message);
@@ -1089,7 +1089,7 @@ extension _DashboardShellMembers on _DashboardShellState {
           builder: (dialogContext) => AlertDialog(
             title: const Text('Clear all data?'),
             content: const Text(
-              'This removes saved subscriptions, review decisions, reminders, and labels from this phone.',
+              'This removes saved subscriptions, possible-item decisions, reminders, and labels from this phone.',
             ),
             actions: <Widget>[
               TextButton(
@@ -1217,7 +1217,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       case DashboardBucket.endedSubscriptions:
         return 'No longer active or payment has stopped.';
       case DashboardBucket.needsReview:
-        return 'Kept separate until the signal is strong enough.';
+        return 'Possible items stay separate until billing is stronger.';
       case DashboardBucket.trialsAndBenefits:
         return 'Visible separately because they are not direct paid billing.';
       case DashboardBucket.hidden:
@@ -1606,7 +1606,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         );
       case DashboardBucket.needsReview:
         return const _BucketStyle(
-          badgeLabel: 'Needs review',
+          badgeLabel: 'Possible',
           background: DashboardShellPalette.elevatedPaper,
           border: DashboardShellPalette.outlineStrong,
           badgeBackground: DashboardShellPalette.registerPaper,
@@ -1639,7 +1639,7 @@ extension _DashboardShellMembers on _DashboardShellState {
         _SettingsSubsection(
           key: const ValueKey<String>('section-confirmedByYou'),
           title: 'Confirmed',
-          caption: 'Items you moved out of Review as paid subscriptions.',
+          caption: 'Items you moved out of Possible as paid subscriptions.',
           children: _buildConfirmedReviewRows(data.confirmedReviewItems),
         ),
       );
@@ -1766,7 +1766,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       'Visible state:',
       '- Source status: ${sourceStatus.title}',
       '- Provenance: ${sourceStatus.provenanceDescription}',
-      '- Review items: ${data.reviewQueue.length}',
+      '- Possible items: ${data.reviewQueue.length}',
       '- Confirmed subscriptions: $confirmedCount',
       '- Included items: $separateAccessCount',
       '- Manual entries: ${data.manualSubscriptions.length}',
@@ -1781,9 +1781,9 @@ extension _DashboardShellMembers on _DashboardShellState {
   String _serviceSectionTitle(DashboardBucket bucket) {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
-        return 'Subscriptions';
+        return 'Confirmed';
       case DashboardBucket.needsReview:
-        return 'Needs review';
+        return 'Possible';
       case DashboardBucket.trialsAndBenefits:
         return 'Included with your plan';
       case DashboardBucket.hidden:
@@ -1796,9 +1796,9 @@ extension _DashboardShellMembers on _DashboardShellState {
   String _serviceSectionEmptyTitle(DashboardBucket bucket) {
     switch (bucket) {
       case DashboardBucket.confirmedSubscriptions:
-        return 'No subscriptions found yet';
+        return 'No confirmed subscriptions found yet';
       case DashboardBucket.needsReview:
-        return 'Nothing to review';
+        return 'No possible items found';
       case DashboardBucket.trialsAndBenefits:
         return 'No included services found';
       case DashboardBucket.hidden:
@@ -1813,7 +1813,7 @@ extension _DashboardShellMembers on _DashboardShellState {
       case DashboardBucket.confirmedSubscriptions:
         return 'Confirmed subscriptions appear here. You can still add one yourself.';
       case DashboardBucket.needsReview:
-        return 'Nothing needs review right now.';
+        return 'No possible items right now.';
       case DashboardBucket.trialsAndBenefits:
         return 'No included services right now.';
       case DashboardBucket.hidden:
@@ -1833,7 +1833,7 @@ extension _DashboardShellMembers on _DashboardShellState {
                 'passport-card-confirmedByYou-${item.targetKey}'),
             title: item.title,
             subtitle: item.subtitle,
-            statusLabel: 'Confirmed by your review',
+            statusLabel: 'Moved to Confirmed',
             isBusy: _reviewActionTargetsInFlight.contains(item.targetKey),
             actionKey: ValueKey<String>('undo-review-action-${item.targetKey}'),
             onUndo: () => _handleUndoReviewItemAction(

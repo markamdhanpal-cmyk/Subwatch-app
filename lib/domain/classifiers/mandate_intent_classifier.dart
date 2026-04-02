@@ -49,18 +49,21 @@ class MandateIntentClassifier implements EventClassifier {
     }
 
     final amount = IndianAmountParser.extract(body);
+    final anyAmount = _extractAnyAmount(body);
     final hasMandateContext = _mandateContextPattern.hasMatch(body);
     final hasAutopayContext = _autopayContextPattern.hasMatch(body);
     final hasAnyRecurringContext = hasMandateContext || hasAutopayContext;
 
-    final hasAnyRecurringContext = hasMandateContext || hasAutopayContext;
-
     if (hasAnyRecurringContext && _cancellationPattern.hasMatch(body)) {
-      var resolveAmount = amount;
+      var resolveAmount = amount ?? anyAmount;
       if (resolveAmount == null) {
-        final fallbackMatch = RegExp(r'\b(?:for|of)\s+([0-9][0-9,]*(?:\.[0-9]{1,2})?)', caseSensitive: false).firstMatch(body);
+        final fallbackMatch = RegExp(
+          r'\b(?:for|of)\s+([0-9][0-9,]*(?:\.[0-9]{1,2})?)',
+          caseSensitive: false,
+        ).firstMatch(body);
         if (fallbackMatch != null) {
-          resolveAmount = double.tryParse(fallbackMatch.group(1)!.replaceAll(',', ''));
+          resolveAmount =
+              double.tryParse(fallbackMatch.group(1)!.replaceAll(',', ''));
         }
       }
 
@@ -86,15 +89,16 @@ class MandateIntentClassifier implements EventClassifier {
             ),
           ],
         );
-      } else {
-        // Drop low-value or no-amount cancellations as noise to prevent setup checks
-        return null;
       }
+
+      return null;
     }
 
+    final microAmount = amount ?? anyAmount;
     if (hasAnyRecurringContext &&
-        amount != null &&
-        amount <= 2 &&
+        microAmount != null &&
+        microAmount > 0 &&
+        microAmount <= 2 &&
         _executionPattern.hasMatch(body)) {
       final capturedTerms = _capturedTerms(body);
       return ParsedSignal(
@@ -102,7 +106,7 @@ class MandateIntentClassifier implements EventClassifier {
         eventType: SubscriptionEventType.mandateExecutedMicro,
         summary: 'Recurring mandate validation or micro execution detected.',
         detectedAt: message.receivedAt,
-        amount: amount,
+        amount: microAmount,
         capturedTerms: capturedTerms,
         evidenceFragments: <EvidenceFragment>[
           EvidenceFragment(
@@ -111,7 +115,7 @@ class MandateIntentClassifier implements EventClassifier {
             classifierId: classifierId,
             strength: EvidenceFragmentStrength.strong,
             confidence: 0.98,
-            amount: amount,
+            amount: microAmount,
             note: 'Mandate validation or micro execution detected.',
             terms: capturedTerms,
           ),
@@ -168,6 +172,23 @@ class MandateIntentClassifier implements EventClassifier {
     }
 
     return null;
+  }
+
+  double? _extractAnyAmount(String input) {
+    final match = RegExp(
+      r'\b(?:rs\.?|inr|amt\.?|amount|for)\s*[:\-\s]*([0-9][0-9,]*(?:\.[0-9]{1,2})?)',
+      caseSensitive: false,
+    ).firstMatch(input);
+    if (match == null) {
+      return null;
+    }
+
+    final raw = match.group(1);
+    if (raw == null) {
+      return null;
+    }
+
+    return double.tryParse(raw.replaceAll(',', ''));
   }
 
   List<String> _capturedTerms(String input) {

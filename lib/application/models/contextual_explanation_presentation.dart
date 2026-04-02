@@ -20,10 +20,10 @@ class ContextualExplanationPresentation {
         return const ContextualExplanationPresentation(
           actionLabel: 'Why it\'s here',
           title: 'Why this is here',
-          description: 'This looks strong enough to count as paid.',
+          description: 'This has billed evidence strong enough to count as paid.',
           bullets: <String>[
             'Setup or one-time payments do not count.',
-            'Weaker signals stay in Review or Benefits.',
+            'Weaker signals stay in Possible or Included.',
             'A later scan can update this.',
           ],
         );
@@ -87,16 +87,16 @@ class ContextualExplanationPresentation {
 
     if (descriptor.canConfirm) {
       return ContextualExplanationPresentation(
-        actionLabel: 'Why it needs review',
-        title: 'Why this item is in review',
+        actionLabel: 'Why it is possible',
+        title: 'Why this item is marked possible',
         description: description,
         bullets: bullets,
       );
     }
 
     return ContextualExplanationPresentation(
-      actionLabel: 'Why it needs review',
-      title: 'Why this item still needs review',
+      actionLabel: 'Why it is possible',
+      title: 'Why this item stays possible',
       description: description,
       bullets: item.detailsBullets.isNotEmpty
           ? item.detailsBullets

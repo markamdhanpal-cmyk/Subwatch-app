@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'support/test_temp_dir.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/stores/atomic_json_file_writer.dart';
 
@@ -8,7 +10,7 @@ void main() {
     late Directory tempDir;
 
     setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('atomic_write_test');
+      tempDir = await createWorkspaceTempDirectory('atomic_write_test');
     });
 
     tearDown(() async {
@@ -65,3 +67,4 @@ void main() {
     });
   });
 }
+

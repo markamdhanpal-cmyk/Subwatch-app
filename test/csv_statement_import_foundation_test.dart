@@ -68,7 +68,7 @@ txn_date,narration,debit_amount,merchant_name
       final result = await useCase.execute(
         csvText: '''
 date,description,debit,merchant
-2026-03-12,Streaming charge,499,NETFLIX
+2026-03-12,Netflix monthly subscription renewed successfully,499,NETFLIX
 ''',
         batchId: 'batch-3',
         sourceLabel: 'march_statement.csv',

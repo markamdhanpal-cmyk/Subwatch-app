@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'support/test_temp_dir.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/stores/json_file_service_evidence_bucket_store.dart';
 import 'package:sub_killer/domain/entities/evidence_trail.dart';
@@ -13,9 +15,7 @@ void main() {
     late JsonFileServiceEvidenceBucketStore store;
 
     setUp(() async {
-      tempDirectory = await Directory.systemTemp.createTemp(
-        'sub-killer-evidence-bucket-store-',
-      );
+      tempDirectory = await createWorkspaceTempDirectory('sub-killer-evidence-bucket-store');
       store = JsonFileServiceEvidenceBucketStore.applicationSupport(
         directoryProvider: () async => tempDirectory,
       );
@@ -75,6 +75,31 @@ void main() {
       expect(restored.last.intervalHintsInDays, <int>[31]);
       expect(restored.last.contradictions, <String>['paid_after_setup']);
     });
+    test('demotes legacy low-confidence extracted-candidate bucket keys on load',
+        () async {
+      await store.save(<ServiceEvidenceBucket>[
+        ServiceEvidenceBucket(
+          serviceKey: const ServiceKey('MODI'),
+          firstSeenAt: DateTime(2026, 3, 6, 9, 0),
+          lastSeenAt: DateTime(2026, 3, 6, 9, 0),
+          sourceKindsSeen: const <ServiceEvidenceSourceKind>[
+            ServiceEvidenceSourceKind.deviceSmsInbox,
+          ],
+          mandateCount: 1,
+          amountSeries: const <double>[2868],
+          evidenceTrail: EvidenceTrail(
+            notes: const <String>[
+              'merchant_resolution:extractedCandidate:low:modi',
+            ],
+          ),
+        ),
+      ]);
+
+      final restored = await store.load();
+
+      expect(restored, hasLength(1));
+      expect(restored.single.serviceKey.value, 'UNRESOLVED');
+    });
 
     test('returns empty list when the persisted file is malformed', () async {
       final file = File(
@@ -86,3 +111,4 @@ void main() {
     });
   });
 }
+

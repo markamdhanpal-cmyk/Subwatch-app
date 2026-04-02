@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/domain/classifiers/upi_noise_veto_classifier.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
 import 'package:sub_killer/domain/enums/subscription_event_type.dart';
@@ -27,14 +27,16 @@ void main() {
       expect(result.amount, 250);
     });
 
-    test('classifies plain UPI debit to VPA as one-time payment', () {
+    test(
+        'classifies plain UPI debit to VPA as one-time payment even when micro amount is not retained',
+        () {
       final result = classifier.classify(
         message('Rs 1 debited via UPI to VPA test@upi. Ref 2222'),
       );
 
       expect(result, isNotNull);
       expect(result!.eventType, SubscriptionEventType.oneTimePayment);
-      expect(result.amount, 1);
+      expect(result.amount, isNull);
     });
 
     test('parses rupee symbol amount in UPI noise', () {

@@ -18,7 +18,8 @@ class LifecycleEventClassifier implements EventClassifier {
       return null;
     }
 
-    final hasCancellation = RecurringBillingHeuristics.cancellationPattern.hasMatch(body);
+    final hasCancellation =
+        RecurringBillingHeuristics.cancellationPattern.hasMatch(body);
     if (!hasCancellation) {
       return null;
     }
@@ -36,7 +37,7 @@ class LifecycleEventClassifier implements EventClassifier {
       capturedTerms: capturedTerms,
       evidenceFragments: <EvidenceFragment>[
         EvidenceFragment(
-          type: EvidenceFragmentType.cancellationHint,
+          type: EvidenceFragmentType.endedLifecycle,
           sourceMessageId: message.id,
           classifierId: classifierId,
           strength: EvidenceFragmentStrength.strong,

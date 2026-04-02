@@ -25,7 +25,8 @@ class AccumulateServiceEvidenceBucketsUseCase {
     }
 
     final bucketsByKey = <String, ServiceEvidenceBucket>{
-      for (final bucket in await repository.list()) bucket.serviceKey.value: bucket,
+      for (final bucket in await repository.list())
+        bucket.serviceKey.value: bucket,
     };
 
     for (final event in events) {
@@ -52,7 +53,8 @@ class AccumulateServiceEvidenceBucketsUseCase {
     await repository.replaceAll(
       bucketsByKey.values.toList(growable: false)
         ..sort(
-          (left, right) => left.serviceKey.value.compareTo(right.serviceKey.value),
+          (left, right) =>
+              left.serviceKey.value.compareTo(right.serviceKey.value),
         ),
     );
   }
@@ -71,10 +73,13 @@ class AccumulateServiceEvidenceBucketsUseCase {
     var autopaySetupCount = current.autopaySetupCount;
     var microChargeCount = current.microChargeCount;
     var bundleCount = current.bundleCount;
+    var endedLifecycleCount = current.endedLifecycleCount;
     var promoCount = current.promoCount;
     var cancellationHintCount = current.cancellationHintCount;
     var weakRecurringHintCount = current.weakRecurringHintCount;
     var unknownReviewCount = current.unknownReviewCount;
+    var otpNoiseCount = current.otpNoiseCount;
+    var telecomRechargeNoiseCount = current.telecomRechargeNoiseCount;
     var oneTimePaymentNoiseCount = current.oneTimePaymentNoiseCount;
     var ignoreNoiseCount = current.ignoreNoiseCount;
     var lastBilledAt = current.lastBilledAt;
@@ -87,19 +92,6 @@ class AccumulateServiceEvidenceBucketsUseCase {
       sourceKind,
     };
 
-    final eventAmounts = <double>{
-      if (event.amount != null) event.amount!,
-      ...fragments
-          .where((fragment) => fragment.amount != null)
-          .map((fragment) => fragment.amount!),
-    };
-    for (final amount in eventAmounts) {
-      amounts.add(amount);
-    }
-    if (amounts.length > _maxAmountSeriesLength) {
-      amounts.removeRange(0, amounts.length - _maxAmountSeriesLength);
-    }
-
     final hadPaidEvidence = current.billedCount > 0;
     final hadBundleEvidence = current.bundleCount > 0;
     final hadSetupEvidence =
@@ -110,6 +102,10 @@ class AccumulateServiceEvidenceBucketsUseCase {
       switch (fragment.type) {
         case EvidenceFragmentType.billedSuccess:
           billedCount++;
+          final billedAmount = fragment.amount ?? event.amount;
+          if (billedAmount != null) {
+            amounts.add(billedAmount);
+          }
           if (hadBundleEvidence) {
             contradictions.add('paid_vs_bundle');
           }
@@ -154,6 +150,9 @@ class AccumulateServiceEvidenceBucketsUseCase {
             contradictions.add('paid_vs_bundle');
           }
           break;
+        case EvidenceFragmentType.endedLifecycle:
+          endedLifecycleCount++;
+          break;
         case EvidenceFragmentType.promoOnly:
           promoCount++;
           break;
@@ -166,6 +165,12 @@ class AccumulateServiceEvidenceBucketsUseCase {
         case EvidenceFragmentType.unknownReview:
           unknownReviewCount++;
           break;
+        case EvidenceFragmentType.otpNoise:
+          otpNoiseCount++;
+          break;
+        case EvidenceFragmentType.telecomRechargeNoise:
+          telecomRechargeNoiseCount++;
+          break;
         case EvidenceFragmentType.oneTimePaymentNoise:
           oneTimePaymentNoiseCount++;
           break;
@@ -175,8 +180,13 @@ class AccumulateServiceEvidenceBucketsUseCase {
       }
     }
 
+    if (amounts.length > _maxAmountSeriesLength) {
+      amounts.removeRange(0, amounts.length - _maxAmountSeriesLength);
+    }
+
     if (intervalHints.length > _maxIntervalHintLength) {
-      intervalHints.removeRange(0, intervalHints.length - _maxIntervalHintLength);
+      intervalHints.removeRange(
+          0, intervalHints.length - _maxIntervalHintLength);
     }
 
     return current.copyWith(
@@ -195,10 +205,13 @@ class AccumulateServiceEvidenceBucketsUseCase {
       autopaySetupCount: autopaySetupCount,
       microChargeCount: microChargeCount,
       bundleCount: bundleCount,
+      endedLifecycleCount: endedLifecycleCount,
       promoCount: promoCount,
       cancellationHintCount: cancellationHintCount,
       weakRecurringHintCount: weakRecurringHintCount,
       unknownReviewCount: unknownReviewCount,
+      otpNoiseCount: otpNoiseCount,
+      telecomRechargeNoiseCount: telecomRechargeNoiseCount,
       oneTimePaymentNoiseCount: oneTimePaymentNoiseCount,
       ignoreNoiseCount: ignoreNoiseCount,
       amountSeries: amounts,
@@ -236,16 +249,36 @@ class AccumulateServiceEvidenceBucketsUseCase {
   }
 
   List<EvidenceFragment> _fallbackFragments(SubscriptionEvent event) {
-    final type = switch (event.type.name) {
-      'subscriptionBilled' => EvidenceFragmentType.billedSuccess,
-      'mandateCreated' => EvidenceFragmentType.mandateCreated,
-      'autopaySetup' => EvidenceFragmentType.autopaySetup,
-      'mandateExecutedMicro' => EvidenceFragmentType.microCharge,
-      'bundleActivated' => EvidenceFragmentType.bundledBenefit,
-      'unknownReview' => EvidenceFragmentType.unknownReview,
-      'oneTimePayment' => EvidenceFragmentType.oneTimePaymentNoise,
-      _ => EvidenceFragmentType.ignoreNoise,
-    };
+    var type = EvidenceFragmentType.ignoreNoise;
+    switch (event.type.name) {
+      case 'subscriptionBilled':
+        type = EvidenceFragmentType.billedSuccess;
+        break;
+      case 'mandateCreated':
+        type = EvidenceFragmentType.mandateCreated;
+        break;
+      case 'autopaySetup':
+        type = EvidenceFragmentType.autopaySetup;
+        break;
+      case 'mandateExecutedMicro':
+        type = EvidenceFragmentType.microCharge;
+        break;
+      case 'bundleActivated':
+        type = EvidenceFragmentType.bundledBenefit;
+        break;
+      case 'subscriptionCancelled':
+        type = EvidenceFragmentType.endedLifecycle;
+        break;
+      case 'unknownReview':
+        type = EvidenceFragmentType.unknownReview;
+        break;
+      case 'oneTimePayment':
+        type = EvidenceFragmentType.oneTimePaymentNoise;
+        break;
+      default:
+        type = EvidenceFragmentType.ignoreNoise;
+        break;
+    }
 
     return <EvidenceFragment>[
       EvidenceFragment(

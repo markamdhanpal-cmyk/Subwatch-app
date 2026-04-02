@@ -84,16 +84,6 @@ class RecurringBillingHeuristics {
     caseSensitive: false,
   );
 
-  static final RegExp directRecurringMerchantPattern =
-      MerchantKnowledgeBase.aliasPatternForTypeLabels(
-    <String>['direct_recurring'],
-  );
-
-  static final RegExp appStoreMerchantPattern =
-      MerchantKnowledgeBase.aliasPatternForTypeLabels(
-    <String>['app_store'],
-  );
-
   static final RegExp merchantRoutingPattern = RegExp(
     r'\b(at|for|towards|on)\b',
     caseSensitive: false,
@@ -185,11 +175,37 @@ class RecurringBillingHeuristics {
   }
 
   static bool hasDirectRecurringMerchant(String body) {
-    return directRecurringMerchantPattern.hasMatch(body);
+    return MerchantKnowledgeBase.matchKnownMerchant(
+          body,
+          requiredTypeLabels: const <String>['direct_recurring'],
+          allowWeakReview: false,
+          allowBundleSignals: true,
+        ) !=
+        null;
   }
 
   static bool hasAppStoreMerchant(String body) {
-    return appStoreMerchantPattern.hasMatch(body);
+    return MerchantKnowledgeBase.matchKnownMerchant(
+          body,
+          requiredTypeLabels: const <String>['app_store'],
+          allowWeakReview: false,
+          allowBundleSignals: true,
+        ) !=
+        null;
+  }
+
+  static String? extractMerchantHint(
+    String body, {
+    Iterable<String>? requiredTypeLabels,
+    bool allowBundleSignals = false,
+  }) {
+    final entry = MerchantKnowledgeBase.matchKnownMerchant(
+      body,
+      requiredTypeLabels: requiredTypeLabels,
+      allowWeakReview: false,
+      allowBundleSignals: allowBundleSignals,
+    );
+    return entry?.preferredHintAlias;
   }
 
   static bool hasMerchantRoutingContext(String body) {
@@ -220,6 +236,6 @@ class RecurringBillingHeuristics {
       }
     }
 
-    return terms.toList(growable: false);
+    return terms.toList(growable: true);
   }
 }

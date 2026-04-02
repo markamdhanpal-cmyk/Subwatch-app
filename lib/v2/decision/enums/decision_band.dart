@@ -5,6 +5,7 @@ enum DecisionBand {
   includedWithPlan,
   setupOnly,
   verificationOnly,
+  ended,
   oneTimeOrNoise,
   ignored,
 }

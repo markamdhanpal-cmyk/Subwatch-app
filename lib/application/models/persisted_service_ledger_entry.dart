@@ -3,6 +3,7 @@ import '../../domain/entities/service_ledger_entry.dart';
 import '../../domain/enums/billing_cadence.dart';
 import '../../domain/enums/resolver_state.dart';
 import '../../domain/enums/subscription_event_type.dart';
+import '../../domain/services/legacy_service_key_trust_guard.dart';
 import '../../domain/value_objects/service_key.dart';
 
 class PersistedServiceLedgerEntry {
@@ -19,7 +20,10 @@ class PersistedServiceLedgerEntry {
 
   factory PersistedServiceLedgerEntry.fromDomain(ServiceLedgerEntry entry) {
     return PersistedServiceLedgerEntry(
-      serviceKey: entry.serviceKey.value,
+      serviceKey: LegacyServiceKeyTrustGuard.sanitizePersistedServiceKey(
+        serviceKey: entry.serviceKey.value,
+        evidenceNotes: entry.evidenceTrail.notes,
+      ),
       state: entry.state.name,
       evidenceTrail: PersistedEvidenceTrail.fromDomain(entry.evidenceTrail),
       lastEventType: entry.lastEventType?.name,
@@ -55,10 +59,17 @@ class PersistedServiceLedgerEntry {
   final String? billingCadence;
 
   ServiceLedgerEntry toDomain() {
+    final domainEvidenceTrail = evidenceTrail.toDomain();
+    final sanitizedServiceKey =
+        LegacyServiceKeyTrustGuard.sanitizePersistedServiceKey(
+      serviceKey: serviceKey,
+      evidenceNotes: domainEvidenceTrail.notes,
+    );
+
     return ServiceLedgerEntry(
-      serviceKey: ServiceKey(serviceKey),
+      serviceKey: ServiceKey(sanitizedServiceKey),
       state: ResolverState.values.firstWhere((value) => value.name == state),
-      evidenceTrail: evidenceTrail.toDomain(),
+      evidenceTrail: domainEvidenceTrail,
       lastEventType: lastEventType == null
           ? null
           : SubscriptionEventType.values.firstWhere(

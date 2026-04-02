@@ -47,7 +47,9 @@ void main() {
       );
     }
 
-    test('unknownReview becomes review-eligible', () {
+    test(
+        'unknownReview stays hidden from review until stronger evidence exists',
+        () {
       final ledgerEntry = resolver.resolve(
         event: event(
           id: 'review-1',
@@ -58,9 +60,9 @@ void main() {
 
       expect(ledgerEntry.state, ResolverState.possibleSubscription);
 
-      final reviewItems = projection.buildReviewQueue(<ServiceLedgerEntry>[ledgerEntry]);
-      expect(reviewItems, hasLength(1));
-      expect(reviewItems.single.serviceKey.value, 'MYSTERY_SUB');
+      final reviewItems =
+          projection.buildReviewQueue(<ServiceLedgerEntry>[ledgerEntry]);
+      expect(reviewItems, isEmpty);
     });
 
     test('pendingConversion becomes a review item', () {
@@ -85,11 +87,12 @@ void main() {
       expect(reviewItems.single.serviceKey.value, 'CRUNCHYROLL');
       expect(
         reviewItems.single.detailsBullets,
-        contains('Tiny verification charges do not prove an active paid subscription.'),
+        contains(
+            'Tiny verification charges do not prove an active paid subscription.'),
       );
     });
 
-    test('possibleSubscription becomes a review item', () {
+    test('possibleSubscription is hidden from the review queue by default', () {
       final reviewItems = projection.buildReviewQueue(<ServiceLedgerEntry>[
         entry(
           key: 'MYSTERY_SUB',
@@ -102,12 +105,7 @@ void main() {
         ),
       ]);
 
-      expect(reviewItems, hasLength(1));
-      expect(reviewItems.single.serviceKey.value, 'MYSTERY_SUB');
-      expect(
-        reviewItems.single.reasonLine,
-        'It looks recurring, but billing is still unproven',
-      );
+      expect(reviewItems, isEmpty);
     });
 
     test('activePaid is excluded from the review queue', () {
@@ -126,7 +124,8 @@ void main() {
       expect(reviewItems, isEmpty);
     });
 
-    test('ignored oneTimeOnly and cancelled are excluded from the review queue', () {
+    test('ignored oneTimeOnly and cancelled are excluded from the review queue',
+        () {
       final reviewItems = projection.buildReviewQueue(<ServiceLedgerEntry>[
         entry(key: 'IGNORED', state: ResolverState.ignored),
         entry(key: 'SHOPPING', state: ResolverState.oneTimeOnly),
@@ -144,7 +143,8 @@ void main() {
       expect(reviewItems, isEmpty);
     });
 
-    test('multiple mixed ledger entries produce the correct review queue', () async {
+    test('multiple mixed ledger entries produce the correct review queue',
+        () async {
       final repository = InMemoryLedgerRepository();
       await repository.write(
         entry(key: 'NETFLIX', state: ResolverState.activePaid),
@@ -191,14 +191,18 @@ void main() {
         dashboardProjection: projection,
       ).execute();
 
-      expect(reviewItems, hasLength(3));
+      expect(reviewItems, hasLength(2));
       expect(
-        reviewItems.map((item) => item.serviceKey.value).toList(growable: false),
-        <String>['CRUNCHYROLL', 'JIOHOTSTAR', 'MYSTERY_SUB'],
+        reviewItems
+            .map((item) => item.serviceKey.value)
+            .toList(growable: false),
+        <String>['CRUNCHYROLL', 'JIOHOTSTAR'],
       );
     });
 
-    test('higher value billed uncertainty ranks above generic weak recurring', () {
+    test(
+        'possibleSubscription entries do not surface in review ranking by default',
+        () {
       final reviewItems = projection.buildReviewQueue(<ServiceLedgerEntry>[
         entry(
           key: 'GOOGLE_PLAY',
@@ -223,14 +227,7 @@ void main() {
         ),
       ]);
 
-      expect(
-        reviewItems.map((item) => item.serviceKey.value).toList(growable: false),
-        <String>['GOOGLE_PLAY', 'MYSTERY_SUB'],
-      );
-      expect(
-        reviewItems.first.reasonLine,
-        'A billing signal was found, but the proof is still thin',
-      );
+      expect(reviewItems, isEmpty);
     });
   });
 }

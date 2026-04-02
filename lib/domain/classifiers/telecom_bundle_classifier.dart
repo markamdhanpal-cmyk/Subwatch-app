@@ -4,6 +4,8 @@ import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
 import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_event_type.dart';
+import '../knowledge/merchant_knowledge_base.dart';
+import 'recurring_billing_heuristics.dart';
 
 class TelecomBundleClassifier implements EventClassifier {
   const TelecomBundleClassifier();
@@ -22,22 +24,19 @@ class TelecomBundleClassifier implements EventClassifier {
 
   static final List<RegExp> _benefitPatterns = <RegExp>[
     RegExp(r'\bsubscription\b', caseSensitive: false),
-    RegExp(r'\bplan\b', caseSensitive: false),
-    RegExp(r'\bpack\b', caseSensitive: false),
-    RegExp(r'\bbundle\b', caseSensitive: false),
     RegExp(r'\bbenefit\b', caseSensitive: false),
     RegExp(r'\bcomplimentary\b', caseSensitive: false),
     RegExp(r'\bfree\b', caseSensitive: false),
+    RegExp(r'\bincluded\b', caseSensitive: false),
     RegExp(r'\brecent recharge has unlocked\b', caseSensitive: false),
     RegExp(r'\bunlocked by recharge\b', caseSensitive: false),
   ];
 
-  static final List<RegExp> _bundleMarkerPatterns = <RegExp>[
-    RegExp(r'\bbundle\b', caseSensitive: false),
-    RegExp(r'\bbenefit\b', caseSensitive: false),
-    RegExp(r'\bcomplimentary\b', caseSensitive: false),
-    RegExp(r'\bfree\b', caseSensitive: false),
+  static final List<RegExp> _rechargeOrPackMarkers = <RegExp>[
     RegExp(r'\brecharge\b', caseSensitive: false),
+    RegExp(r'\bplan\b', caseSensitive: false),
+    RegExp(r'\bpack\b', caseSensitive: false),
+    RegExp(r'\bvalidity\b', caseSensitive: false),
     RegExp(r'\bunlocked\b', caseSensitive: false),
   ];
 
@@ -48,12 +47,40 @@ class TelecomBundleClassifier implements EventClassifier {
       return null;
     }
 
-    final hasProviderBundleContext = _providerPattern.hasMatch(body) &&
-        _benefitPatterns.any((pattern) => pattern.hasMatch(body));
-    final hasCoBrandedBundleContext = _coBrandedBundlePattern.hasMatch(body) &&
-        _bundleMarkerPatterns.any((pattern) => pattern.hasMatch(body));
+    final hasCrediblePaidAmount = RecurringBillingHeuristics.isCredibleAmount(
+      RecurringBillingHeuristics.extractAmount(body),
+    );
+    final hasDirectPaidSignal = hasCrediblePaidAmount &&
+        RecurringBillingHeuristics.hasBillingContext(body) &&
+        (RecurringBillingHeuristics.hasSuccessContext(body) ||
+            RecurringBillingHeuristics.hasRecurringContext(body)) &&
+        RecurringBillingHeuristics.hasDirectRecurringMerchant(body);
+    if (hasDirectPaidSignal) {
+      return null;
+    }
 
-    if (!hasProviderBundleContext && !hasCoBrandedBundleContext) {
+    final hasProviderContext = _providerPattern.hasMatch(body);
+    final hasBenefitLanguage =
+        _benefitPatterns.any((pattern) => pattern.hasMatch(body));
+    final hasRechargeMarker =
+        _rechargeOrPackMarkers.any((pattern) => pattern.hasMatch(body));
+    final hasCoBrandedContext = _coBrandedBundlePattern.hasMatch(body);
+    final hasBundleServiceAlias = MerchantKnowledgeBase.matchKnownMerchant(
+          body,
+          requiredTypeLabels: const <String>['bundle_candidate'],
+          allowWeakReview: false,
+          allowBundleSignals: true,
+        ) !=
+        null;
+
+    final hasProviderBundleContext =
+        hasProviderContext && hasBenefitLanguage && hasRechargeMarker;
+    final hasCoBrandedBundleContext =
+        hasCoBrandedContext && hasBenefitLanguage && hasRechargeMarker;
+    final hasStrongBundleContext =
+        hasProviderBundleContext || hasCoBrandedBundleContext;
+
+    if (!hasStrongBundleContext || !hasBundleServiceAlias) {
       return null;
     }
 
@@ -92,6 +119,18 @@ class TelecomBundleClassifier implements EventClassifier {
     }
 
     for (final pattern in _benefitPatterns) {
+      final match = pattern.firstMatch(input);
+      if (match == null) {
+        continue;
+      }
+
+      final term = match.group(0);
+      if (term != null) {
+        terms.add(term.toLowerCase());
+      }
+    }
+
+    for (final pattern in _rechargeOrPackMarkers) {
       final match = pattern.firstMatch(input);
       if (match == null) {
         continue;

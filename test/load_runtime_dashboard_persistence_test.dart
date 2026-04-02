@@ -1,4 +1,6 @@
-﻿import 'dart:io';
+import 'dart:io';
+
+import 'support/test_temp_dir.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
@@ -15,6 +17,8 @@ import 'package:sub_killer/application/use_cases/apply_local_service_presentatio
 import 'package:sub_killer/application/use_cases/handle_local_service_presentation_use_case.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 import 'package:sub_killer/domain/entities/dashboard_card.dart';
+import 'package:sub_killer/domain/entities/evidence_trail.dart';
+import 'package:sub_killer/domain/entities/service_ledger_entry.dart';
 import 'package:sub_killer/domain/enums/dashboard_bucket.dart';
 import 'package:sub_killer/domain/enums/resolver_state.dart';
 import 'package:sub_killer/domain/value_objects/service_key.dart';
@@ -25,9 +29,7 @@ void main() {
     late JsonFileLedgerSnapshotStore store;
 
     setUp(() async {
-      tempDirectory = await Directory.systemTemp.createTemp(
-        'sub-killer-runtime-',
-      );
+      tempDirectory = await createWorkspaceTempDirectory('sub-killer-runtime');
       store = JsonFileLedgerSnapshotStore.applicationSupport(
         directoryProvider: () async => tempDirectory,
       );
@@ -366,6 +368,176 @@ void main() {
       },
     );
     test(
+      'restore sanitizes legacy low-confidence extracted-candidate keys before projection',
+      () async {
+        await store.saveRecord(
+          LedgerSnapshotRecord(
+            entries: <ServiceLedgerEntry>[
+              ServiceLedgerEntry(
+                serviceKey: const ServiceKey('NETFLIX'),
+                state: ResolverState.activePaid,
+                evidenceTrail: EvidenceTrail(
+                  notes: const <String>[
+                    'merchant_resolution:exactAlias:high:netflix',
+                  ],
+                ),
+              ),
+              ServiceLedgerEntry(
+                serviceKey: const ServiceKey('MODI'),
+                state: ResolverState.pendingConversion,
+                evidenceTrail: EvidenceTrail(
+                  notes: const <String>[
+                    'merchant_resolution:extractedCandidate:low:modi',
+                    'fragment:mandate_created',
+                  ],
+                ),
+              ),
+            ],
+            metadata: LedgerSnapshotMetadata(
+              sourceKind: RuntimeSnapshotSourceKind.deviceSms,
+              refreshedAt: DateTime(2026, 3, 13, 9, 30),
+            ),
+          ),
+        );
+
+        final restored = await LoadRuntimeDashboardUseCase(
+          capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+            accessState: LocalMessageSourceAccessState.deviceLocalDenied,
+          ),
+          deviceSmsGateway: _CountingDeviceSmsGateway(const <RawDeviceSms>[]),
+          ledgerSnapshotStore: store,
+          clock: () => DateTime(2026, 3, 13, 11, 30),
+        ).execute();
+
+        expect(
+          restored.provenance.kind,
+          RuntimeSnapshotProvenanceKind.restoredLocalSnapshot,
+        );
+        expect(
+          restored.cards.map((card) => card.serviceKey.value),
+          isNot(contains('MODI')),
+        );
+        expect(
+          restored.cards.map((card) => card.serviceKey.value),
+          contains('NETFLIX'),
+        );
+      },
+    );
+    test(
+      'restored projection keeps unresolved hidden and surfaces only review-eligible states',
+      () async {
+        await store.saveRecord(
+          LedgerSnapshotRecord(
+            entries: <ServiceLedgerEntry>[
+              ServiceLedgerEntry(
+                serviceKey: const ServiceKey('UNRESOLVED'),
+                state: ResolverState.pendingConversion,
+                evidenceTrail: EvidenceTrail.empty(),
+              ),
+              ServiceLedgerEntry(
+                serviceKey: const ServiceKey('MYSTERY_SUB'),
+                state: ResolverState.possibleSubscription,
+                evidenceTrail: EvidenceTrail(
+                  notes: const <String>['v2:reason=weakRecurringSignalsObserved'],
+                ),
+              ),
+              ServiceLedgerEntry(
+                serviceKey: const ServiceKey('JIOHOTSTAR'),
+                state: ResolverState.pendingConversion,
+                evidenceTrail: EvidenceTrail.empty(),
+              ),
+              ServiceLedgerEntry(
+                serviceKey: const ServiceKey('CRUNCHYROLL'),
+                state: ResolverState.verificationOnly,
+                evidenceTrail: EvidenceTrail.empty(),
+              ),
+              ServiceLedgerEntry(
+                serviceKey: const ServiceKey('NETFLIX'),
+                state: ResolverState.activePaid,
+                evidenceTrail: EvidenceTrail.empty(),
+                totalBilled: 499,
+              ),
+            ],
+            metadata: LedgerSnapshotMetadata(
+              sourceKind: RuntimeSnapshotSourceKind.deviceSms,
+              refreshedAt: DateTime(2026, 3, 13, 9, 30),
+            ),
+          ),
+        );
+
+        final restored = await LoadRuntimeDashboardUseCase(
+          capabilityProvider: const StubLocalMessageSourceCapabilityProvider(
+            accessState: LocalMessageSourceAccessState.deviceLocalDenied,
+          ),
+          deviceSmsGateway: _CountingDeviceSmsGateway(const <RawDeviceSms>[]),
+          ledgerSnapshotStore: store,
+          clock: () => DateTime(2026, 3, 13, 12, 0),
+        ).execute();
+
+        expect(
+          restored.cards.map((card) => card.serviceKey.value),
+          isNot(contains('UNRESOLVED')),
+        );
+        final mysteryCard = restored.cards.firstWhere(
+          (card) => card.serviceKey.value == 'MYSTERY_SUB',
+        );
+        expect(mysteryCard.bucket, DashboardBucket.hidden);
+        expect(
+          restored.reviewQueue.map((item) => item.serviceKey.value),
+          <String>['CRUNCHYROLL', 'JIOHOTSTAR'],
+        );
+        final pending = restored.reviewQueue.firstWhere(
+          (item) => item.serviceKey.value == 'JIOHOTSTAR',
+        );
+        expect(
+          pending.reasonLine,
+          'A recurring setup was found, but billing is still missing',
+        );
+        final verification = restored.reviewQueue.firstWhere(
+          (item) => item.serviceKey.value == 'CRUNCHYROLL',
+        );
+        expect(
+          verification.detailsBullets,
+          contains(
+            'Tiny verification charges do not prove an active paid subscription.',
+          ),
+        );
+      },
+    );
+    test(
+      'refresh persistence writes low-confidence extracted candidates as UNRESOLVED',
+      () async {
+        await store.saveRecord(
+          LedgerSnapshotRecord(
+            entries: <ServiceLedgerEntry>[
+              ServiceLedgerEntry(
+                serviceKey: const ServiceKey('MODI'),
+                state: ResolverState.pendingConversion,
+                evidenceTrail: EvidenceTrail(
+                  notes: const <String>[
+                    'merchant_resolution:extractedCandidate:low:modi',
+                    'fragment:mandate_created',
+                  ],
+                ),
+              ),
+            ],
+            metadata: LedgerSnapshotMetadata(
+              sourceKind: RuntimeSnapshotSourceKind.deviceSms,
+              refreshedAt: DateTime(2026, 3, 13, 9, 0),
+            ),
+          ),
+        );
+
+        final snapshotFile = File(
+          '${tempDirectory.path}${Platform.pathSeparator}${JsonFileLedgerSnapshotStore.defaultFileName}',
+        );
+        final raw = await snapshotFile.readAsString();
+
+        expect(raw, contains('"UNRESOLVED"'));
+        expect(raw, isNot(contains('"MODI"')));
+      },
+    );
+    test(
       'local service presentation overlays relabel cards locally and keep pinned services first',
       () async {
         final localServicePresentationOverlayStore =
@@ -560,6 +732,5 @@ class _CountingDeviceSmsGateway implements DeviceSmsGateway {
     return messages;
   }
 }
-
 
 

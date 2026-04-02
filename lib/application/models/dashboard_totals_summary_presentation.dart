@@ -46,7 +46,7 @@ class DashboardTotalsSummaryPresentation {
   String get reviewValueLabel => '$reviewCount';
 
   String get reviewCaption =>
-      reviewCount == 1 ? 'Review item' : 'Review items';
+      reviewCount == 1 ? 'Possible item' : 'Possible items';
 
   String get monthlyTotalValueLabel => !hasEstimatedSpend
       ? 'Amount not available yet'
@@ -100,7 +100,7 @@ class DashboardTotalsSummaryPresentation {
         'Only confirmed subscriptions with visible amounts count automatically.',
         'Manual entries with amounts count on this phone.',
         'Yearly and quarterly plans are shown monthly.',
-        'Review, benefits, and missing amounts stay excluded.',
+        'Possible items, included services, and missing amounts stay excluded.',
         'This is an estimate, not exact spend.',
       ];
 }

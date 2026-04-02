@@ -1,43 +1,23 @@
-﻿import 'package:flutter_test/flutter_test.dart';
-import 'package:sub_killer/application/models/raw_device_sms.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
-import 'package:sub_killer/application/stores/in_memory_review_action_store.dart';
-import 'package:sub_killer/application/stores/in_memory_local_control_overlay_store.dart';
-import 'package:sub_killer/application/stores/in_memory_local_manual_subscription_store.dart';
-import 'package:sub_killer/application/stores/in_memory_local_service_presentation_overlay_store.dart';
-import 'package:sub_killer/application/stores/in_memory_local_renewal_reminder_store.dart';
-import 'package:sub_killer/application/contracts/device_sms_gateway.dart';
 
-class FakeDeviceSmsGateway implements DeviceSmsGateway {
-  const FakeDeviceSmsGateway(this.messages);
-  final List<RawDeviceSms> messages;
-  @override
-  Future<List<RawDeviceSms>> readMessages() async => messages;
-}
+void main() {
+  test('runtime sample projection does not surface legacy candidate noise keys',
+      () async {
+    final snapshot = await LoadRuntimeDashboardUseCase(
+      clock: () => DateTime(2026, 3, 24, 10, 0),
+    ).execute();
 
-void main() async {
-  final now = DateTime(2026, 3, 24, 10, 0);
-  final gateway = FakeDeviceSmsGateway([
-    RawDeviceSms(
-      id: 'raw-2',
-      address: 'SPOTIFY',
-      body: 'Premium Rs 119',
-      receivedAt: now.subtract(const Duration(days: 2)),
-    ),
-  ]);
+    final serviceKeys = snapshot.cards
+        .map((card) => card.serviceKey.value)
+        .toList(growable: false);
 
-  final runtimeUseCase = LoadRuntimeDashboardUseCase(
-    reviewActionStore: InMemoryReviewActionStore(),
-    localControlOverlayStore: InMemoryLocalControlOverlayStore(),
-    localManualSubscriptionStore: InMemoryLocalManualSubscriptionStore(),
-    localServicePresentationOverlayStore: InMemoryLocalServicePresentationOverlayStore(),
-    localRenewalReminderStore: InMemoryLocalRenewalReminderStore(),
-    deviceSmsGateway: gateway,
-    clock: () => now,
-  );
-
-  final snapshot = await runtimeUseCase.execute();
-  for (final card in snapshot.cards) {
-    print('Card title: ${card.title}, serviceKey: ${card.serviceKey.value}');
-  }
+    expect(serviceKeys, contains('NETFLIX'));
+    expect(
+      serviceKeys,
+      isNot(contains('CLICK_IF_YOU_DO_NOT_HAVE_ANY_OTHER_DATA')),
+    );
+    expect(serviceKeys, isNot(contains('MODI')));
+    expect(serviceKeys, isNot(contains('UNRESOLVED')));
+  });
 }

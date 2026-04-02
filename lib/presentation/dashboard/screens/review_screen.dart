@@ -28,7 +28,7 @@ Widget _buildDashboardReviewScreen({
 }) {
   final reviewRows = shell._buildReviewRows(
     data.reviewQueue,
-    emptyTitle: 'Nothing to review right now',
+    emptyTitle: 'No possible items right now',
     emptyMessage: '',
   );
   final reviewCount = data.reviewQueue.length;
@@ -47,10 +47,10 @@ Widget _buildDashboardReviewScreen({
             const SizedBox(height: DashboardSpacing.screenBlockGap),
             _DashboardSection(
               key: const ValueKey<String>('section-reviewQueue'),
-              title: 'Needs your review',
+              title: 'Possible',
               countLabel: reviewCount == 1 ? '1 item' : '$reviewCount items',
               caption:
-                  'Kept separate so your confirmed list stays careful until you decide.',
+                  'Kept separate so confirmed stays trustworthy.',
               children: reviewRows,
             ),
           ],

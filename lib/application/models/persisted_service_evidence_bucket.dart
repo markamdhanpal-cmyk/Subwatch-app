@@ -1,6 +1,7 @@
 import '../../domain/entities/evidence_trail.dart';
 import '../../domain/entities/service_evidence_bucket.dart';
 import '../../domain/enums/service_evidence_source_kind.dart';
+import '../../domain/services/legacy_service_key_trust_guard.dart';
 import '../../domain/value_objects/service_key.dart';
 
 class PersistedServiceEvidenceBucket {
@@ -15,10 +16,13 @@ class PersistedServiceEvidenceBucket {
     required this.autopaySetupCount,
     required this.microChargeCount,
     required this.bundleCount,
+    required this.endedLifecycleCount,
     required this.promoCount,
     required this.cancellationHintCount,
     required this.weakRecurringHintCount,
     required this.unknownReviewCount,
+    required this.otpNoiseCount,
+    required this.telecomRechargeNoiseCount,
     required this.oneTimePaymentNoiseCount,
     required this.ignoreNoiseCount,
     required this.amountSeries,
@@ -26,14 +30,17 @@ class PersistedServiceEvidenceBucket {
     required this.contradictions,
     required this.evidenceTrail,
     this.lastBilledAt,
-    this.schemaVersion = 2,
+    this.schemaVersion = 3,
   });
 
   factory PersistedServiceEvidenceBucket.fromDomain(
     ServiceEvidenceBucket bucket,
   ) {
     return PersistedServiceEvidenceBucket(
-      serviceKey: bucket.serviceKey.value,
+      serviceKey: LegacyServiceKeyTrustGuard.sanitizePersistedServiceKey(
+        serviceKey: bucket.serviceKey.value,
+        evidenceNotes: bucket.evidenceTrail.notes,
+      ),
       firstSeenAt: bucket.firstSeenAt.toIso8601String(),
       lastSeenAt: bucket.lastSeenAt.toIso8601String(),
       lastBilledAt: bucket.lastBilledAt?.toIso8601String(),
@@ -46,10 +53,13 @@ class PersistedServiceEvidenceBucket {
       autopaySetupCount: bucket.autopaySetupCount,
       microChargeCount: bucket.microChargeCount,
       bundleCount: bucket.bundleCount,
+      endedLifecycleCount: bucket.endedLifecycleCount,
       promoCount: bucket.promoCount,
       cancellationHintCount: bucket.cancellationHintCount,
       weakRecurringHintCount: bucket.weakRecurringHintCount,
       unknownReviewCount: bucket.unknownReviewCount,
+      otpNoiseCount: bucket.otpNoiseCount,
+      telecomRechargeNoiseCount: bucket.telecomRechargeNoiseCount,
       oneTimePaymentNoiseCount: bucket.oneTimePaymentNoiseCount,
       ignoreNoiseCount: bucket.ignoreNoiseCount,
       amountSeries: bucket.amountSeries,
@@ -75,12 +85,16 @@ class PersistedServiceEvidenceBucket {
       autopaySetupCount: (json['autopaySetupCount'] as num?)?.toInt() ?? 0,
       microChargeCount: (json['microChargeCount'] as num?)?.toInt() ?? 0,
       bundleCount: (json['bundleCount'] as num?)?.toInt() ?? 0,
+      endedLifecycleCount: (json['endedLifecycleCount'] as num?)?.toInt() ?? 0,
       promoCount: (json['promoCount'] as num?)?.toInt() ?? 0,
       cancellationHintCount:
           (json['cancellationHintCount'] as num?)?.toInt() ?? 0,
       weakRecurringHintCount:
           (json['weakRecurringHintCount'] as num?)?.toInt() ?? 0,
       unknownReviewCount: (json['unknownReviewCount'] as num?)?.toInt() ?? 0,
+      otpNoiseCount: (json['otpNoiseCount'] as num?)?.toInt() ?? 0,
+      telecomRechargeNoiseCount:
+          (json['telecomRechargeNoiseCount'] as num?)?.toInt() ?? 0,
       oneTimePaymentNoiseCount:
           (json['oneTimePaymentNoiseCount'] as num?)?.toInt() ?? 0,
       ignoreNoiseCount: (json['ignoreNoiseCount'] as num?)?.toInt() ?? 0,
@@ -107,10 +121,13 @@ class PersistedServiceEvidenceBucket {
   final int autopaySetupCount;
   final int microChargeCount;
   final int bundleCount;
+  final int endedLifecycleCount;
   final int promoCount;
   final int cancellationHintCount;
   final int weakRecurringHintCount;
   final int unknownReviewCount;
+  final int otpNoiseCount;
+  final int telecomRechargeNoiseCount;
   final int oneTimePaymentNoiseCount;
   final int ignoreNoiseCount;
   final List<double> amountSeries;
@@ -119,30 +136,39 @@ class PersistedServiceEvidenceBucket {
   final PersistedBucketEvidenceTrail evidenceTrail;
 
   ServiceEvidenceBucket toDomain() {
+    final domainEvidenceTrail = evidenceTrail.toDomain();
+    final sanitizedServiceKey =
+        LegacyServiceKeyTrustGuard.sanitizePersistedServiceKey(
+      serviceKey: serviceKey,
+      evidenceNotes: domainEvidenceTrail.notes,
+    );
+
     return ServiceEvidenceBucket(
-      serviceKey: ServiceKey(serviceKey),
+      serviceKey: ServiceKey(sanitizedServiceKey),
       firstSeenAt: DateTime.parse(firstSeenAt),
       lastSeenAt: DateTime.parse(lastSeenAt),
       lastBilledAt: lastBilledAt == null ? null : DateTime.parse(lastBilledAt!),
-      sourceKindsSeen: sourceKindsSeen
-          .map(_sourceKindFromName)
-          .toList(growable: false),
+      sourceKindsSeen:
+          sourceKindsSeen.map(_sourceKindFromName).toList(growable: false),
       billedCount: billedCount,
       renewalHintCount: renewalHintCount,
       mandateCount: mandateCount,
       autopaySetupCount: autopaySetupCount,
       microChargeCount: microChargeCount,
       bundleCount: bundleCount,
+      endedLifecycleCount: endedLifecycleCount,
       promoCount: promoCount,
       cancellationHintCount: cancellationHintCount,
       weakRecurringHintCount: weakRecurringHintCount,
       unknownReviewCount: unknownReviewCount,
+      otpNoiseCount: otpNoiseCount,
+      telecomRechargeNoiseCount: telecomRechargeNoiseCount,
       oneTimePaymentNoiseCount: oneTimePaymentNoiseCount,
       ignoreNoiseCount: ignoreNoiseCount,
       amountSeries: amountSeries,
       intervalHintsInDays: intervalHintsInDays,
       contradictions: contradictions,
-      evidenceTrail: evidenceTrail.toDomain(),
+      evidenceTrail: domainEvidenceTrail,
     );
   }
 
@@ -160,10 +186,13 @@ class PersistedServiceEvidenceBucket {
       'autopaySetupCount': autopaySetupCount,
       'microChargeCount': microChargeCount,
       'bundleCount': bundleCount,
+      'endedLifecycleCount': endedLifecycleCount,
       'promoCount': promoCount,
       'cancellationHintCount': cancellationHintCount,
       'weakRecurringHintCount': weakRecurringHintCount,
       'unknownReviewCount': unknownReviewCount,
+      'otpNoiseCount': otpNoiseCount,
+      'telecomRechargeNoiseCount': telecomRechargeNoiseCount,
       'oneTimePaymentNoiseCount': oneTimePaymentNoiseCount,
       'ignoreNoiseCount': ignoreNoiseCount,
       'amountSeries': amountSeries,

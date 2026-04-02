@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'support/test_temp_dir.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/review_item_action_models.dart';
 import 'package:sub_killer/application/stores/json_file_review_action_store.dart';
@@ -10,9 +12,7 @@ void main() {
     late JsonFileReviewActionStore store;
 
     setUp(() async {
-      tempDirectory = await Directory.systemTemp.createTemp(
-        'sub-killer-review-actions-',
-      );
+      tempDirectory = await createWorkspaceTempDirectory('sub-killer-review-actions');
       store = JsonFileReviewActionStore.applicationSupport(
         directoryProvider: () async => tempDirectory,
       );
@@ -97,3 +97,4 @@ void main() {
     });
   });
 }
+

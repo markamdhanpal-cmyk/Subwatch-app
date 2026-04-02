@@ -1,18 +1,24 @@
 import '../../../domain/entities/service_evidence_bucket.dart';
+import '../../../domain/enums/subscription_evidence_kind.dart';
 import '../../scoring/contracts/subscription_scorer.dart';
 import '../../scoring/models/subscription_score.dart';
 import '../../scoring/models/subscription_scoring_context.dart';
-import '../../scoring/use_cases/local_subscription_scorer.dart';
+import '../../scoring/use_cases/rule_based_subscription_scorer.dart';
 import '../enums/decision_band.dart';
 import '../enums/decision_reason_code.dart';
 import '../models/decision_snapshot.dart';
+import 'build_service_evidence_profile_use_case.dart';
 
 class DecisionEngineV2UseCase {
   const DecisionEngineV2UseCase({
-    SubscriptionScorer scorer = const LocalSubscriptionScorer(),
-  }) : _scorer = scorer;
+    SubscriptionScorer scorer = const RuleBasedSubscriptionScorer(),
+    BuildServiceEvidenceProfileUseCase evidenceProfileBuilder =
+        const BuildServiceEvidenceProfileUseCase(),
+  })  : _scorer = scorer,
+        _evidenceProfileBuilder = evidenceProfileBuilder;
 
   final SubscriptionScorer _scorer;
+  final BuildServiceEvidenceProfileUseCase _evidenceProfileBuilder;
 
   List<DecisionSnapshot> decideAll(
     Iterable<ServiceEvidenceBucket> buckets, {
@@ -41,71 +47,44 @@ class DecisionEngineV2UseCase {
     SubscriptionScoringContext scoringContext =
         const SubscriptionScoringContext(),
   }) {
+    final profile = _evidenceProfileBuilder.execute(bucket);
     final reasons = <DecisionReasonCode>[];
-    final notes = <String>[];
+    final notes = <String>[
+      'decision:model=deterministic_service_level_v3',
+    ];
     final subscriptionScore = _scorer.score(
       bucket,
       context: scoringContext,
     );
-    notes.add(
-      'ml:model=${subscriptionScore.modelVersion}'
-      ';p=${subscriptionScore.subscriptionProbability.toStringAsFixed(3)}'
-      ';review=${subscriptionScore.reviewPriorityScore.toStringAsFixed(3)}',
-    );
-    if (subscriptionScore.subscriptionProbability >= 0.8) {
-      reasons.add(DecisionReasonCode.mlHighSubscriptionProbability);
-    } else if (subscriptionScore.subscriptionProbability <= 0.45) {
-      reasons.add(DecisionReasonCode.mlLowSubscriptionProbability);
-    }
-    if (subscriptionScore.reviewPriorityScore >= 0.55) {
-      reasons.add(DecisionReasonCode.mlReviewPriorityElevated);
-    }
-    notes.addAll(
-      subscriptionScore.contributingSignals
-          .map((signal) => 'ml:signal=$signal'),
-    );
 
-    final hasPaidEvidence = bucket.billedCount > 0;
-    final hasBundleEvidence = bucket.bundleCount > 0;
-    final hasSetupEvidence =
-        bucket.mandateCount > 0 || bucket.autopaySetupCount > 0;
-    final hasMicroEvidence = bucket.microChargeCount > 0;
-    final hasReviewSignals = bucket.weakRecurringHintCount > 0 ||
-        bucket.unknownReviewCount > 0 ||
-        bucket.promoCount > 0 ||
-        bucket.cancellationHintCount > 0 ||
-        bucket.renewalHintCount > 0;
-    final hasLifecycleReviewSignals =
-        bucket.renewalHintCount > 0 || bucket.cancellationHintCount > 0;
+    final hasPaidEvidence = profile.has(SubscriptionEvidenceKind.paidCharge);
+    final hasBundleEvidence =
+        profile.has(SubscriptionEvidenceKind.bundleBenefit);
+    final hasSetupEvidence = profile.has(SubscriptionEvidenceKind.mandateSetup);
+    final hasMicroEvidence =
+        profile.has(SubscriptionEvidenceKind.microVerification);
+    final hasRenewalHints = profile.has(SubscriptionEvidenceKind.renewalHint);
+    final hasCancellationHints =
+        profile.has(SubscriptionEvidenceKind.cancellationHint);
+    final hasPromoNoise = profile.has(SubscriptionEvidenceKind.promoNoise);
+    final hasOtpNoise = profile.has(SubscriptionEvidenceKind.otpNoise);
+    final hasOneTimeNoise = profile.has(SubscriptionEvidenceKind.upiOneTime);
+    final hasTelecomRechargeNoise =
+        profile.has(SubscriptionEvidenceKind.telecomRechargeNoise);
+    final hasWeakReviewHints =
+        bucket.weakRecurringHintCount > 0 || bucket.unknownReviewCount > 0;
+    final hasExplicitEndedEvidence = bucket.endedLifecycleCount > 0;
     final hasContradictions = bucket.contradictions.isNotEmpty;
 
-    if (bucket.ignoreNoiseCount > 0 &&
-        !hasPaidEvidence &&
-        !hasBundleEvidence &&
-        !hasSetupEvidence &&
-        !hasMicroEvidence &&
-        !hasReviewSignals &&
-        bucket.oneTimePaymentNoiseCount == 0) {
-      reasons.add(DecisionReasonCode.ignoreSignalsObserved);
+    if (hasExplicitEndedEvidence) {
+      reasons.add(DecisionReasonCode.cancellationSignalsObserved);
+      if (hasContradictions) {
+        reasons.add(DecisionReasonCode.contradictionObserved);
+        notes.addAll(bucket.contradictions);
+      }
       return _snapshot(
         bucket,
-        band: DecisionBand.ignored,
-        reasons: reasons,
-        notes: notes,
-        subscriptionScore: subscriptionScore,
-      );
-    }
-
-    if (bucket.oneTimePaymentNoiseCount > 0 &&
-        !hasPaidEvidence &&
-        !hasBundleEvidence &&
-        !hasSetupEvidence &&
-        !hasMicroEvidence &&
-        !hasReviewSignals) {
-      reasons.add(DecisionReasonCode.oneTimeNoiseObserved);
-      return _snapshot(
-        bucket,
-        band: DecisionBand.oneTimeOrNoise,
+        band: DecisionBand.ended,
         reasons: reasons,
         notes: notes,
         subscriptionScore: subscriptionScore,
@@ -114,37 +93,20 @@ class DecisionEngineV2UseCase {
 
     if (hasPaidEvidence) {
       reasons.add(DecisionReasonCode.paidEvidenceObserved);
-      if (bucket.renewalHintCount > 0 ||
-          bucket.intervalHintsInDays.isNotEmpty) {
+      if (hasRenewalHints || bucket.intervalHintsInDays.isNotEmpty) {
         reasons.add(DecisionReasonCode.recurringRenewalObserved);
       }
       if (hasContradictions) {
         reasons.add(DecisionReasonCode.contradictionObserved);
         notes.addAll(bucket.contradictions);
       }
-      if (bucket.promoCount > 0 &&
-          bucket.billedCount == 1 &&
-          bucket.renewalHintCount == 0 &&
-          bucket.intervalHintsInDays.isEmpty) {
-        reasons.add(DecisionReasonCode.likelyPaidNeedsMoreHistory);
-        reasons.add(DecisionReasonCode.promoSignalsObserved);
-        return _snapshot(
-          bucket,
-          band: DecisionBand.likelyPaid,
-          reasons: reasons,
-          notes: notes,
-          subscriptionScore: subscriptionScore,
-          bridgeTotalBilled: bucket.amountSeries.fold<double>(
-            0,
-            (total, amount) => total + amount,
-          ),
-        );
-      }
 
-      if (bucket.billedCount == 1 &&
-          bucket.renewalHintCount == 0 &&
-          bucket.intervalHintsInDays.isEmpty &&
-          subscriptionScore.subscriptionProbability < 0.55) {
+      final hasSingleChargeOnly = bucket.billedCount == 1 &&
+          !hasRenewalHints &&
+          bucket.intervalHintsInDays.isEmpty;
+      if (hasSingleChargeOnly &&
+          !_isHighConfidenceSingleCharge(bucket,
+              hasPromoNoise: hasPromoNoise)) {
         reasons.add(DecisionReasonCode.likelyPaidNeedsMoreHistory);
         return _snapshot(
           bucket,
@@ -174,28 +136,6 @@ class DecisionEngineV2UseCase {
 
     if (hasBundleEvidence) {
       reasons.add(DecisionReasonCode.bundledBenefitObserved);
-      if (hasLifecycleReviewSignals &&
-          (bucket.weakRecurringHintCount > 0 ||
-              bucket.unknownReviewCount > 0)) {
-        reasons.add(DecisionReasonCode.weakRecurringSignalsObserved);
-        if (bucket.renewalHintCount > 0) {
-          reasons.add(DecisionReasonCode.recurringRenewalObserved);
-        }
-        if (bucket.cancellationHintCount > 0) {
-          reasons.add(DecisionReasonCode.cancellationSignalsObserved);
-        }
-        if (hasContradictions) {
-          reasons.add(DecisionReasonCode.contradictionObserved);
-          notes.addAll(bucket.contradictions);
-        }
-        return _snapshot(
-          bucket,
-          band: DecisionBand.needsReview,
-          reasons: reasons,
-          notes: notes,
-          subscriptionScore: subscriptionScore,
-        );
-      }
       if (hasContradictions) {
         reasons.add(DecisionReasonCode.contradictionObserved);
         notes.addAll(bucket.contradictions);
@@ -203,21 +143,6 @@ class DecisionEngineV2UseCase {
       return _snapshot(
         bucket,
         band: DecisionBand.includedWithPlan,
-        reasons: reasons,
-        notes: notes,
-        subscriptionScore: subscriptionScore,
-      );
-    }
-
-    if (hasMicroEvidence) {
-      reasons.add(DecisionReasonCode.microVerificationObserved);
-      if (hasContradictions) {
-        reasons.add(DecisionReasonCode.contradictionObserved);
-        notes.addAll(bucket.contradictions);
-      }
-      return _snapshot(
-        bucket,
-        band: DecisionBand.verificationOnly,
         reasons: reasons,
         notes: notes,
         subscriptionScore: subscriptionScore,
@@ -239,22 +164,60 @@ class DecisionEngineV2UseCase {
       );
     }
 
-    if (hasReviewSignals) {
-      if (bucket.weakRecurringHintCount > 0 || bucket.unknownReviewCount > 0 || bucket.renewalHintCount > 0) {
-        reasons.add(DecisionReasonCode.weakRecurringSignalsObserved);
-        if (bucket.renewalHintCount > 0) {
-          reasons.add(DecisionReasonCode.recurringRenewalObserved);
-        }
+    if (hasMicroEvidence) {
+      reasons.add(DecisionReasonCode.microVerificationObserved);
+      if (hasContradictions) {
+        reasons.add(DecisionReasonCode.contradictionObserved);
+        notes.addAll(bucket.contradictions);
       }
-      if (bucket.promoCount > 0) {
-        reasons.add(DecisionReasonCode.promoSignalsObserved);
+      return _snapshot(
+        bucket,
+        band: DecisionBand.verificationOnly,
+        reasons: reasons,
+        notes: notes,
+        subscriptionScore: subscriptionScore,
+      );
+    }
+
+    if (hasWeakReviewHints || hasRenewalHints || hasCancellationHints) {
+      reasons.add(DecisionReasonCode.weakRecurringSignalsObserved);
+      if (hasRenewalHints) {
+        reasons.add(DecisionReasonCode.recurringRenewalObserved);
       }
-      if (bucket.cancellationHintCount > 0) {
+      if (hasCancellationHints) {
         reasons.add(DecisionReasonCode.cancellationSignalsObserved);
       }
       return _snapshot(
         bucket,
         band: DecisionBand.needsReview,
+        reasons: reasons,
+        notes: notes,
+        subscriptionScore: subscriptionScore,
+      );
+    }
+
+    if (hasOneTimeNoise) {
+      reasons.add(DecisionReasonCode.oneTimeNoiseObserved);
+      return _snapshot(
+        bucket,
+        band: DecisionBand.oneTimeOrNoise,
+        reasons: reasons,
+        notes: notes,
+        subscriptionScore: subscriptionScore,
+      );
+    }
+
+    if (hasPromoNoise ||
+        hasOtpNoise ||
+        hasTelecomRechargeNoise ||
+        bucket.ignoreNoiseCount > 0) {
+      reasons.add(DecisionReasonCode.ignoreSignalsObserved);
+      if (hasPromoNoise) {
+        reasons.add(DecisionReasonCode.promoSignalsObserved);
+      }
+      return _snapshot(
+        bucket,
+        band: DecisionBand.ignored,
         reasons: reasons,
         notes: notes,
         subscriptionScore: subscriptionScore,
@@ -269,6 +232,52 @@ class DecisionEngineV2UseCase {
       notes: notes,
       subscriptionScore: subscriptionScore,
     );
+  }
+
+  bool _isHighConfidenceSingleCharge(
+    ServiceEvidenceBucket bucket, {
+    required bool hasPromoNoise,
+  }) {
+    final hasMerchantResolutionConfidence = bucket.evidenceTrail.notes.any(
+      (note) =>
+          note.startsWith('merchant_resolution:') &&
+          (note.contains(':high:') || note.contains(':medium:')),
+    );
+    if (!hasMerchantResolutionConfidence) {
+      return false;
+    }
+
+    final hasAnnualCadenceTerm = bucket.evidenceTrail.notes.any((note) {
+      final lower = note.toLowerCase();
+      return lower.contains('annual') ||
+          lower.contains('yearly') ||
+          lower.contains('12-month');
+    });
+
+    final serviceKeyValue = bucket.serviceKey.value.toUpperCase();
+    final looksLikeStoreRail = serviceKeyValue.contains('GOOGLE_PLAY') ||
+        serviceKeyValue.contains('APPLE_APP_STORE') ||
+        serviceKeyValue.contains('APP_STORE') ||
+        serviceKeyValue.contains('ITUNES');
+    if (looksLikeStoreRail) {
+      if (!hasAnnualCadenceTerm) {
+        return false;
+      }
+      final hasHighConfidenceMerchantResolution = bucket.evidenceTrail.notes.any(
+        (note) =>
+            note.startsWith('merchant_resolution:') &&
+            note.contains(':high:'),
+      );
+      if (!hasHighConfidenceMerchantResolution) {
+        return false;
+      }
+    }
+
+    if (hasPromoNoise && !hasAnnualCadenceTerm) {
+      return false;
+    }
+
+    return true;
   }
 
   DecisionSnapshot _snapshot(

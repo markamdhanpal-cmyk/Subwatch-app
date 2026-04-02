@@ -51,7 +51,7 @@ class RuntimeLocalMessageSourceStatus {
         return RuntimeLocalMessageSourceStatus(
           tone: RuntimeLocalMessageSourceTone.demo,
           title: 'Preview',
-          description: 'Scan to see your subscriptions.',
+          description: 'Scan to see confirmed and included services.',
           provenanceTitle: _provenanceTitle(provenance),
           hasLocalModifications: hasLocalModifications,
           localModificationsLabel: localModificationsLabel,
@@ -76,7 +76,7 @@ class RuntimeLocalMessageSourceStatus {
           description: provenance.kind ==
                   RuntimeSnapshotProvenanceKind.restoredLocalSnapshot
               ? 'Showing your last results.'
-              : 'Found from your messages.',
+              : 'High-confidence results from your messages.',
           provenanceTitle: _provenanceTitle(provenance),
           hasLocalModifications: hasLocalModifications,
           localModificationsLabel: localModificationsLabel,

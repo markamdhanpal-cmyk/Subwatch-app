@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import '../contracts/ledger_snapshot_store.dart';
 import '../contracts/local_control_overlay_store.dart';
@@ -27,6 +29,16 @@ class SyncDeviceSmsResult {
 }
 
 class SyncDeviceSmsUseCase {
+  static LocalMessageSourcePlatformBinding _defaultPlatformBinding() {
+    final isFlutterTest =
+        !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    if (isFlutterTest) {
+      return LocalMessageSourcePlatformBinding.stubDeviceLocal();
+    }
+
+    return LocalMessageSourcePlatformBinding.android();
+  }
+
   factory SyncDeviceSmsUseCase.android({
     LocalMessageSourcePlatformBinding? platformBinding,
     LedgerSnapshotStore? ledgerSnapshotStore,
@@ -35,9 +47,9 @@ class SyncDeviceSmsUseCase {
     LocalRenewalReminderStore? localRenewalReminderStore,
     LocalServicePresentationOverlayStore? localServicePresentationOverlayStore,
     ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
+    bool useEvidenceFirstV3 = true,
   }) {
-    final binding =
-        platformBinding ?? LocalMessageSourcePlatformBinding.android();
+    final binding = platformBinding ?? _defaultPlatformBinding();
 
     return SyncDeviceSmsUseCase(
       requestDeviceSmsAccessUseCase: RequestDeviceSmsAccessUseCase(
@@ -53,6 +65,7 @@ class SyncDeviceSmsUseCase {
             localServicePresentationOverlayStore,
         serviceEvidenceBucketStore: serviceEvidenceBucketStore,
         loadMode: RuntimeLedgerLoadMode.refreshFromSource,
+        useEvidenceFirstV3: useEvidenceFirstV3,
       ).execute(),
     );
   }
@@ -65,6 +78,7 @@ class SyncDeviceSmsUseCase {
     LocalRenewalReminderStore? localRenewalReminderStore,
     LocalServicePresentationOverlayStore? localServicePresentationOverlayStore,
     ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
+    bool useEvidenceFirstV3 = true,
   }) {
     return SyncDeviceSmsUseCase.android(
       platformBinding: platformBinding,
@@ -81,6 +95,7 @@ class SyncDeviceSmsUseCase {
               JsonFileLocalServicePresentationOverlayStore.applicationSupport(),
       serviceEvidenceBucketStore: serviceEvidenceBucketStore ??
           JsonFileServiceEvidenceBucketStore.applicationSupport(),
+      useEvidenceFirstV3: useEvidenceFirstV3,
     );
   }
 

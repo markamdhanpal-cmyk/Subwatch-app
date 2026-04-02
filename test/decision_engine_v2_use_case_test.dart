@@ -76,7 +76,7 @@ void main() {
 
       expect(snapshot.band, DecisionBand.confirmedPaid);
       expect(snapshot.subscriptionScore.modelVersion,
-          'subwatch_structured_local_v1');
+          'deterministic_rules_v1');
       expect(
           snapshot.subscriptionScore.subscriptionProbability, greaterThan(0.7));
     });
@@ -149,7 +149,8 @@ void main() {
       expect(snapshot.band, DecisionBand.includedWithPlan);
     });
 
-    test('bundle evidence with renewal-risk review signals stays in review',
+    test(
+        'bundle evidence with renewal-risk hints stays included when paid evidence is absent',
         () {
       final snapshot = useCase.decide(
         bucket(
@@ -162,15 +163,10 @@ void main() {
         ),
       );
 
-      expect(snapshot.band, DecisionBand.needsReview);
+      expect(snapshot.band, DecisionBand.includedWithPlan);
       expect(
         snapshot.reasonCodes,
-        containsAll(<DecisionReasonCode>[
-          DecisionReasonCode.bundledBenefitObserved,
-          DecisionReasonCode.weakRecurringSignalsObserved,
-          DecisionReasonCode.recurringRenewalObserved,
-          DecisionReasonCode.cancellationSignalsObserved,
-        ]),
+        contains(DecisionReasonCode.bundledBenefitObserved),
       );
     });
 
@@ -253,3 +249,4 @@ class _StubSubscriptionScorer implements SubscriptionScorer {
     );
   }
 }
+

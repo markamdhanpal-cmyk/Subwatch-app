@@ -47,7 +47,8 @@ class MerchantKnowledgeEntry {
   final MerchantResolutionMetadata resolutionMetadata;
 
   String get preferredHintAlias {
-    return (resolutionMetadata.preferredHintAlias ?? aliases.first).toLowerCase();
+    return (resolutionMetadata.preferredHintAlias ?? aliases.first)
+        .toLowerCase();
   }
 }
 
@@ -61,7 +62,7 @@ class MerchantKnowledgeBase {
     'LAZYPY', // LazyPay Debt/BNPL
     'PAYTMI', // Paytm Insurance
     'KREDIT', // KreditBee BNPL
-    'SIMPL',  // Simpl BNPL
+    'SIMPL', // Simpl BNPL
     'POLICY', // PolicyBazaar Insurance
   ];
 
@@ -97,13 +98,27 @@ class MerchantKnowledgeBase {
     MerchantKnowledgeEntry(
       serviceKey: 'JIOHOTSTAR',
       displayName: 'JioHotstar',
-      aliases: <String>['jiohotstar', 'disney hotstar', 'disney+ hotstar', 'hotstar'],
+      aliases: <String>[
+        'jiohotstar',
+        'disney hotstar',
+        'disney+ hotstar',
+        'hotstar'
+      ],
       category: MerchantCategory.videoStreaming,
       senderIdPrefixes: <String>['JIOHTT'],
       planHints: <String>['super', 'premium', 'mobile'],
       billingHints: <String>['subscription', 'renewed', 'membership'],
-      includedBundleHints: <String>['recharge', 'complimentary', 'benefit', 'free'],
-      typeLabels: <String>['direct_recurring', 'bundle_candidate', 'india_first'],
+      includedBundleHints: <String>[
+        'recharge',
+        'complimentary',
+        'benefit',
+        'free'
+      ],
+      typeLabels: <String>[
+        'direct_recurring',
+        'bundle_candidate',
+        'india_first'
+      ],
       resolutionMetadata: MerchantResolutionMetadata(
         resolveOnBundleSignals: true,
         preferredHintAlias: 'jiohotstar',
@@ -161,7 +176,41 @@ class MerchantKnowledgeBase {
       category: MerchantCategory.musicAudio,
       planHints: <String>['premium'],
       billingHints: <String>['subscription', 'renewed'],
-      typeLabels: <String>['direct_recurring', 'india_first'],
+      includedBundleHints: <String>[
+        'airtel',
+        'recharge',
+        'complimentary',
+        'included',
+        'free'
+      ],
+      typeLabels: <String>[
+        'direct_recurring',
+        'bundle_candidate',
+        'india_first'
+      ],
+      resolutionMetadata:
+          MerchantResolutionMetadata(resolveOnBundleSignals: true),
+    ),
+    MerchantKnowledgeEntry(
+      serviceKey: 'JIOSAAVN_PRO',
+      displayName: 'JioSaavn Pro',
+      aliases: <String>['jiosaavn pro', 'jiosaavn', 'saavn pro'],
+      category: MerchantCategory.musicAudio,
+      planHints: <String>['pro', 'premium'],
+      billingHints: <String>['subscription', 'renewed'],
+      includedBundleHints: <String>[
+        'recharge',
+        'complimentary',
+        'benefit',
+        'free'
+      ],
+      typeLabels: <String>[
+        'direct_recurring',
+        'bundle_candidate',
+        'india_first'
+      ],
+      resolutionMetadata:
+          MerchantResolutionMetadata(resolveOnBundleSignals: true),
     ),
     MerchantKnowledgeEntry(
       serviceKey: 'GAANA',
@@ -194,7 +243,13 @@ class MerchantKnowledgeBase {
     MerchantKnowledgeEntry(
       serviceKey: 'APPLE_SERVICES',
       displayName: 'Apple Services',
-      aliases: <String>['apple services', 'apple bill', 'apple.com/bill', 'itunes', 'app store'],
+      aliases: <String>[
+        'apple services',
+        'apple bill',
+        'apple.com/bill',
+        'itunes',
+        'app store'
+      ],
       category: MerchantCategory.digitalStore,
       planHints: <String>['subscription', 'icloud'],
       billingHints: <String>['bill', 'services'],
@@ -216,9 +271,15 @@ class MerchantKnowledgeBase {
       category: MerchantCategory.aiAssistant,
       planHints: <String>['pro', 'advanced'],
       billingHints: <String>['subscription', 'plan'],
-      includedBundleHints: <String>['recharge', 'complimentary', 'free', 'unlocked'],
+      includedBundleHints: <String>[
+        'recharge',
+        'complimentary',
+        'free',
+        'unlocked'
+      ],
       typeLabels: <String>['direct_recurring', 'bundle_candidate'],
-      resolutionMetadata: MerchantResolutionMetadata(resolveOnBundleSignals: true),
+      resolutionMetadata:
+          MerchantResolutionMetadata(resolveOnBundleSignals: true),
     ),
     MerchantKnowledgeEntry(
       serviceKey: 'SWIGGY_ONE',
@@ -248,15 +309,26 @@ class MerchantKnowledgeBase {
       senderIdPrefixes: <String>[],
       planHints: <String>['premium', 'mobile'],
       billingHints: <String>['subscription', 'renewed'],
-      includedBundleHints: <String>['recharge', 'complimentary', 'benefit', 'free'],
-      typeLabels: <String>['direct_recurring', 'bundle_candidate', 'india_first'],
-      resolutionMetadata: MerchantResolutionMetadata(resolveOnBundleSignals: true),
+      includedBundleHints: <String>[
+        'recharge',
+        'complimentary',
+        'benefit',
+        'free'
+      ],
+      typeLabels: <String>[
+        'direct_recurring',
+        'bundle_candidate',
+        'india_first'
+      ],
+      resolutionMetadata:
+          MerchantResolutionMetadata(resolveOnBundleSignals: true),
     ),
     MerchantKnowledgeEntry(
       serviceKey: 'AIRTEL_BLACK',
       displayName: 'Airtel Black',
       aliases: <String>['airtel black'],
-      category: MerchantCategory.foodMembership, // Actually a combo bill, but keeping categorized
+      category: MerchantCategory
+          .foodMembership, // Actually a combo bill, but keeping categorized
       senderIdPrefixes: <String>[],
       planHints: <String>['black'],
       billingHints: <String>['bill', 'generated'],
@@ -330,8 +402,10 @@ class MerchantKnowledgeBase {
       if (entry.senderIdPrefixes.isEmpty) continue;
 
       if (labels != null && !entry.typeLabels.any(labels.contains)) continue;
-      if (!allowWeakReview && !entry.resolutionMetadata.resolveOnWeakReview) continue;
-      if (!allowBundleSignals && entry.resolutionMetadata.resolveOnBundleSignals) continue;
+      if (!allowWeakReview && !entry.resolutionMetadata.resolveOnWeakReview)
+        continue;
+      if (!allowBundleSignals &&
+          entry.resolutionMetadata.resolveOnBundleSignals) continue;
 
       for (final prefix in entry.senderIdPrefixes) {
         if (senderToken == prefix.toUpperCase()) {
@@ -464,4 +538,3 @@ class MerchantAliasCandidate {
   final List<String> aliasTokens;
   final String normalizedAlias;
 }
-

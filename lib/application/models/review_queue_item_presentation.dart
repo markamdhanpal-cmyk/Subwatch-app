@@ -45,7 +45,7 @@ class ReviewQueueItemPresentation {
       detailsBullets: <String>[
         'A recurring-looking signal was found.',
         'The service name is still unclear.',
-        'That is why SubWatch asks you to decide it yourself.',
+        'That is why SubWatch keeps it as possible until evidence improves.',
       ],
       confirmLabel: null,
       benefitLabel: null,
@@ -73,20 +73,20 @@ class ReviewQueueItemPresentation {
       return const <String>[
         'A recurring setup or mandate signal was found.',
         'No billed renewal evidence has been confirmed yet.',
-        'That is why it stays in Review for your decision.',
+        'That is why it stays in Possible for now.',
       ];
     }
     if (lowerRationale.contains('micro verification')) {
       return const <String>[
         'A small verification charge was found.',
         'Verification charges alone are not treated as active paid subscriptions.',
-        'That is why it stays in Review for your decision.',
+        'That is why it stays in Possible for now.',
       ];
     }
     return const <String>[
       'A recurring-looking signal was found.',
       'The evidence is still too weak to confirm it automatically.',
-      'That is why it stays in Review for your decision.',
+      'That is why it stays in Possible for now.',
     ];
   }
 

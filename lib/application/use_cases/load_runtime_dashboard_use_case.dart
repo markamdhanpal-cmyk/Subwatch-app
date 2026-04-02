@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import '../contracts/device_sms_gateway.dart';
 import '../contracts/ledger_snapshot_store.dart';
@@ -83,6 +85,20 @@ class RuntimeDashboardSnapshot {
 }
 
 class LoadRuntimeDashboardUseCase {
+  static LocalMessageSourcePlatformBinding _defaultPlatformBinding() {
+    final isFlutterTest =
+        !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    if (isFlutterTest) {
+      return LocalMessageSourcePlatformBinding.sampleDemo();
+    }
+
+    if (!kIsWeb && Platform.isAndroid) {
+      return LocalMessageSourcePlatformBinding.android();
+    }
+
+    return LocalMessageSourcePlatformBinding.sampleDemo();
+  }
+
   factory LoadRuntimeDashboardUseCase({
     LocalMessageSourcePlatformBinding? platformBinding,
     LocalMessageSourceCapabilityProvider? capabilityProvider,
@@ -109,14 +125,12 @@ class LoadRuntimeDashboardUseCase {
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
+    bool useEvidenceFirstV3 = true,
   }) {
     final repository = ledgerRepository ?? InMemoryLedgerRepository();
     final evidenceBucketRepository = InMemoryServiceEvidenceBucketRepository();
     const projection = DeterministicDashboardProjection();
-    final binding = platformBinding ??
-        (defaultTargetPlatform == TargetPlatform.android
-            ? LocalMessageSourcePlatformBinding.android()
-            : LocalMessageSourcePlatformBinding.sampleDemo());
+    final binding = platformBinding ?? _defaultPlatformBinding();
 
     return LoadRuntimeDashboardUseCase._(
       ledgerRepository: repository,
@@ -159,6 +173,7 @@ class LoadRuntimeDashboardUseCase {
             ledgerRepository: repository,
             serviceEvidenceBucketRepository: evidenceBucketRepository,
             decisionExecutionMode: decisionExecutionMode,
+            useEvidenceFirstV3: useEvidenceFirstV3,
           ),
       serviceEvidenceBucketRepository: evidenceBucketRepository,
       projectDashboardUseCase: projectDashboardUseCase ??
@@ -201,6 +216,7 @@ class LoadRuntimeDashboardUseCase {
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
+    bool useEvidenceFirstV3 = true,
   }) {
     return LoadRuntimeDashboardUseCase(
       platformBinding: platformBinding,
@@ -234,6 +250,7 @@ class LoadRuntimeDashboardUseCase {
       projectDashboardUseCase: projectDashboardUseCase,
       projectReviewQueueUseCase: projectReviewQueueUseCase,
       clock: clock,
+      useEvidenceFirstV3: useEvidenceFirstV3,
     );
   }
 
@@ -258,6 +275,7 @@ class LoadRuntimeDashboardUseCase {
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
+    bool useEvidenceFirstV3 = true,
   }) {
     return LoadRuntimeDashboardUseCase(
       platformBinding:
@@ -280,6 +298,7 @@ class LoadRuntimeDashboardUseCase {
       projectDashboardUseCase: projectDashboardUseCase,
       projectReviewQueueUseCase: projectReviewQueueUseCase,
       clock: clock,
+      useEvidenceFirstV3: useEvidenceFirstV3,
     );
   }
 
@@ -304,6 +323,7 @@ class LoadRuntimeDashboardUseCase {
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
+    bool useEvidenceFirstV3 = true,
   }) {
     return LoadRuntimeDashboardUseCase(
       platformBinding: LocalMessageSourcePlatformBinding.stubDeviceLocal(),
@@ -329,6 +349,7 @@ class LoadRuntimeDashboardUseCase {
       projectDashboardUseCase: projectDashboardUseCase,
       projectReviewQueueUseCase: projectReviewQueueUseCase,
       clock: clock,
+      useEvidenceFirstV3: useEvidenceFirstV3,
     );
   }
 
@@ -387,15 +408,12 @@ class LoadRuntimeDashboardUseCase {
   final DecisionExecutionMode _decisionExecutionMode;
 
   Future<RuntimeDashboardSnapshot> execute() async {
-    debugPrint('LoadRuntimeDashboardUseCase: execute starting...');
     final messageSourceSelection =
         await _selectLocalMessageSourceUseCase.execute();
-    debugPrint('LoadRuntimeDashboardUseCase: source resolution=${messageSourceSelection.resolution}');
     final snapshotStore = _ledgerSnapshotStore;
     final now = _clock();
     final persistedRecord =
         snapshotStore == null ? null : await snapshotStore.loadRecord();
-    debugPrint('LoadRuntimeDashboardUseCase: persistedRecord=${persistedRecord != null}');
 
     if (_loadMode == RuntimeLedgerLoadMode.restorePersistedOrRefreshSource &&
         persistedRecord != null) {
@@ -434,10 +452,7 @@ class LoadRuntimeDashboardUseCase {
           await messageSource.loadMessages(),
         );
       }
-      debugPrint('LoadRuntimeDashboardUseCase: ingestion results=${ingestionResult.ledgerEntries.length} entries');
-      for (final entry in ingestionResult.ledgerEntries) {
-        debugPrint('LEDGER: ${entry.serviceKey.value} | State: ${entry.state} | Total: ${entry.totalBilled}');
-      }
+      await _persistEvidenceBuckets();
       await snapshotStore?.saveRecord(
         LedgerSnapshotRecord(
           entries: ingestionResult.ledgerEntries,
@@ -452,8 +467,6 @@ class LoadRuntimeDashboardUseCase {
           ),
         ),
       );
-
-      debugPrint('LoadRuntimeDashboardUseCase: projecting snapshot...');
       return _projectSnapshot(
         messageSourceSelection,
         provenance: RuntimeSnapshotProvenance(
@@ -621,6 +634,17 @@ class LoadRuntimeDashboardUseCase {
     await _serviceEvidenceBucketRepository.replaceAll(persistedBuckets);
   }
 
+  Future<void> _persistEvidenceBuckets() async {
+    final store = _serviceEvidenceBucketStore;
+    if (store == null) {
+      return;
+    }
+
+    final buckets = await _serviceEvidenceBucketRepository.list()
+      ..sort((left, right) => left.serviceKey.value.compareTo(right.serviceKey.value));
+    await store.save(buckets);
+  }
+
   Future<({List<SubscriptionEvent> events, List<ServiceLedgerEntry> ledgerEntries})>
       _executeCanonicalIngestion(
     CanonicalInputSource messageSource,
@@ -629,8 +653,4 @@ class LoadRuntimeDashboardUseCase {
     return _ingestionUseCase.executeCanonicalInputs(canonicalInputs);
   }
 }
-
-
-
-
 

@@ -35,6 +35,8 @@ class EvidenceFragment {
         return 'micro_charge';
       case EvidenceFragmentType.bundledBenefit:
         return 'bundled_benefit';
+      case EvidenceFragmentType.endedLifecycle:
+        return 'ended_lifecycle';
       case EvidenceFragmentType.cancellationHint:
         return 'cancellation_hint';
       case EvidenceFragmentType.promoOnly:
@@ -43,6 +45,10 @@ class EvidenceFragment {
         return 'weak_recurring_hint';
       case EvidenceFragmentType.unknownReview:
         return 'unknown_review';
+      case EvidenceFragmentType.otpNoise:
+        return 'otp_noise';
+      case EvidenceFragmentType.telecomRechargeNoise:
+        return 'telecom_recharge_noise';
       case EvidenceFragmentType.oneTimePaymentNoise:
         return 'one_time_payment_noise';
       case EvidenceFragmentType.ignoreNoise:

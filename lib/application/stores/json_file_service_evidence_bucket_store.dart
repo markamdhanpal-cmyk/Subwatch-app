@@ -27,7 +27,7 @@ class JsonFileServiceEvidenceBucketStore implements ServiceEvidenceBucketStore {
         _fileName = fileName;
 
   static const String defaultFileName = 'service_evidence_buckets.json';
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
   final Future<Directory> Function() _directoryProvider;
   final String _fileName;
@@ -56,7 +56,8 @@ class JsonFileServiceEvidenceBucketStore implements ServiceEvidenceBucketStore {
           )
           .toList(growable: false)
         ..sort(
-          (left, right) => left.serviceKey.value.compareTo(right.serviceKey.value),
+          (left, right) =>
+              left.serviceKey.value.compareTo(right.serviceKey.value),
         );
 
       return buckets;
@@ -79,20 +80,24 @@ class JsonFileServiceEvidenceBucketStore implements ServiceEvidenceBucketStore {
       final file = await _dataFile(createDirectory: true);
       final payload = buckets.toList(growable: false)
         ..sort(
-          (left, right) => left.serviceKey.value.compareTo(right.serviceKey.value),
+          (left, right) =>
+              left.serviceKey.value.compareTo(right.serviceKey.value),
         );
-      await AtomicJsonFileWriter.write(file, jsonEncode(
-        <String, Object?>{
-          'schemaVersion': schemaVersion,
-          'savedAt': DateTime.now().toIso8601String(),
-          'buckets': payload
-              .map(
-                (bucket) => PersistedServiceEvidenceBucket.fromDomain(bucket)
-                    .toJson(),
-              )
-              .toList(growable: false),
-        },
-      ));
+      await AtomicJsonFileWriter.write(
+          file,
+          jsonEncode(
+            <String, Object?>{
+              'schemaVersion': schemaVersion,
+              'savedAt': DateTime.now().toIso8601String(),
+              'buckets': payload
+                  .map(
+                    (bucket) =>
+                        PersistedServiceEvidenceBucket.fromDomain(bucket)
+                            .toJson(),
+                  )
+                  .toList(growable: false),
+            },
+          ));
     } on MissingPluginException {
       return;
     } on MissingPlatformDirectoryException {

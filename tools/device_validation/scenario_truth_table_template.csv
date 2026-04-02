@@ -1,0 +1,13 @@
+device_id,device_class,scenario,expected_result,actual_result,service_key,surfaced_state,hidden_or_visible,pass_fail,diagnosis
+__DEVICE_ID__,__DEVICE_CLASS__,"Netflix monthly paid","Confirmed paid recurring with stable merchant identity","","","confirmed_paid","visible","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"Adobe annual","Conservative annual handling; do not over-promote from single charge","","","possible_secondary","visible","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"Jio recharge with included JioSaavn","Included benefit separated from direct paid subscriptions","","","included_with_plan","visible","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"Airtel recharge with free Wynk","Included benefit separated from direct paid subscriptions","","","included_with_plan","visible","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"YouTube mandate setup only","Setup/mandate only must not be confirmed paid","","","pending_conversion","visible","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"Google mandate + Rs2 execution only","Mandate+micro verification must not be confirmed paid","","","pending_conversion","visible","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"Plain UPI debit","One-time payment noise should stay out of subscription truth","","","hidden_noise","hidden","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"OTP spam","OTP noise should stay out of subscription truth","","","hidden_noise","hidden","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"Missed call alerts","Missed-call telecom alerts should stay out of subscription truth","","","hidden_noise","hidden","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"RCS bot messages","RCS/promotional bot traffic should stay out of confirmed subscriptions","","","hidden_noise","hidden","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"Promo/discount messages","Promo/discount should not inflate confirmed subscription surface","","","hidden_noise","hidden","",""
+__DEVICE_ID__,__DEVICE_CLASS__,"Hindi/Hinglish telecom messages","Telecom Hindi/Hinglish should map to bundle/noise conservatively","","","included_with_plan","visible","",""

@@ -374,7 +374,7 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
       case _DashboardDestination.settings:
         return 'Settings';
       case _DashboardDestination.review:
-        return 'Review';
+        return 'Possible';
     }
   }
 

@@ -42,7 +42,7 @@ class _DashboardLoadingState extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Loading your saved subscriptions and review items.',
+                'Loading your saved subscriptions and possible items.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DashboardShellPalette.mutedInk,
@@ -1387,7 +1387,8 @@ class _HomeCompletedState extends StatelessWidget {
       eyebrow: 'All caught up',
       tone: DashboardEmptyStateTone.success,
       title: 'Nothing needs attention right now',
-      message: 'There are no review items or near-term renewals in your current view.',
+      message:
+          'There are no possible items or near-term renewals in your current view.',
       icon: Icons.done_all_rounded,
       action: OutlinedButton.icon(
         onPressed: onOpenSubscriptions,
@@ -1447,7 +1448,7 @@ class _HomeTrustRowCopy {
 
     if (reviewCount > 0) {
       return _HomeTrustRowCopy(
-        eyebrow: 'Review is separate',
+        eyebrow: 'Possible is separate',
         icon: Icons.rule_folder_outlined,
         title: reviewCount == 1
             ? '1 unclear item is staying out of this summary.'
@@ -1495,7 +1496,7 @@ class _HomeTrustRowCopy {
           : 'No insights yet.',
       body: totalsSummary.hasEstimatedSpend
           ? 'Your summary is steady, and only confirmed subscriptions count here.'
-          : 'Home will stay quiet until clear paid subscriptions or review signals show up.',
+          : 'Home will stay quiet until clear paid subscriptions or possible signals show up.',
       badgeBackground: DashboardShellPalette.statusBlueSoft,
       badgeForeground: DashboardShellPalette.statusBlue,
       borderColor: DashboardShellPalette.outline,
@@ -2138,7 +2139,7 @@ class _SubscriptionDetailsSheet extends StatelessWidget {
           badgeForeground: DashboardShellPalette.success,
         ),
       DashboardBucket.needsReview => const _BucketStyle(
-          badgeLabel: 'Needs review',
+          badgeLabel: 'Possible',
           background: DashboardShellPalette.elevatedPaper,
           border: DashboardShellPalette.outlineStrong,
           badgeBackground: DashboardShellPalette.registerPaper,
@@ -2404,12 +2405,12 @@ class _SyncProgressPresentation {
       return const _SyncProgressPresentation(
         title: 'Still working through a larger message history',
         description:
-            'SubWatch is still sorting paid, review, and benefit items.',
+            'SubWatch is still sorting confirmed, possible, and included items.',
       );
     }
     if (elapsed >= const Duration(seconds: 2)) {
       return const _SyncProgressPresentation(
-        title: 'Sorting confirmed, review, and benefit items',
+        title: 'Sorting confirmed, possible, and included items',
         description:
             'SubWatch is separating strong paid signals from the rest.',
       );
@@ -2877,7 +2878,7 @@ class _ProductGuidancePanel extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   _CompactMetricTile(
-                    label: 'Needs review',
+                    label: 'Possible',
                     value: samplePreview!.reviewCountLabel,
                     caption: 'Kept separate',
                     accent: DashboardShellPalette.caution,
@@ -2918,7 +2919,7 @@ class _ProductGuidancePanel extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     child: _CompactMetricTile(
-                      label: 'Needs review',
+                      label: 'Possible',
                       value: samplePreview!.reviewCountLabel,
                       caption: 'Kept separate',
                       accent: DashboardShellPalette.caution,
@@ -3167,11 +3168,11 @@ class _SampleHomePreviewState {
         ),
         _SamplePreviewHighlight(
           icon: Icons.rule_folder_outlined,
-          title: 'Needs review',
+          title: 'Possible',
           badgeLabel: _previewCountLabel(reviewItems.length),
           description: reviewTitles.isEmpty
-              ? 'Unclear recurring signals stay separate until you decide.'
-              : '${_joinPreviewTitles(reviewTitles)} stay separate until you decide.',
+              ? 'Unclear recurring signals stay separate until evidence improves.'
+              : '${_joinPreviewTitles(reviewTitles)} stay separate until evidence improves.',
         ),
         _SamplePreviewHighlight(
           icon: Icons.workspace_premium_outlined,
@@ -3515,12 +3516,12 @@ class _ZeroConfirmedRescueState {
         ? 'Why the confirmed list is still empty'
         : 'Why nothing is confirmed yet';
     final explanationBody = hasReviewItems
-        ? 'Possible recurring items were kept in Review so SubWatch does not count them as paid too early.'
+        ? 'Possible recurring items were kept separate so SubWatch does not count them as paid too early.'
         : hasTrialCards
             ? 'This scan found trial or bundled access signals, and those stay separate from paid subscriptions.'
             : 'This scan did not surface recurring paid billing proof strong enough to confirm yet.';
     final supportingExplanationBody = hasReviewItems
-        ? 'You can review each item yourself, add a subscription, or wait for a later billing message to make the picture clearer.'
+        ? 'You can inspect each possible item, add a subscription, or wait for a later billing message to make the picture clearer.'
         : hasTrialCards
             ? 'Recharges, bundled access, and free benefits do not get counted as paid subscriptions. If you already know one you pay for directly, you can still add it yourself.'
             : 'One-time payments, mandate setup, recharges, and bundled access are kept out of confirmed subscriptions on purpose. If you already know one you pay for, you can still add it yourself.';
@@ -3534,7 +3535,7 @@ class _ZeroConfirmedRescueState {
       reviewSummary: _ZeroConfirmedFindingSummary(
         key: 'review',
         icon: Icons.rule_folder_outlined,
-        title: 'Needs review',
+        title: 'Possible',
         count: reviewItems.length,
         description: reviewItems.isEmpty
             ? 'No uncertain items were surfaced this time.'
@@ -3590,8 +3591,8 @@ class _ZeroConfirmedRescueState {
     switch (primaryActionKind) {
       case _ZeroConfirmedPrimaryActionKind.review:
         return reviewSummary.count == 1
-            ? 'Review 1 item'
-            : 'Review ${reviewSummary.count} items';
+            ? 'Open 1 possible item'
+            : 'Open ${reviewSummary.count} possible items';
       case _ZeroConfirmedPrimaryActionKind.subscriptions:
         return trialSummary.count > 0
             ? 'See what was found'
@@ -3835,7 +3836,7 @@ class _FirstRunGateState extends StatelessWidget {
                     Semantics(
                       header: true,
                       child: Text(
-                        'Find subscriptions\nfrom your SMS',
+                        'Find high-confidence\nsubscriptions from SMS',
                         key: const ValueKey<String>('first-run-gate-headline'),
                         textAlign: TextAlign.center,
                         style:
@@ -3847,7 +3848,7 @@ class _FirstRunGateState extends StatelessWidget {
                     ),
                     SizedBox(height: compactLayout ? 8 : 10),
                     Text(
-                      'SubWatch checks message wording for recurring billing and keeps uncertain items in Review first.',
+                      'SubWatch checks message wording for recurring billing and keeps uncertain items marked as Possible.',
                       textAlign: TextAlign.center,
                       style: type.body.copyWith(
                         color: colors.softInk,
@@ -3861,7 +3862,7 @@ class _FirstRunGateState extends StatelessWidget {
                     ),
                     SizedBox(height: compactLayout ? 12 : 16),
                     Text(
-                      'Paid subscriptions, Review, and included access stay separate.',
+                      'Confirmed, Possible, and Included stay separate.',
                       key: const ValueKey<String>('first-run-gate-trust'),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -3878,7 +3879,7 @@ class _FirstRunGateState extends StatelessWidget {
                 child: Semantics(
                   button: true,
                   label:
-                      'Get started \u2014 scan your SMS messages for subscriptions',
+                      'Get started \u2014 scan your SMS messages for high-confidence subscriptions',
                   child: FilledButton(
                     key: const ValueKey<String>('first-run-get-started-button'),
                     onPressed: onGetStarted,
@@ -3944,7 +3945,7 @@ class _FirstRunDeniedState extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'SubWatch needs SMS access to find your subscriptions.',
+                'SubWatch needs SMS access to find high-confidence recurring charges.',
                 key: const ValueKey<String>('first-run-denied-message'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -3953,7 +3954,7 @@ class _FirstRunDeniedState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Messages stay on this phone, and unclear items still go to Review instead of being confirmed automatically.',
+                'Messages stay on this phone, and unclear items stay in Possible instead of being confirmed automatically.',
                 textAlign: TextAlign.center,
                 style: type.supporting.copyWith(
                   color: colors.mutedInk,
@@ -4050,7 +4051,7 @@ class _FirstRunPermanentlyDeniedState extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'SubWatch only needs access on this phone, and Review still keeps weak signals separate.',
+                'SubWatch only needs access on this phone, and Possible still keeps weak signals separate.',
                 textAlign: TextAlign.center,
                 style: type.supporting.copyWith(
                   color: colors.mutedInk,
@@ -4190,7 +4191,7 @@ class _FirstRunScanningStateState extends State<_FirstRunScanningState>
             ),
             const SizedBox(height: 8),
             Text(
-              'Looking for recurring billing, bundled access, and anything that should stay in Review first.',
+              'Looking for recurring billing, bundled access, and anything that should stay in Possible first.',
               key: const ValueKey<String>('first-run-scanning-support'),
               textAlign: TextAlign.center,
               style: type.supporting.copyWith(
@@ -4226,8 +4227,8 @@ class _FirstRunZeroResultState extends StatelessWidget {
         0;
     final supportCopy = reviewCount > 0
         ? (reviewCount == 1
-            ? '1 item was kept in Review because the signal was not clear enough yet.'
-            : '$reviewCount items were kept in Review because the signal was not clear enough yet.')
+            ? '1 item was marked Possible because the signal is not clear enough yet.'
+            : '$reviewCount items were marked Possible because the signal is not clear enough yet.')
         : includedCount > 0
             ? (includedCount == 1
                 ? '1 included service stayed separate from paid subscriptions.'
@@ -4292,8 +4293,8 @@ class _FirstRunZeroResultState extends StatelessWidget {
                         if (reviewCount > 0)
                           DashboardBadge(
                             label: reviewCount == 1
-                                ? '1 item in Review'
-                                : '$reviewCount items in Review',
+                                ? '1 possible item'
+                                : '$reviewCount possible items',
                             icon: Icons.fact_check_outlined,
                             tone: DashboardBadgeTone.caution,
                           ),
@@ -4547,7 +4548,7 @@ class _SmsPermissionRationaleContent {
         return const _SmsPermissionRationaleContent(
           title: 'Start with SMS permission',
           description:
-              'SubWatch checks messages on this phone to find paid subscriptions.',
+              'SubWatch checks messages on this phone to find high-confidence paid subscriptions.',
           highlights: <_OnboardingBadgeCopy>[
             _OnboardingBadgeCopy(
               label: 'On this phone',
@@ -4555,7 +4556,7 @@ class _SmsPermissionRationaleContent {
               tone: DashboardBadgeTone.info,
             ),
             _OnboardingBadgeCopy(
-              label: 'Review stays separate',
+              label: 'Possible stays separate',
               icon: Icons.fact_check_outlined,
               tone: DashboardBadgeTone.caution,
             ),
@@ -4569,9 +4570,9 @@ class _SmsPermissionRationaleContent {
             ),
             _OnboardingPointCopy(
               icon: Icons.rule_folder_outlined,
-              title: 'Why Review exists',
+              title: 'Why Possible exists',
               body:
-                  'Weak recurring-looking messages stay separate until they are clearer or you decide.',
+                  'Weak recurring-looking messages stay separate until they are clearer.',
             ),
             _OnboardingPointCopy(
               icon: Icons.workspace_premium_outlined,
@@ -4597,7 +4598,7 @@ class _SmsPermissionRationaleContent {
               tone: DashboardBadgeTone.info,
             ),
             _OnboardingBadgeCopy(
-              label: 'Review stays careful',
+              label: 'Possible stays careful',
               icon: Icons.fact_check_outlined,
               tone: DashboardBadgeTone.caution,
             ),
@@ -4613,7 +4614,7 @@ class _SmsPermissionRationaleContent {
               icon: Icons.rule_folder_outlined,
               title: 'What does not change',
               body:
-                  'Review still keeps unclear signals separate instead of confirming them automatically.',
+                  'Possible still keeps unclear signals separate instead of confirming them automatically.',
             ),
           ],
           footer: 'Your messages are still checked on this phone.',
@@ -4711,9 +4712,9 @@ class _OnboardingFeatureGroup extends StatelessWidget {
           SizedBox(height: 10),
           _OnboardingInfoRow(
             icon: Icons.fact_check_outlined,
-            title: 'Review first',
+            title: 'Possible stays separate',
             body:
-                'Weak signals stay separate until they are clearer or you decide.',
+                'Weak signals stay separate until they become clearer.',
           ),
           SizedBox(height: 10),
           _OnboardingInfoRow(
@@ -4739,8 +4740,8 @@ class _OnboardingFeatureGroup extends StatelessWidget {
         ),
         _OnboardingFeatureCard(
           icon: Icons.fact_check_outlined,
-          title: 'Review first',
-          body: 'Weak signals stay separate until they are clearer or you decide.',
+          title: 'Possible stays separate',
+          body: 'Weak signals stay separate until they become clearer.',
           tone: DashboardEmptyStateTone.trust,
         ),
         _OnboardingFeatureCard(
@@ -4860,8 +4861,8 @@ class _ReviewQueueSummaryCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             isEmpty
-                ? 'Nothing to review right now.'
-                : 'Ready for your decision',
+                ? 'No possible items right now.'
+                : 'Possible items waiting for stronger evidence',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -4919,7 +4920,7 @@ class _ReviewDecisionDeskHeader extends StatelessWidget {
                     : colors.softInk,
               ),
               DashboardBadge(
-                label: 'Careful review',
+                label: 'Careful by default',
                 icon: Icons.lock_outline_rounded,
                 backgroundColor: colors.registerPaper,
                 foregroundColor: colors.mutedInk,
@@ -4929,8 +4930,8 @@ class _ReviewDecisionDeskHeader extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             isEmpty
-                ? 'Review is clear for now'
-                : 'Review keeps uncertain items separate',
+                ? 'Possible is clear for now'
+                : 'Possible keeps uncertain items separate',
             style: type.screenTitle.copyWith(
               fontWeight: FontWeight.w800,
             ),
@@ -4960,8 +4961,9 @@ class _ReviewDeskEmptyState extends StatelessWidget {
       key: const ValueKey<String>('review-desk-empty-state'),
       eyebrow: 'Clear for now',
       tone: DashboardEmptyStateTone.success,
-      title: 'Nothing to review right now',
-      message: 'Your confirmed list stays careful, and nothing currently needs a closer look.',
+      title: 'No possible items right now',
+      message:
+          'Your confirmed list stays careful, and no possible item currently needs a closer look.',
       icon: Icons.verified_outlined,
     );
   }
@@ -5004,10 +5006,10 @@ class _HowSubWatchWorksSheet extends StatelessWidget {
         ),
         SizedBox(height: 14),
         _TrustSheetSection(
-          title: 'Review',
+          title: 'Possible',
           items: <String>[
-            'Review holds items that still need your decision.',
-            'Weak recurring-looking signals stay there until the evidence is clearer.',
+            'Possible holds items that look recurring but are not proven as paid.',
+            'Weak recurring-looking signals stay there until evidence is clearer.',
           ],
         ),
         SizedBox(height: 14),
@@ -5074,8 +5076,8 @@ class _AboutSubWatchSheet extends StatelessWidget {
         _TrustSheetSection(
           title: 'What it is',
           items: <String>[
-            'SubWatch helps you spot subscriptions from your messages.',
-            'It keeps subscriptions, Review, and included services separate.',
+            'SubWatch helps you spot high-confidence recurring charges from on-device SMS.',
+            'It keeps Confirmed, Possible, and Included services separate.',
           ],
         ),
         SizedBox(height: 14),
@@ -5084,6 +5086,7 @@ class _AboutSubWatchSheet extends StatelessWidget {
           items: <String>[
             'It is not a payments inbox.',
             'It is not a cloud account or budget tracker.',
+            'It does not claim to find every subscription on every billing channel.',
           ],
         ),
       ],
@@ -5393,7 +5396,7 @@ class _ServiceViewControlsPanel extends StatelessWidget {
       case DashboardServiceFilterMode.confirmedOnly:
         return 'Subscriptions';
       case DashboardServiceFilterMode.observedOnly:
-        return 'Needs review';
+        return 'Possible';
       case DashboardServiceFilterMode.separateAccessOnly:
         return 'Included';
     }
@@ -5417,7 +5420,7 @@ class _ServiceViewControlsPanel extends StatelessWidget {
       case DashboardServiceFilterMode.confirmedOnly:
         return 'Subscriptions';
       case DashboardServiceFilterMode.observedOnly:
-        return 'Needs review';
+        return 'Possible';
       case DashboardServiceFilterMode.separateAccessOnly:
         return 'Included with your plan';
     }
@@ -8789,7 +8792,7 @@ class _ReviewItemDetailsSheet extends StatelessWidget {
                       ? 'Choose the safest match'
                       : 'Finish this item',
                   helper: onConfirm != null
-                      ? 'Review keeps this separate until you pick the best fit.'
+                      ? 'Possible keeps this separate until you pick the best fit.'
                       : 'Add it yourself if you recognize it, or mark it as not yours.',
                   accentColor: accentColor,
                   children: <Widget>[
@@ -8885,7 +8888,7 @@ class _ReviewItemDetailsSheet extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Hide this item on this phone without changing review meaning.',
+                        'Hide this item on this phone without changing possible-state meaning.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DashboardShellPalette.mutedInk,
                               height: 1.26,
@@ -9538,7 +9541,7 @@ String _fallbackAmountLabel(DashboardBucket bucket) {
     case DashboardBucket.confirmedSubscriptions:
       return 'Not found yet';
     case DashboardBucket.needsReview:
-      return 'Not visible yet';
+      return 'Possible amount not visible yet';
     case DashboardBucket.trialsAndBenefits:
       return 'Included access';
     case DashboardBucket.hidden:
@@ -9682,7 +9685,7 @@ String _reviewCardSemantics(
     item.title,
     presentation.reasonLine,
     descriptor.canConfirm
-        ? 'Review actions below'
+        ? 'Possible actions below'
         : 'Add a subscription or mark as not yours',
   ];
   return '${parts.join('. ')}.';

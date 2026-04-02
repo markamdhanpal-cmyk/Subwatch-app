@@ -1,4 +1,6 @@
-﻿import 'dart:io';
+import 'dart:io';
+
+import 'support/test_temp_dir.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/models/manual_subscription_models.dart';
@@ -12,9 +14,7 @@ void main() {
     late JsonFileLocalManualSubscriptionStore store;
 
     setUp(() async {
-      tempDirectory = await Directory.systemTemp.createTemp(
-        'sub-killer-manual-subscriptions-',
-      );
+      tempDirectory = await createWorkspaceTempDirectory('sub-killer-manual-subscriptions');
       store = JsonFileLocalManualSubscriptionStore.applicationSupport(
         directoryProvider: () async => tempDirectory,
       );

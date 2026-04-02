@@ -21,8 +21,8 @@ class DecisionSnapshotLedgerBridge {
         currentEntry: currentEntry,
       ),
       lastEventType: _eventTypeFor(snapshot.band, snapshot),
-      lastEventAt: snapshot.lastBilledAt,
-      totalBilled: snapshot.bridgeTotalBilled,
+      lastEventAt: snapshot.lastBilledAt ?? snapshot.decidedAt,
+      totalBilled: _totalBilledFor(snapshot, currentEntry),
       lastBilledAmount: _lastBilledAmountFor(snapshot, currentEntry),
       billingCadence: _inferCadence(snapshot, currentEntry),
       nextRenewalDate: _inferNextRenewalDate(snapshot, currentEntry),
@@ -116,13 +116,15 @@ class DecisionSnapshotLedgerBridge {
         return ResolverState.activePaid;
       case DecisionBand.likelyPaid:
       case DecisionBand.needsReview:
-        return ResolverState.possibleSubscription;
+        return ResolverState.ignored;
       case DecisionBand.includedWithPlan:
         return ResolverState.activeBundled;
       case DecisionBand.setupOnly:
         return ResolverState.pendingConversion;
       case DecisionBand.verificationOnly:
         return ResolverState.verificationOnly;
+      case DecisionBand.ended:
+        return ResolverState.cancelled;
       case DecisionBand.oneTimeOrNoise:
         return ResolverState.oneTimeOnly;
       case DecisionBand.ignored:
@@ -136,8 +138,8 @@ class DecisionSnapshotLedgerBridge {
   ) {
     switch (band) {
       case DecisionBand.confirmedPaid:
-      case DecisionBand.likelyPaid:
         return SubscriptionEventType.subscriptionBilled;
+      case DecisionBand.likelyPaid:
       case DecisionBand.needsReview:
         return SubscriptionEventType.unknownReview;
       case DecisionBand.includedWithPlan:
@@ -149,11 +151,24 @@ class DecisionSnapshotLedgerBridge {
         return SubscriptionEventType.mandateCreated;
       case DecisionBand.verificationOnly:
         return SubscriptionEventType.mandateExecutedMicro;
+      case DecisionBand.ended:
+        return SubscriptionEventType.subscriptionCancelled;
       case DecisionBand.oneTimeOrNoise:
         return SubscriptionEventType.oneTimePayment;
       case DecisionBand.ignored:
         return SubscriptionEventType.ignore;
     }
+  }
+
+  double _totalBilledFor(
+    DecisionSnapshot snapshot,
+    ServiceLedgerEntry? currentEntry,
+  ) {
+    if (snapshot.band == DecisionBand.confirmedPaid) {
+      return snapshot.bridgeTotalBilled;
+    }
+
+    return currentEntry?.totalBilled ?? 0;
   }
 
   double? _lastBilledAmountFor(
@@ -176,7 +191,8 @@ class DecisionSnapshotLedgerBridge {
     required DecisionSnapshot snapshot,
     required ServiceLedgerEntry? currentEntry,
   }) {
-    final currentEvidence = currentEntry?.evidenceTrail ?? EvidenceTrail.empty();
+    final currentEvidence =
+        currentEntry?.evidenceTrail ?? EvidenceTrail.empty();
     final notes = <String>{
       ...currentEvidence.notes,
       ...snapshot.evidenceTrail.notes,
@@ -190,7 +206,10 @@ class DecisionSnapshotLedgerBridge {
 
     return EvidenceTrail(
       messageIds: <String>[
-        ...{...currentEvidence.messageIds, ...snapshot.evidenceTrail.messageIds},
+        ...{
+          ...currentEvidence.messageIds,
+          ...snapshot.evidenceTrail.messageIds
+        },
       ],
       eventIds: <String>[
         ...{...currentEvidence.eventIds, ...snapshot.evidenceTrail.eventIds},

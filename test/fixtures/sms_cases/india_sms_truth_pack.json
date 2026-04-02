@@ -1,0 +1,163 @@
+[
+  {
+    "id": "jio_recharge_jiosaavn_included",
+    "messages": [
+      {
+        "sender": "AD-JIOMSG-S",
+        "body": "Your Jio recharge has unlocked complimentary JioSaavn Pro subscription benefit for 28 days."
+      }
+    ],
+    "expectedServiceKey": "JIOSAAVN_PRO",
+    "expectedState": "activeBundled"
+  },
+  {
+    "id": "airtel_recharge_wynk_included",
+    "messages": [
+      {
+        "sender": "AD-AIRTEL-S",
+        "body": "Airtel recharge success: FREE Wynk premium subscription included with your plan."
+      }
+    ],
+    "expectedServiceKey": "WYNK",
+    "expectedState": "activeBundled"
+  },
+  {
+    "id": "youtube_mandate_only",
+    "messages": [
+      {
+        "sender": "VK-ALERTS",
+        "body": "You have successfully created an e-mandate for YouTube Premium monthly plan."
+      }
+    ],
+    "expectedServiceKey": "YOUTUBE_PREMIUM",
+    "expectedState": "pendingConversion"
+  },
+  {
+    "id": "google_mandate_micro_only",
+    "messages": [
+      {
+        "sender": "VK-GOOGLE",
+        "body": "Your mandate for Google One was successfully executed for Rs 2.00."
+      }
+    ],
+    "expectedServiceKey": "GOOGLE_ONE",
+    "expectedState": "verificationOnly"
+  },
+  {
+    "id": "netflix_monthly_paid",
+    "messages": [
+      {
+        "sender": "VK-NETFLX",
+        "body": "Your Netflix subscription has been renewed for Rs 499."
+      }
+    ],
+    "expectedServiceKey": "NETFLIX",
+    "expectedState": "activePaid"
+  },
+  {
+    "id": "adobe_annual_paid",
+    "messages": [
+      {
+        "sender": "VM-ADOBE",
+        "body": "Adobe annual plan renewed successfully. Rs 7199 charged for 12-month subscription."
+      }
+    ],
+    "expectedServiceKey": "ADOBE_SYSTEMS",
+    "expectedState": "activePaid"
+  },
+  {
+    "id": "upi_one_time_swiggy",
+    "messages": [
+      {
+        "sender": "VK-HDFCBK",
+        "body": "Rs 329 debited via UPI to swiggy@icici. UTR 123456."
+      }
+    ],
+    "expectedState": "none"
+  },
+  {
+    "id": "otp_noise",
+    "messages": [
+      {
+        "sender": "VK-BANK",
+        "body": "OTP 229911 for login. Do not share with anyone."
+      }
+    ],
+    "expectedState": "none"
+  },
+  {
+    "id": "promo_noise",
+    "messages": [
+      {
+        "sender": "VK-SHOP",
+        "body": "Flat 50% OFF today. Buy now and claim cashback."
+      }
+    ],
+    "expectedState": "none"
+  },
+  {
+    "id": "rcs_bot_noise",
+    "messages": [
+      {
+        "sender": "chat@bot.rcs.google.com",
+        "body": "Verified business chatbot: tap to reply with the button below."
+      }
+    ],
+    "expectedState": "none"
+  },
+  {
+    "id": "lazypay_due_reminder",
+    "messages": [
+      {
+        "sender": "VK-LAZYPY",
+        "body": "LazyPay alert: your due amount is pending. Pay now to avoid charges."
+      }
+    ],
+    "expectedState": "none"
+  },
+  {
+    "id": "one_time_insurance_premium",
+    "messages": [
+      {
+        "sender": "VK-INSURE",
+        "body": "Insurance premium of Rs 12000 received successfully for policy renewal."
+      }
+    ],
+    "expectedState": "none"
+  },
+  {
+    "id": "mixed_hinglish_telecom_noise",
+    "messages": [
+      {
+        "sender": "AD-AIRTEL-S",
+        "body": "Aapka daily data 90% use ho gaya hai, recharge pack validity kal khatam."
+      }
+    ],
+    "expectedState": "none"
+  },
+  {
+    "id": "contradiction_paid_and_bundle",
+    "messages": [
+      {
+        "sender": "AD-JIOHTT-S",
+        "body": "Your recharge unlocked free JioHotstar benefit this month."
+      },
+      {
+        "sender": "VK-JIOHTT",
+        "body": "Your JioHotstar subscription has been renewed for Rs 299."
+      }
+    ],
+    "expectedServiceKey": "JIOHOTSTAR",
+    "expectedState": "activePaid"
+  },
+  {
+    "id": "unresolved_merchant_paid_like",
+    "messages": [
+      {
+        "sender": "VK-UNKNOWN",
+        "body": "Your Music Plus subscription renewed successfully for Rs 149."
+      }
+    ],
+    "expectedState": "none"
+  }
+]

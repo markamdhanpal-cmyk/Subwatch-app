@@ -82,9 +82,9 @@ Widget _buildDashboardSettingsScreen({
         tileKey: const ValueKey<String>('settings-open-review-action'),
         icon: Icons.rule_folder_outlined,
         title: data.reviewQueue.length == 1
-            ? 'Review 1 item'
-            : 'Review ${data.reviewQueue.length} items',
-        subtitle: 'Needs your decision.',
+            ? 'Open 1 possible item'
+            : 'Open ${data.reviewQueue.length} possible items',
+        subtitle: 'Kept separate from confirmed until evidence improves.',
         onTap: () {
           shell._openReviewDestination();
         },
@@ -121,7 +121,8 @@ Widget _buildDashboardSettingsScreen({
     _SettingsGroupPanel(
       key: const ValueKey<String>('settings-quick-actions-panel'),
       title: 'Actions',
-      subtitle: 'Refresh, review, and add trusted entries on this phone.',
+      subtitle:
+          'Refresh SMS results, inspect possible items, and add manual entries on this phone.',
       children: quickActionRows,
     ),
   ];
@@ -157,7 +158,7 @@ Widget _buildDashboardSettingsScreen({
     const _SettingsSectionLead(
       title: 'Help & feedback',
       caption:
-          'Understand the product, review privacy details, or report a problem without leaving this trust surface.',
+          'Understand the product, check privacy details, or report a problem without leaving this trust surface.',
     ),
   );
   settingsPanels.add(const SizedBox(height: 10));
@@ -199,7 +200,7 @@ Widget _buildDashboardSettingsScreen({
     const _SettingsSectionLead(
       title: 'Controls & recovery',
       caption:
-          'Undo local decisions, review recovery history, or clear this phone view when needed.',
+          'Undo local decisions, check recovery history, or clear this phone view when needed.',
     ),
   );
   settingsPanels.add(const SizedBox(height: 10));

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/local_ingestion_flow_use_case.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
@@ -122,7 +125,7 @@ void main() {
       expect(result.ledgerEntries.single.totalBilled, 299);
     });
 
-    test('direct Swiggy One card billing becomes activePaid end to end',
+    test('ambiguous card-only Swiggy charge stays out of confirmed list',
         () async {
       final result = await useCase.execute(<MessageRecord>[
         message(
@@ -131,15 +134,12 @@ void main() {
         ),
       ]);
 
-      expect(result.events, hasLength(1));
-      expect(
-          result.events.single.type, SubscriptionEventType.subscriptionBilled);
-      expect(result.events.single.serviceKey.value, 'SWIGGY_ONE');
-      expect(result.ledgerEntries.single.state, ResolverState.activePaid);
-      expect(result.ledgerEntries.single.totalBilled, 99);
+      expect(result.events, isEmpty);
+      expect(result.ledgerEntries, isEmpty);
     });
 
-    test('one-time payment noise does not become activePaid', () async {
+    test('one-time payment noise does not create surfaced subscriptions',
+        () async {
       final result = await useCase.execute(<MessageRecord>[
         message(
           id: 'upi-1',
@@ -147,10 +147,24 @@ void main() {
         ),
       ]);
 
+      expect(result.events, hasLength(1));
       expect(result.events.single.type, SubscriptionEventType.oneTimePayment);
-      expect(result.ledgerEntries.single.state, ResolverState.oneTimeOnly);
-      expect(
-          result.ledgerEntries.single.state, isNot(ResolverState.activePaid));
+      expect(result.ledgerEntries, isEmpty);
+    });
+
+    test('missed call alerts stay hard noise and do not surface subscriptions',
+        () async {
+      final result = await useCase.execute(<MessageRecord>[
+        message(
+          id: 'missed-call-1',
+          body:
+              'You have 1 missed call from +91XXXXXX. Callback at this number to connect instantly.',
+        ),
+      ]);
+
+      expect(result.events, hasLength(1));
+      expect(result.events.single.type, SubscriptionEventType.ignore);
+      expect(result.ledgerEntries, isEmpty);
     });
 
     test('repeated messages for the same service update one ledger entry',
@@ -175,7 +189,7 @@ void main() {
     });
 
     test(
-        'generic app-store recurring billing becomes reviewable instead of disappearing',
+        'generic app-store recurring billing stays hidden without stronger proof',
         () async {
       final result = await useCase.execute(<MessageRecord>[
         message(
@@ -185,13 +199,8 @@ void main() {
         ),
       ]);
 
-      expect(result.events, hasLength(1));
-      expect(result.events.single.type, SubscriptionEventType.unknownReview);
-      expect(result.events.single.serviceKey.value, 'GOOGLE_PLAY');
-      expect(result.ledgerEntries, hasLength(1));
-      expect(result.ledgerEntries.single.state,
-          ResolverState.possibleSubscription);
-      expect(result.ledgerEntries.single.totalBilled, 0);
+      expect(result.events, isEmpty);
+      expect(result.ledgerEntries, isEmpty);
     });
 
     test('separate services remain separate end to end', () async {
@@ -213,6 +222,58 @@ void main() {
         containsAll(<String>['NETFLIX', 'YOUTUBE_PREMIUM']),
       );
     });
+    test('truth-pack cases execute inside stable ingestion suite', () async {
+      final fixtureFile = File('test/fixtures/sms_cases/india_sms_truth_pack.json');
+      final rawCases = jsonDecode(fixtureFile.readAsStringSync()) as List<dynamic>;
+      final baseTime = DateTime(2026, 4, 1, 10, 0);
+
+      for (final rawCase in rawCases) {
+        final caseData = rawCase as Map<String, dynamic>;
+        final id = caseData['id'] as String;
+        final messagesJson = caseData['messages'] as List<dynamic>;
+        final expectedState = caseData['expectedState'] as String;
+        final expectedServiceKey = caseData['expectedServiceKey'] as String?;
+
+        final messages = <MessageRecord>[
+          for (var index = 0; index < messagesJson.length; index += 1)
+            MessageRecord(
+              id: '$id-$index',
+              sourceAddress:
+                  (messagesJson[index] as Map<String, dynamic>)['sender']
+                      as String,
+              body: (messagesJson[index] as Map<String, dynamic>)['body']
+                  as String,
+              receivedAt: baseTime.add(Duration(minutes: index)),
+            ),
+        ];
+
+        final caseUseCase = LocalIngestionFlowUseCase();
+        final result = await caseUseCase.execute(messages);
+
+        if (expectedState == 'none') {
+          expect(result.ledgerEntries, isEmpty, reason: 'truth-pack case: $id');
+          continue;
+        }
+
+        expect(expectedServiceKey, isNotNull, reason: 'truth-pack case: $id');
+        final entry = result.ledgerEntries.firstWhere(
+          (candidate) => candidate.serviceKey.value == expectedServiceKey,
+          orElse: () => throw StateError(
+            'Expected ledger entry for $expectedServiceKey in case $id',
+          ),
+        );
+        final expectedResolverState = ResolverState.values.firstWhere(
+          (value) => value.name == expectedState,
+        );
+        expect(
+          entry.state,
+          expectedResolverState,
+          reason: 'truth-pack case: $id',
+        );
+      }
+    });
   });
 }
+
+
 
