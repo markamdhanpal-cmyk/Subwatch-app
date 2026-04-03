@@ -41,11 +41,11 @@ class ReviewQueueItemPresentation {
     }
 
     return const ReviewQueueItemPresentation(
-      reasonLine: 'Looks recurring, but the service is still unclear',
+      reasonLine: 'Possible recurring signal, service still unclear',
       detailsBullets: <String>[
         'A recurring-looking signal was found.',
         'The service name is still unclear.',
-        'That is why SubWatch keeps it as possible until evidence improves.',
+        'That is why SubWatch keeps it possible until evidence improves.',
       ],
       confirmLabel: null,
       benefitLabel: null,
@@ -59,7 +59,7 @@ class ReviewQueueItemPresentation {
   static String _reasonLine(String lowerRationale) {
     if (lowerRationale.contains('setup intent') ||
         lowerRationale.contains('mandate')) {
-      return 'Recurring setup spotted, but billing is unconfirmed';
+      return 'Setup detected, but billing is unconfirmed';
     }
     if (lowerRationale.contains('micro verification')) {
       return 'Only a small verification charge was found';
@@ -72,21 +72,21 @@ class ReviewQueueItemPresentation {
         lowerRationale.contains('mandate')) {
       return const <String>[
         'A recurring setup or mandate signal was found.',
-        'No billed renewal evidence has been confirmed yet.',
-        'That is why it stays in Possible for now.',
+        'No billed renewal evidence has been confirmed.',
+        'That is why it stays as possible for now.',
       ];
     }
     if (lowerRationale.contains('micro verification')) {
       return const <String>[
         'A small verification charge was found.',
         'Verification charges alone are not treated as active paid subscriptions.',
-        'That is why it stays in Possible for now.',
+        'That is why it stays as possible for now.',
       ];
     }
     return const <String>[
       'A recurring-looking signal was found.',
       'The evidence is still too weak to confirm it automatically.',
-      'That is why it stays in Possible for now.',
+      'That is why it stays as possible for now.',
     ];
   }
 

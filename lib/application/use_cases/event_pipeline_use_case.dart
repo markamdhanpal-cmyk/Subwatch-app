@@ -15,6 +15,14 @@ import '../../domain/entities/subscription_event.dart';
 import '../../domain/enums/subscription_event_type.dart';
 import '../../domain/resolvers/deterministic_service_identity_resolver.dart';
 
+/// Legacy classifier chain retained for compatibility and diagnostics only.
+///
+/// Live runtime truth should be produced by the v3 evidence-first path
+/// (`ScanSubscriptionsV3UseCase`).
+@Deprecated(
+  'Legacy compatibility pipeline only. Use ScanSubscriptionsV3UseCase for '
+  'live runtime truth.',
+)
 class EventPipelineUseCase {
   EventPipelineUseCase({
     List<EventClassifier>? classifiers,

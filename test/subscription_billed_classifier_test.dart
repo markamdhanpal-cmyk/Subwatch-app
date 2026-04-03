@@ -87,7 +87,7 @@ void main() {
       expect(result, isNull);
     });
 
-    test('classifies a paid JioHotstar renewal as billed subscription', () {
+    test('classifies a paid JioHotstar renewal as billed subscription (direct-paid)', () {
       final result = classifier.classify(
         message('Your JioHotstar subscription has been renewed for Rs 299.'),
       );
@@ -227,3 +227,4 @@ void main() {
     });
   });
 }
+

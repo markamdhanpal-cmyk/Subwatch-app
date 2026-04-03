@@ -28,7 +28,7 @@ void main() {
     });
 
     test(
-        'classifies plain UPI debit to VPA as one-time payment even when micro amount is not retained',
+        'classifies plain UPI debit to VPA as non-subscription one-time payment',
         () {
       final result = classifier.classify(
         message('Rs 1 debited via UPI to VPA test@upi. Ref 2222'),
@@ -76,3 +76,4 @@ void main() {
     });
   });
 }
+

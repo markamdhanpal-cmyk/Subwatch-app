@@ -78,6 +78,7 @@ void main() {
       expect(result.events.single.serviceKey.value, 'JIOHOTSTAR');
       expect(
           result.ledgerEntries.single.state, ResolverState.pendingConversion);
+      expect(result.ledgerEntries.single.totalBilled, 0);
     });
 
     test('micro execution becomes verificationOnly end to end', () async {
@@ -93,6 +94,7 @@ void main() {
           SubscriptionEventType.mandateExecutedMicro);
       expect(result.events.single.serviceKey.value, 'CRUNCHYROLL');
       expect(result.ledgerEntries.single.state, ResolverState.verificationOnly);
+      expect(result.ledgerEntries.single.totalBilled, 0);
     });
 
     test('telecom bundle becomes activeBundled end to end', () async {
@@ -274,6 +276,7 @@ void main() {
     });
   });
 }
+
 
 
 

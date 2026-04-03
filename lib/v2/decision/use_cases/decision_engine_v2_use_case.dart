@@ -108,16 +108,13 @@ class DecisionEngineV2UseCase {
           !_isHighConfidenceSingleCharge(bucket,
               hasPromoNoise: hasPromoNoise)) {
         reasons.add(DecisionReasonCode.likelyPaidNeedsMoreHistory);
+        notes.add('decision:single_charge_possible_only');
         return _snapshot(
           bucket,
           band: DecisionBand.likelyPaid,
           reasons: reasons,
           notes: notes,
           subscriptionScore: subscriptionScore,
-          bridgeTotalBilled: bucket.amountSeries.fold<double>(
-            0,
-            (total, amount) => total + amount,
-          ),
         );
       }
 
@@ -181,6 +178,7 @@ class DecisionEngineV2UseCase {
 
     if (hasWeakReviewHints || hasRenewalHints || hasCancellationHints) {
       reasons.add(DecisionReasonCode.weakRecurringSignalsObserved);
+      notes.add('decision:weak_signals_possible_only');
       if (hasRenewalHints) {
         reasons.add(DecisionReasonCode.recurringRenewalObserved);
       }

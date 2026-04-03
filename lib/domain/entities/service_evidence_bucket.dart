@@ -74,6 +74,25 @@ class ServiceEvidenceBucket {
   final List<String> contradictions;
   final EvidenceTrail evidenceTrail;
 
+  bool get hasConfirmedPaidEvidence => billedCount > 0;
+
+  bool get hasIncludedBundleEvidence => bundleCount > 0;
+
+  bool get hasSetupOrVerificationOnlyEvidence =>
+      billedCount == 0 &&
+      (mandateCount > 0 || autopaySetupCount > 0 || microChargeCount > 0) &&
+      bundleCount == 0 &&
+      endedLifecycleCount == 0;
+
+  bool get hasReviewOnlyEvidence =>
+      billedCount == 0 &&
+      bundleCount == 0 &&
+      endedLifecycleCount == 0 &&
+      (renewalHintCount > 0 ||
+          cancellationHintCount > 0 ||
+          weakRecurringHintCount > 0 ||
+          unknownReviewCount > 0);
+
   ServiceEvidenceBucket copyWith({
     DateTime? firstSeenAt,
     DateTime? lastSeenAt,

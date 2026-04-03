@@ -125,7 +125,6 @@ class LoadRuntimeDashboardUseCase {
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
-    bool useEvidenceFirstV3 = true,
   }) {
     final repository = ledgerRepository ?? InMemoryLedgerRepository();
     final evidenceBucketRepository = InMemoryServiceEvidenceBucketRepository();
@@ -173,7 +172,6 @@ class LoadRuntimeDashboardUseCase {
             ledgerRepository: repository,
             serviceEvidenceBucketRepository: evidenceBucketRepository,
             decisionExecutionMode: decisionExecutionMode,
-            useEvidenceFirstV3: useEvidenceFirstV3,
           ),
       serviceEvidenceBucketRepository: evidenceBucketRepository,
       projectDashboardUseCase: projectDashboardUseCase ??
@@ -216,7 +214,6 @@ class LoadRuntimeDashboardUseCase {
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
-    bool useEvidenceFirstV3 = true,
   }) {
     return LoadRuntimeDashboardUseCase(
       platformBinding: platformBinding,
@@ -250,7 +247,6 @@ class LoadRuntimeDashboardUseCase {
       projectDashboardUseCase: projectDashboardUseCase,
       projectReviewQueueUseCase: projectReviewQueueUseCase,
       clock: clock,
-      useEvidenceFirstV3: useEvidenceFirstV3,
     );
   }
 
@@ -275,7 +271,6 @@ class LoadRuntimeDashboardUseCase {
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
-    bool useEvidenceFirstV3 = true,
   }) {
     return LoadRuntimeDashboardUseCase(
       platformBinding:
@@ -298,7 +293,6 @@ class LoadRuntimeDashboardUseCase {
       projectDashboardUseCase: projectDashboardUseCase,
       projectReviewQueueUseCase: projectReviewQueueUseCase,
       clock: clock,
-      useEvidenceFirstV3: useEvidenceFirstV3,
     );
   }
 
@@ -323,7 +317,6 @@ class LoadRuntimeDashboardUseCase {
     ProjectDashboardUseCase? projectDashboardUseCase,
     ProjectReviewQueueUseCase? projectReviewQueueUseCase,
     DateTime Function()? clock,
-    bool useEvidenceFirstV3 = true,
   }) {
     return LoadRuntimeDashboardUseCase(
       platformBinding: LocalMessageSourcePlatformBinding.stubDeviceLocal(),
@@ -349,7 +342,6 @@ class LoadRuntimeDashboardUseCase {
       projectDashboardUseCase: projectDashboardUseCase,
       projectReviewQueueUseCase: projectReviewQueueUseCase,
       clock: clock,
-      useEvidenceFirstV3: useEvidenceFirstV3,
     );
   }
 
@@ -441,8 +433,10 @@ class LoadRuntimeDashboardUseCase {
       await _ledgerRepository.replaceAll(const <ServiceLedgerEntry>[]);
       await _serviceEvidenceBucketRepository.clear();
       final messageSource = messageSourceSelection.messageSource;
-      final ({List<SubscriptionEvent> events, List<ServiceLedgerEntry> ledgerEntries})
-          ingestionResult;
+      final ({
+        List<SubscriptionEvent> events,
+        List<ServiceLedgerEntry> ledgerEntries
+      }) ingestionResult;
       if (messageSource is CanonicalInputSource) {
         ingestionResult = await _executeCanonicalIngestion(
           messageSource as CanonicalInputSource,
@@ -477,8 +471,7 @@ class LoadRuntimeDashboardUseCase {
           decisionExecutionMode: _decisionExecutionMode,
           shadowDifferenceCount:
               _ingestionUseCase.lastShadowComparison?.driftCount,
-          shadowComparedAt:
-              _ingestionUseCase.lastShadowComparison?.comparedAt,
+          shadowComparedAt: _ingestionUseCase.lastShadowComparison?.comparedAt,
         ),
       );
     } catch (_) {
@@ -499,20 +492,64 @@ class LoadRuntimeDashboardUseCase {
     required LedgerSnapshotRecord persistedRecord,
     required DateTime recordedAt,
   }) async {
-    await _ledgerRepository.replaceAll(persistedRecord.entries);
+    final sanitizedEntries = _sanitizePersistedEntries(persistedRecord.entries);
+    await _ledgerRepository.replaceAll(sanitizedEntries);
+    final metadata = _sanitizePersistedMetadata(persistedRecord.metadata);
 
     return _projectSnapshot(
       messageSourceSelection,
       provenance: RuntimeSnapshotProvenance(
         kind: RuntimeSnapshotProvenanceKind.restoredLocalSnapshot,
-        sourceKind: persistedRecord.metadata?.sourceKind ??
-            RuntimeSnapshotSourceKind.unknown,
+        sourceKind: metadata?.sourceKind ?? RuntimeSnapshotSourceKind.unknown,
         recordedAt: recordedAt,
-        refreshedAt: persistedRecord.metadata?.refreshedAt,
-        decisionExecutionMode: persistedRecord.metadata?.decisionExecutionMode,
-        shadowDifferenceCount: persistedRecord.metadata?.shadowDifferenceCount,
-        shadowComparedAt: persistedRecord.metadata?.shadowComparedAt,
+        refreshedAt: metadata?.refreshedAt,
+        decisionExecutionMode: metadata?.decisionExecutionMode,
+        shadowDifferenceCount: metadata?.shadowDifferenceCount,
+        shadowComparedAt: metadata?.shadowComparedAt,
       ),
+    );
+  }
+
+  List<ServiceLedgerEntry> _sanitizePersistedEntries(
+    List<ServiceLedgerEntry> entries,
+  ) {
+    if (entries.isEmpty) {
+      return const <ServiceLedgerEntry>[];
+    }
+
+    final dedupedByServiceKey = <String, ServiceLedgerEntry>{};
+    for (final entry in entries) {
+      dedupedByServiceKey[entry.serviceKey.value] = entry;
+    }
+
+    final sanitized = dedupedByServiceKey.values.toList(growable: false)
+      ..sort(
+        (left, right) =>
+            left.serviceKey.value.compareTo(right.serviceKey.value),
+      );
+    return List<ServiceLedgerEntry>.unmodifiable(sanitized);
+  }
+
+  LedgerSnapshotMetadata? _sanitizePersistedMetadata(
+    LedgerSnapshotMetadata? metadata,
+  ) {
+    if (metadata == null) {
+      return null;
+    }
+
+    final decisionMode =
+        metadata.decisionExecutionMode ?? _decisionExecutionMode;
+    final allowShadowMetadata =
+        decisionMode == DecisionExecutionMode.shadowCompareAndBridge;
+
+    return LedgerSnapshotMetadata(
+      sourceKind: metadata.sourceKind,
+      refreshedAt: metadata.refreshedAt,
+      schemaVersion: metadata.schemaVersion,
+      decisionExecutionMode: decisionMode,
+      shadowDifferenceCount:
+          allowShadowMetadata ? metadata.shadowDifferenceCount : null,
+      shadowComparedAt: allowShadowMetadata ? metadata.shadowComparedAt : null,
     );
   }
 
@@ -641,16 +678,19 @@ class LoadRuntimeDashboardUseCase {
     }
 
     final buckets = await _serviceEvidenceBucketRepository.list()
-      ..sort((left, right) => left.serviceKey.value.compareTo(right.serviceKey.value));
+      ..sort((left, right) =>
+          left.serviceKey.value.compareTo(right.serviceKey.value));
     await store.save(buckets);
   }
 
-  Future<({List<SubscriptionEvent> events, List<ServiceLedgerEntry> ledgerEntries})>
-      _executeCanonicalIngestion(
+  Future<
+      ({
+        List<SubscriptionEvent> events,
+        List<ServiceLedgerEntry> ledgerEntries
+      })> _executeCanonicalIngestion(
     CanonicalInputSource messageSource,
   ) async {
     final canonicalInputs = await messageSource.loadCanonicalInputs();
     return _ingestionUseCase.executeCanonicalInputs(canonicalInputs);
   }
 }
-

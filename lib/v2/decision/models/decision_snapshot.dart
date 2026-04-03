@@ -34,6 +34,12 @@ class DecisionSnapshot {
   final ServiceEvidenceBucket sourceBucket;
   final SubscriptionScore subscriptionScore;
 
+  bool get isPaidTruth => band.isConfirmedPaidTruth;
+
+  bool get isIncludedBenefit => band.isIncludedBenefit;
+
+  bool get isConservativePossible => band.isConservativePossible;
+
   ServiceDecisionState get decisionState {
     switch (band) {
       case DecisionBand.confirmedPaid:

@@ -126,6 +126,35 @@ void main() {
       expect(resolution.resolutionMethod, MerchantResolutionMethod.noMatch);
     });
 
+    test('keeps setup-only and micro events unresolved even when alias exists',
+        () {
+      final mandateResolution = resolver.resolveMerchant(
+        message: message('You have successfully created a mandate on Netflix.'),
+        signal: signal(SubscriptionEventType.mandateCreated),
+      );
+      final microResolution = resolver.resolveMerchant(
+        message: message('Mandate for Netflix executed for Rs 1.00.'),
+        signal: signal(SubscriptionEventType.mandateExecutedMicro),
+      );
+
+      expect(
+        mandateResolution.resolvedServiceKey.value,
+        DeterministicServiceIdentityResolver.unresolvedServiceKey.value,
+      );
+      expect(
+        mandateResolution.resolutionMethod,
+        MerchantResolutionMethod.noMatch,
+      );
+      expect(
+        microResolution.resolvedServiceKey.value,
+        DeterministicServiceIdentityResolver.unresolvedServiceKey.value,
+      );
+      expect(
+        microResolution.resolutionMethod,
+        MerchantResolutionMethod.noMatch,
+      );
+    });
+
     test(
         'keeps telecom generic data-plan warning unresolved instead of synthetic keying',
         () {
@@ -144,7 +173,10 @@ void main() {
         resolution.resolvedServiceKey.value,
         DeterministicServiceIdentityResolver.unresolvedServiceKey.value,
       );
-      expect(resolution.resolutionMethod, MerchantResolutionMethod.protectedUnresolved);
+      expect(
+        resolution.resolutionMethod,
+        MerchantResolutionMethod.protectedUnresolved,
+      );
     });
   });
 }

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/load_runtime_dashboard_use_case.dart';
 
 void main() {
-  test('runtime sample projection does not surface legacy candidate noise keys',
+  test('runtime sample projection keeps unresolved-first key hygiene and blocks legacy candidate noise keys',
       () async {
     final snapshot = await LoadRuntimeDashboardUseCase(
       clock: () => DateTime(2026, 3, 24, 10, 0),
@@ -21,3 +21,4 @@ void main() {
     expect(serviceKeys, isNot(contains('UNRESOLVED')));
   });
 }
+

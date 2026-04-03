@@ -5,9 +5,13 @@ import '../entities/parsed_signal.dart';
 import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_event_type.dart';
 import '../parsing/indian_amount_parser.dart';
+import 'recurring_billing_heuristics.dart';
 
 class MandateIntentClassifier implements EventClassifier {
   const MandateIntentClassifier();
+
+  // Legacy parsed-signal classifier kept for compatibility shadowing.
+  // Mandate/setup/micro signals must remain non-paid evidence.
 
   static const String classifierId = 'mandate_intent';
 
@@ -53,6 +57,16 @@ class MandateIntentClassifier implements EventClassifier {
     final hasMandateContext = _mandateContextPattern.hasMatch(body);
     final hasAutopayContext = _autopayContextPattern.hasMatch(body);
     final hasAnyRecurringContext = hasMandateContext || hasAutopayContext;
+    final hasDirectPaidRenewalContext = hasAnyRecurringContext &&
+        RecurringBillingHeuristics.hasBillingContext(body) &&
+        RecurringBillingHeuristics.hasSuccessContext(body) &&
+        RecurringBillingHeuristics.hasSubscriptionContext(body) &&
+        (amount ?? anyAmount ?? 0) > 2;
+    if (hasDirectPaidRenewalContext) {
+      // Keep mandate/setup semantics conservative. If the text already carries
+      // direct billed-renewal context, this classifier should not emit.
+      return null;
+    }
 
     if (hasAnyRecurringContext && _cancellationPattern.hasMatch(body)) {
       var resolveAmount = amount ?? anyAmount;

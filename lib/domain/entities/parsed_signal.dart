@@ -1,6 +1,12 @@
 import 'evidence_fragment.dart';
 import '../enums/subscription_event_type.dart';
 
+/// Legacy parsed-signal carrier used by compatibility classifiers.
+///
+/// v3 runtime truth should use SubscriptionEvidence and service aggregation.
+@Deprecated(
+  'Compatibility-only model. Prefer SubscriptionEvidence in the v3 runtime.',
+)
 class ParsedSignal {
   ParsedSignal({
     required this.classifierId,

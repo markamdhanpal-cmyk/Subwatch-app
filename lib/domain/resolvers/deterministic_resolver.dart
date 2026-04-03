@@ -6,6 +6,9 @@ import '../enums/billing_cadence.dart';
 import '../enums/resolver_state.dart';
 import '../enums/subscription_event_type.dart';
 
+/// Legacy resolver retained for compatibility tests only.
+/// Runtime default resolution now uses ServiceKeyResolverV2 + decision v3.
+@Deprecated('Compatibility-only resolver. Prefer evidence-first v3 path.')
 class DeterministicResolver implements Resolver {
   const DeterministicResolver();
 
@@ -234,4 +237,7 @@ class DeterministicResolver implements Resolver {
     return BillingCadence.fromIntervalDays(days);
   }
 }
+
+
+
 

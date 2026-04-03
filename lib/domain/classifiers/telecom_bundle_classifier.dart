@@ -10,6 +10,9 @@ import 'recurring_billing_heuristics.dart';
 class TelecomBundleClassifier implements EventClassifier {
   const TelecomBundleClassifier();
 
+  // Legacy parsed-signal classifier kept for compatibility shadowing.
+  // It should only emit bundled-benefit evidence, never paid truth.
+
   static const String classifierId = 'telecom_bundle';
 
   static final RegExp _providerPattern = RegExp(
@@ -54,7 +57,8 @@ class TelecomBundleClassifier implements EventClassifier {
         RecurringBillingHeuristics.hasBillingContext(body) &&
         (RecurringBillingHeuristics.hasSuccessContext(body) ||
             RecurringBillingHeuristics.hasRecurringContext(body)) &&
-        RecurringBillingHeuristics.hasDirectRecurringMerchant(body);
+        RecurringBillingHeuristics.hasDirectRecurringMerchant(body) &&
+        !RecurringBillingHeuristics.hasBundleContextForKnownMerchant(body);
     if (hasDirectPaidSignal) {
       return null;
     }
@@ -65,13 +69,11 @@ class TelecomBundleClassifier implements EventClassifier {
     final hasRechargeMarker =
         _rechargeOrPackMarkers.any((pattern) => pattern.hasMatch(body));
     final hasCoBrandedContext = _coBrandedBundlePattern.hasMatch(body);
-    final hasBundleServiceAlias = MerchantKnowledgeBase.matchKnownMerchant(
-          body,
-          requiredTypeLabels: const <String>['bundle_candidate'],
-          allowWeakReview: false,
-          allowBundleSignals: true,
-        ) !=
-        null;
+    final bundleEntry =
+        MerchantKnowledgeBase.matchKnownBundleCandidateMerchant(body);
+    final hasBundleServiceAlias = bundleEntry != null;
+    final hasMerchantBundleLanguage = bundleEntry != null &&
+        MerchantKnowledgeBase.hasBundleContextForEntry(body, bundleEntry);
 
     final hasProviderBundleContext =
         hasProviderContext && hasBenefitLanguage && hasRechargeMarker;
@@ -81,6 +83,10 @@ class TelecomBundleClassifier implements EventClassifier {
         hasProviderBundleContext || hasCoBrandedBundleContext;
 
     if (!hasStrongBundleContext || !hasBundleServiceAlias) {
+      return null;
+    }
+
+    if (!hasMerchantBundleLanguage && !hasBenefitLanguage) {
       return null;
     }
 

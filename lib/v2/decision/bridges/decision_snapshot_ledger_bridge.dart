@@ -21,7 +21,7 @@ class DecisionSnapshotLedgerBridge {
         currentEntry: currentEntry,
       ),
       lastEventType: _eventTypeFor(snapshot.band, snapshot),
-      lastEventAt: snapshot.lastBilledAt ?? snapshot.decidedAt,
+      lastEventAt: _lastEventAtFor(snapshot),
       totalBilled: _totalBilledFor(snapshot, currentEntry),
       lastBilledAmount: _lastBilledAmountFor(snapshot, currentEntry),
       billingCadence: _inferCadence(snapshot, currentEntry),
@@ -29,10 +29,22 @@ class DecisionSnapshotLedgerBridge {
     );
   }
 
+  DateTime _lastEventAtFor(DecisionSnapshot snapshot) {
+    if (snapshot.band.isConfirmedPaidTruth && snapshot.lastBilledAt != null) {
+      return snapshot.lastBilledAt!;
+    }
+    return snapshot.decidedAt;
+  }
+
   BillingCadence _inferCadence(
     DecisionSnapshot snapshot,
     ServiceLedgerEntry? currentEntry,
   ) {
+    if (!snapshot.band.isConfirmedPaidTruth) {
+      // Keep weak/setup/review bands from inheriting paid-like cadence.
+      return BillingCadence.unknown;
+    }
+
     if (currentEntry != null &&
         currentEntry.billingCadence != BillingCadence.unknown) {
       return currentEntry.billingCadence;
@@ -61,6 +73,10 @@ class DecisionSnapshotLedgerBridge {
     DecisionSnapshot snapshot,
     ServiceLedgerEntry? currentEntry,
   ) {
+    if (!snapshot.band.isConfirmedPaidTruth) {
+      return null;
+    }
+
     // If the ledger already has a next renewal date, keep it for now
     // (though in the future we might want to refresh it if we see a newer event)
     if (currentEntry?.nextRenewalDate != null) {
@@ -116,7 +132,7 @@ class DecisionSnapshotLedgerBridge {
         return ResolverState.activePaid;
       case DecisionBand.likelyPaid:
       case DecisionBand.needsReview:
-        return ResolverState.ignored;
+        return ResolverState.possibleSubscription;
       case DecisionBand.includedWithPlan:
         return ResolverState.activeBundled;
       case DecisionBand.setupOnly:
@@ -175,6 +191,10 @@ class DecisionSnapshotLedgerBridge {
     DecisionSnapshot snapshot,
     ServiceLedgerEntry? currentEntry,
   ) {
+    if (!snapshot.band.isConfirmedPaidTruth) {
+      return null;
+    }
+
     if (currentEntry?.lastBilledAmount != null) {
       return currentEntry!.lastBilledAmount;
     }

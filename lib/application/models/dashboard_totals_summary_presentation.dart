@@ -72,12 +72,12 @@ class DashboardTotalsSummaryPresentation {
     if (hasCadenceConversions) {
       return 'Yearly plans shown monthly';
     }
-    return 'Using visible amounts';
+    return 'Using confirmed visible amounts';
   }
 
   String get summaryCopy {
     if (!hasEstimatedSpend) {
-      return 'Monthly spend appears after SubWatch finds an amount.';
+      return 'Monthly spend appears after SubWatch confirms billed amounts.';
     }
     if (isPartialEstimate && hasCadenceConversions) {
       return 'Missing amounts are excluded. Yearly plans are shown monthly.';
@@ -100,7 +100,7 @@ class DashboardTotalsSummaryPresentation {
         'Only confirmed subscriptions with visible amounts count automatically.',
         'Manual entries with amounts count on this phone.',
         'Yearly and quarterly plans are shown monthly.',
-        'Possible items, included services, and missing amounts stay excluded.',
+        'Possible/setup items, included services, and missing amounts stay excluded.',
         'This is an estimate, not exact spend.',
       ];
 }

@@ -47,18 +47,22 @@ class JsonFileServiceEvidenceBucketStore implements ServiceEvidenceBucketStore {
         return const <ServiceEvidenceBucket>[];
       }
 
-      final buckets = rawBuckets
-          .whereType<Map>()
-          .map(
-            (item) => PersistedServiceEvidenceBucket.fromJson(
+      final parsedBuckets = <ServiceEvidenceBucket>[];
+      for (final item in rawBuckets.whereType<Map>()) {
+        try {
+          parsedBuckets.add(
+            PersistedServiceEvidenceBucket.fromJson(
               item.map((key, value) => MapEntry(key.toString(), value)),
             ).toDomain(),
-          )
-          .toList(growable: false)
-        ..sort(
-          (left, right) =>
-              left.serviceKey.value.compareTo(right.serviceKey.value),
-        );
+          );
+        } on FormatException {
+          continue;
+        } on TypeError {
+          continue;
+        }
+      }
+
+      final buckets = _sanitizeBucketsForPersistence(parsedBuckets);
 
       return buckets;
     } on MissingPluginException {
@@ -78,11 +82,7 @@ class JsonFileServiceEvidenceBucketStore implements ServiceEvidenceBucketStore {
   Future<void> save(List<ServiceEvidenceBucket> buckets) async {
     try {
       final file = await _dataFile(createDirectory: true);
-      final payload = buckets.toList(growable: false)
-        ..sort(
-          (left, right) =>
-              left.serviceKey.value.compareTo(right.serviceKey.value),
-        );
+      final payload = _sanitizeBucketsForPersistence(buckets);
       await AtomicJsonFileWriter.write(
           file,
           jsonEncode(
@@ -146,5 +146,29 @@ class JsonFileServiceEvidenceBucketStore implements ServiceEvidenceBucketStore {
     }
 
     return null;
+  }
+
+  List<ServiceEvidenceBucket> _sanitizeBucketsForPersistence(
+    Iterable<ServiceEvidenceBucket> buckets,
+  ) {
+    final deduped = <String, ServiceEvidenceBucket>{};
+    for (final bucket in buckets) {
+      final key = bucket.serviceKey.value;
+      if (key.isEmpty) {
+        continue;
+      }
+
+      final existing = deduped[key];
+      if (existing == null || bucket.lastSeenAt.isAfter(existing.lastSeenAt)) {
+        deduped[key] = bucket;
+      }
+    }
+
+    final sanitized = deduped.values.toList(growable: false)
+      ..sort(
+        (left, right) =>
+            left.serviceKey.value.compareTo(right.serviceKey.value),
+      );
+    return List<ServiceEvidenceBucket>.unmodifiable(sanitized);
   }
 }

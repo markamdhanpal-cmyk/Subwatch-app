@@ -71,7 +71,7 @@ void main() {
     );
   });
 
-  testWidgets('home stays focused on summary and attention surfaces only', (
+  testWidgets('home stays focused on summary and attention surfaces only (non review-heavy default)', (
     tester,
   ) async {
     await pumpConstrainedDashboardShell(
@@ -109,4 +109,5 @@ void main() {
     );
   });
 }
+
 

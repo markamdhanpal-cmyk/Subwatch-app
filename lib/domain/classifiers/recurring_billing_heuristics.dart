@@ -175,12 +175,7 @@ class RecurringBillingHeuristics {
   }
 
   static bool hasDirectRecurringMerchant(String body) {
-    return MerchantKnowledgeBase.matchKnownMerchant(
-          body,
-          requiredTypeLabels: const <String>['direct_recurring'],
-          allowWeakReview: false,
-          allowBundleSignals: true,
-        ) !=
+    return MerchantKnowledgeBase.matchKnownDirectRecurringMerchant(body) !=
         null;
   }
 
@@ -192,6 +187,24 @@ class RecurringBillingHeuristics {
           allowBundleSignals: true,
         ) !=
         null;
+  }
+
+  static bool hasBundleCandidateMerchant(String body) {
+    return MerchantKnowledgeBase.matchKnownBundleCandidateMerchant(body) !=
+        null;
+  }
+
+  static bool hasBundleContextForKnownMerchant(String body) {
+    final entry = MerchantKnowledgeBase.matchKnownMerchant(
+      body,
+      allowWeakReview: false,
+      allowBundleSignals: true,
+    );
+    if (entry == null) {
+      return false;
+    }
+
+    return MerchantKnowledgeBase.hasBundleContextForEntry(body, entry);
   }
 
   static String? extractMerchantHint(

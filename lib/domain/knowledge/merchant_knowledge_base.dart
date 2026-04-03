@@ -46,6 +46,14 @@ class MerchantKnowledgeEntry {
   final List<String> typeLabels;
   final MerchantResolutionMetadata resolutionMetadata;
 
+  bool get isDirectRecurring => typeLabels.contains('direct_recurring');
+
+  bool get isAppStore => typeLabels.contains('app_store');
+
+  bool get isBundleCandidate =>
+      typeLabels.contains('bundle_candidate') ||
+      resolutionMetadata.resolveOnBundleSignals;
+
   String get preferredHintAlias {
     return (resolutionMetadata.preferredHintAlias ?? aliases.first)
         .toLowerCase();
@@ -64,6 +72,17 @@ class MerchantKnowledgeBase {
     'KREDIT', // KreditBee BNPL
     'SIMPL', // Simpl BNPL
     'POLICY', // PolicyBazaar Insurance
+  ];
+
+  static const List<String> _bundleFallbackHints = <String>[
+    'included',
+    'benefit',
+    'complimentary',
+    'free',
+    'recharge',
+    'plan',
+    'pack',
+    'unlocked',
   ];
 
   static const List<MerchantKnowledgeEntry> entries = <MerchantKnowledgeEntry>[
@@ -442,6 +461,57 @@ class MerchantKnowledgeBase {
     }
 
     return null;
+  }
+
+  static MerchantKnowledgeEntry? matchKnownDirectRecurringMerchant(
+    String input, {
+    bool includeAppStore = false,
+  }) {
+    final requiredTypeLabels = <String>[
+      'direct_recurring',
+      if (includeAppStore) 'app_store',
+    ];
+    return matchKnownMerchant(
+      input,
+      requiredTypeLabels: requiredTypeLabels,
+      allowWeakReview: false,
+      // Bundle-capable services can still be direct paid. Classifiers must
+      // separately check for bundle-language context before upgrading truth.
+      allowBundleSignals: true,
+    );
+  }
+
+  static MerchantKnowledgeEntry? matchKnownBundleCandidateMerchant(
+    String input,
+  ) {
+    return matchKnownMerchant(
+      input,
+      requiredTypeLabels: const <String>['bundle_candidate'],
+      allowWeakReview: false,
+      allowBundleSignals: true,
+    );
+  }
+
+  static bool hasBundleContextForEntry(
+    String input,
+    MerchantKnowledgeEntry entry,
+  ) {
+    if (!entry.isBundleCandidate) {
+      return false;
+    }
+
+    for (final hint in <String>[
+      ...entry.includedBundleHints,
+      ..._bundleFallbackHints,
+    ]) {
+      final escaped = RegExp.escape(hint);
+      final pattern = RegExp(r'\b' + escaped + r'\b', caseSensitive: false);
+      if (pattern.hasMatch(input)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   static List<String> extractMerchantHints(String input) {

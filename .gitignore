@@ -53,3 +53,8 @@ tmp/
 test_classifier_debug.dart
 view.xml
 
+_tmp*.json
+_tmp*.tmp
+
+# Explicit local backup artifacts
+_tmp_device_ledger_backup.json

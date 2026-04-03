@@ -19,6 +19,7 @@ class PersistedServiceLedgerEntry {
   });
 
   factory PersistedServiceLedgerEntry.fromDomain(ServiceLedgerEntry entry) {
+    final keepPaidAmounts = _stateCarriesPaidSemantics(entry.state);
     return PersistedServiceLedgerEntry(
       serviceKey: LegacyServiceKeyTrustGuard.sanitizePersistedServiceKey(
         serviceKey: entry.serviceKey.value,
@@ -28,23 +29,28 @@ class PersistedServiceLedgerEntry {
       evidenceTrail: PersistedEvidenceTrail.fromDomain(entry.evidenceTrail),
       lastEventType: entry.lastEventType?.name,
       lastEventAt: entry.lastEventAt?.toIso8601String(),
-      totalBilled: entry.totalBilled,
-      lastBilledAmount: entry.lastBilledAmount,
-      billingCadence: entry.billingCadence.name,
+      totalBilled: keepPaidAmounts ? entry.totalBilled : 0,
+      lastBilledAmount: keepPaidAmounts ? entry.lastBilledAmount : null,
+      billingCadence:
+          keepPaidAmounts ? entry.billingCadence.name : BillingCadence.unknown.name,
     );
   }
 
   factory PersistedServiceLedgerEntry.fromJson(Map<String, Object?> json) {
     return PersistedServiceLedgerEntry(
-      serviceKey: json['serviceKey'] as String,
-      state: json['state'] as String,
+      serviceKey: (json['serviceKey'] as String?)?.trim().isNotEmpty == true
+          ? (json['serviceKey'] as String).trim()
+          : LegacyServiceKeyTrustGuard.unresolvedServiceKey,
+      state: (json['state'] as String?) ?? ResolverState.ignored.name,
       evidenceTrail: PersistedEvidenceTrail.fromJson(
-        json['evidenceTrail'] as Map<String, Object?>,
+        (json['evidenceTrail'] as Map?)
+                ?.map((key, value) => MapEntry(key.toString(), value)) ??
+            const <String, Object?>{},
       ),
       lastEventType: json['lastEventType'] as String?,
       lastEventAt: json['lastEventAt'] as String?,
-      totalBilled: (json['totalBilled'] as num?)?.toDouble() ?? 0,
-      lastBilledAmount: (json['lastBilledAmount'] as num?)?.toDouble(),
+      totalBilled: _nonNegativeAmount(json['totalBilled']),
+      lastBilledAmount: _optionalNonNegativeAmount(json['lastBilledAmount']),
       billingCadence: json['billingCadence'] as String?,
     );
   }
@@ -66,24 +72,25 @@ class PersistedServiceLedgerEntry {
       evidenceNotes: domainEvidenceTrail.notes,
     );
 
+    final resolverState = _resolverStateFromName(state);
+    final keepPaidAmounts = _stateCarriesPaidSemantics(resolverState);
+
     return ServiceLedgerEntry(
       serviceKey: ServiceKey(sanitizedServiceKey),
-      state: ResolverState.values.firstWhere((value) => value.name == state),
+      state: resolverState,
       evidenceTrail: domainEvidenceTrail,
       lastEventType: lastEventType == null
           ? null
           : SubscriptionEventType.values.firstWhere(
               (value) => value.name == lastEventType,
+              orElse: () => SubscriptionEventType.unknownReview,
             ),
-      lastEventAt: lastEventAt == null ? null : DateTime.parse(lastEventAt!),
-      totalBilled: totalBilled,
-      lastBilledAmount: lastBilledAmount,
-      billingCadence: billingCadence == null
-          ? BillingCadence.unknown
-          : BillingCadence.values.firstWhere(
-              (value) => value.name == billingCadence,
-              orElse: () => BillingCadence.unknown,
-            ),
+      lastEventAt: lastEventAt == null ? null : DateTime.tryParse(lastEventAt!),
+      totalBilled: keepPaidAmounts ? totalBilled : 0,
+      lastBilledAmount: keepPaidAmounts ? lastBilledAmount : null,
+      billingCadence: keepPaidAmounts
+          ? _billingCadenceFromName(billingCadence)
+          : BillingCadence.unknown,
     );
   }
 
@@ -98,6 +105,52 @@ class PersistedServiceLedgerEntry {
       'lastBilledAmount': lastBilledAmount,
       'billingCadence': billingCadence,
     };
+  }
+
+  static bool _stateCarriesPaidSemantics(ResolverState state) {
+    switch (state) {
+      case ResolverState.activePaid:
+      case ResolverState.cancelled:
+        return true;
+      case ResolverState.pendingConversion:
+      case ResolverState.verificationOnly:
+      case ResolverState.possibleSubscription:
+      case ResolverState.activeBundled:
+      case ResolverState.ignored:
+      case ResolverState.oneTimeOnly:
+        return false;
+    }
+  }
+
+  static ResolverState _resolverStateFromName(String value) {
+    return ResolverState.values.firstWhere(
+      (entry) => entry.name == value,
+      orElse: () => ResolverState.ignored,
+    );
+  }
+
+  static BillingCadence _billingCadenceFromName(String? value) {
+    if (value == null) {
+      return BillingCadence.unknown;
+    }
+
+    return BillingCadence.values.firstWhere(
+      (entry) => entry.name == value,
+      orElse: () => BillingCadence.unknown,
+    );
+  }
+
+  static double _nonNegativeAmount(Object? value) {
+    final parsed = (value as num?)?.toDouble() ?? 0;
+    return parsed.isFinite && parsed > 0 ? parsed : 0;
+  }
+
+  static double? _optionalNonNegativeAmount(Object? value) {
+    final parsed = (value as num?)?.toDouble();
+    if (parsed == null || !parsed.isFinite || parsed <= 0) {
+      return null;
+    }
+    return parsed;
   }
 }
 

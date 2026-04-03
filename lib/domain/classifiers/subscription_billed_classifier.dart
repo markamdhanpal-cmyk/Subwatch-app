@@ -10,6 +10,9 @@ import 'recurring_billing_heuristics.dart';
 class SubscriptionBilledClassifier implements EventClassifier {
   const SubscriptionBilledClassifier();
 
+  // Legacy parsed-signal classifier kept for compatibility shadowing.
+  // It should emit only strong paid evidence candidates.
+
   static const String classifierId = 'subscription_billed';
 
   static final RegExp annualCadencePattern = RegExp(
@@ -51,16 +54,9 @@ class SubscriptionBilledClassifier implements EventClassifier {
       return null;
     }
 
-    final hasKnownRecurringMerchant = MerchantKnowledgeBase.matchKnownMerchant(
-          body,
-          requiredTypeLabels: const <String>[
-            'direct_recurring',
-            'app_store',
-          ],
-          allowWeakReview: false,
-          allowBundleSignals: false,
-        ) !=
-        null;
+    final directRecurringEntry =
+        MerchantKnowledgeBase.matchKnownDirectRecurringMerchant(body);
+    final hasKnownRecurringMerchant = directRecurringEntry != null;
 
     final hasSubscriptionContext =
         RecurringBillingHeuristics.hasSubscriptionContext(body);
@@ -78,6 +74,12 @@ class SubscriptionBilledClassifier implements EventClassifier {
         RecurringBillingHeuristics.hasAppStoreMerchant(body);
     final isAnnualSignal = annualCadencePattern.hasMatch(body);
     final hasBundleLanguage = _bundleLanguagePattern.hasMatch(body);
+    final hasMerchantBundleContext = directRecurringEntry != null &&
+        MerchantKnowledgeBase.hasBundleContextForEntry(
+          body,
+          directRecurringEntry,
+        );
+    final hasAnyBundleContext = hasBundleLanguage || hasMerchantBundleContext;
     final hasExplicitPlanOrSubscriptionContext =
         hasSubscriptionContext || hasPlanContext;
 
@@ -89,21 +91,21 @@ class SubscriptionBilledClassifier implements EventClassifier {
     final hasDirectPaidSignal = hasDirectRecurringMerchant &&
         hasBillingSuccess &&
         hasSubscriptionFrame &&
-        !hasBundleLanguage;
+        !hasAnyBundleContext;
     final hasKnownMerchantPaidSignal = hasKnownRecurringMerchant &&
         hasBillingSuccess &&
         hasExplicitPlanOrSubscriptionContext &&
-        !hasBundleLanguage;
+        !hasAnyBundleContext;
     final hasAppStorePaidSignal = hasAppStoreMerchant &&
         hasDirectRecurringMerchant &&
         hasBillingSuccess &&
         hasExplicitPlanOrSubscriptionContext &&
-        !hasBundleLanguage;
+        !hasAnyBundleContext;
     final hasCardDebitForRecurringMerchant = hasDirectRecurringMerchant &&
         hasCardContext &&
         hasBillingContext &&
         hasSubscriptionFrame &&
-        !hasBundleLanguage;
+        !hasAnyBundleContext;
     final hasAnnualSingleChargeSignal = isAnnualSignal &&
         (hasDirectPaidSignal ||
             hasKnownMerchantPaidSignal ||
@@ -161,7 +163,7 @@ class SubscriptionBilledClassifier implements EventClassifier {
           amount: amount,
           note: hasAnnualSingleChargeSignal
               ? 'Annual direct paid subscription evidence detected.'
-              : 'Direct paid recurring subscription evidence detected.',
+              : 'Direct paid recurring billing evidence detected.',
           terms: capturedTerms,
         ),
       ],

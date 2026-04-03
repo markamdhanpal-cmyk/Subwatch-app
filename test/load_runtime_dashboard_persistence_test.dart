@@ -424,7 +424,7 @@ void main() {
       },
     );
     test(
-      'restored projection keeps unresolved hidden and surfaces only review-eligible states',
+      'restored projection keeps unresolved hidden and keeps possible/setup conservative',
       () async {
         await store.saveRecord(
           LedgerSnapshotRecord(
@@ -732,5 +732,6 @@ class _CountingDeviceSmsGateway implements DeviceSmsGateway {
     return messages;
   }
 }
+
 
 

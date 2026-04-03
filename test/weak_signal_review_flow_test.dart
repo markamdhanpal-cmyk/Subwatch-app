@@ -100,7 +100,7 @@ void main() {
       expect(reviewItems, isEmpty);
     });
 
-    test('mixed flow keeps weak reminders hidden and preserves trusted states',
+    test('mixed flow keeps weak reminders hidden and preserves trusted paid-vs-included separation',
         () async {
       final result = await ingestionUseCase.execute(<MessageRecord>[
         message(
@@ -155,4 +155,5 @@ void main() {
     });
   });
 }
+
 

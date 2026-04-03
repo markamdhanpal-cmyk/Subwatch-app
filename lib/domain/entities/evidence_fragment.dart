@@ -21,6 +21,21 @@ class EvidenceFragment {
   final double? amount;
   final List<String> terms;
 
+  bool get contributesConfirmedPaidTruth =>
+      type == EvidenceFragmentType.billedSuccess;
+
+  bool get isSetupOrVerificationSignal =>
+      type == EvidenceFragmentType.mandateCreated ||
+      type == EvidenceFragmentType.autopaySetup ||
+      type == EvidenceFragmentType.microCharge;
+
+  bool get isConservativeNonPaidSignal =>
+      type == EvidenceFragmentType.bundledBenefit ||
+      type == EvidenceFragmentType.renewalHint ||
+      type == EvidenceFragmentType.weakRecurringHint ||
+      type == EvidenceFragmentType.unknownReview ||
+      isSetupOrVerificationSignal;
+
   String get code {
     switch (type) {
       case EvidenceFragmentType.billedSuccess:

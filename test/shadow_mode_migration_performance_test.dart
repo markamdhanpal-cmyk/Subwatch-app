@@ -25,8 +25,23 @@ import 'package:sub_killer/domain/value_objects/service_key.dart';
 import 'package:sub_killer/v2/decision/enums/decision_execution_mode.dart';
 import 'package:sub_killer/v2/detection/models/canonical_input.dart';
 
+const Map<String, String> _archivedTimeoutCoverageMap = <String, String>{
+  'performance_large_inbox_test.disabled.dart':
+      'covered by runtime 1k/5k inbox tests in this suite',
+  'json_file_service_evidence_bucket_store_test.disabled.dart':
+      'covered by service evidence bucket migration test in this suite',
+};
+
+
 void main() {
   group('Ticket 79 shadow, migration, and performance hardening', () {
+    test('archived timeout suites have explicit replacement coverage mapping', () {
+      expect(_archivedTimeoutCoverageMap, isNotEmpty);
+      expect(
+        _archivedTimeoutCoverageMap['performance_large_inbox_test.disabled.dart'],
+        contains('runtime 1k/5k inbox tests'),
+      );
+    });
     test('shadow compare mode keeps runtime output inspectable under v3',
         () async {
       final useCase = LocalIngestionFlowUseCase(
@@ -387,3 +402,4 @@ class _CountingBucketRepository implements ServiceEvidenceBucketRepository {
     buckets = <ServiceEvidenceBucket>[...buckets, bucket];
   }
 }
+

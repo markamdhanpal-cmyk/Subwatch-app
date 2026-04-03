@@ -13,8 +13,10 @@ class DeterministicDashboardProjection implements DashboardProjection {
   @override
   List<DashboardCard> buildCards(Iterable<ServiceLedgerEntry> entries) {
     final sortedEntries = entries.toList(growable: false)
-      ..sort((left, right) =>
-          left.serviceKey.value.compareTo(right.serviceKey.value));
+      ..sort(
+        (left, right) =>
+            left.serviceKey.value.compareTo(right.serviceKey.value),
+      );
 
     final cards = <DashboardCard>[];
     for (final entry in sortedEntries) {
@@ -32,9 +34,9 @@ class DeterministicDashboardProjection implements DashboardProjection {
           state: entry.state,
           amountLabel: _amountLabelForEntry(entry),
           frequencyLabel: _frequencyLabelForEntry(entry),
-          structuredAmount: entry.lastBilledAmount,
-          structuredCadence: entry.billingCadence,
-          structuredNextRenewalDate: entry.nextRenewalDate,
+          structuredAmount: _structuredAmountFor(entry),
+          structuredCadence: _structuredCadenceFor(entry),
+          structuredNextRenewalDate: _structuredNextRenewalFor(entry),
         ),
       );
     }
@@ -85,7 +87,6 @@ class DeterministicDashboardProjection implements DashboardProjection {
         return DashboardBucket.confirmedSubscriptions;
       case ResolverState.pendingConversion:
       case ResolverState.verificationOnly:
-        return DashboardBucket.needsReview;
       case ResolverState.possibleSubscription:
         return DashboardBucket.hidden;
       case ResolverState.activeBundled:
@@ -119,13 +120,13 @@ class DeterministicDashboardProjection implements DashboardProjection {
         final billed = entry.totalBilled.toStringAsFixed(0);
         return billed == '0'
             ? 'Confirmed from billed renewal evidence'
-            : 'Confirmed from billed renewal evidence - ₹$billed';
+            : 'Confirmed from billed renewal evidence - Rs $billed';
       case ResolverState.pendingConversion:
-        return 'Possible: setup detected, billing not confirmed yet';
+        return 'Setup detected, not billed';
       case ResolverState.verificationOnly:
-        return 'Possible: micro verification only';
+        return 'Setup detected, verification charge only';
       case ResolverState.possibleSubscription:
-        return 'Possible: waiting for stronger billing evidence';
+        return 'Possible, waiting for billed proof';
       case ResolverState.activeBundled:
         return 'Included with your mobile plan';
       case ResolverState.ignored:
@@ -138,6 +139,10 @@ class DeterministicDashboardProjection implements DashboardProjection {
   }
 
   String? _amountLabelForEntry(ServiceLedgerEntry entry) {
+    if (!_canExposePaidAmounts(entry.state)) {
+      return null;
+    }
+
     final amount =
         (entry.lastBilledAmount != null && entry.lastBilledAmount! > 0)
             ? entry.lastBilledAmount!
@@ -145,10 +150,14 @@ class DeterministicDashboardProjection implements DashboardProjection {
     if (amount <= 0) {
       return null;
     }
-    return '₹${amount.toStringAsFixed(0)}';
+    return 'Rs ${amount.toStringAsFixed(0)}';
   }
 
   String? _frequencyLabelForEntry(ServiceLedgerEntry entry) {
+    if (!_canExposePaidAmounts(entry.state)) {
+      return null;
+    }
+
     switch (entry.billingCadence) {
       case BillingCadence.weekly:
         return 'Weekly';
@@ -162,6 +171,42 @@ class DeterministicDashboardProjection implements DashboardProjection {
         return 'Yearly';
       case BillingCadence.unknown:
         return null;
+    }
+  }
+
+  double? _structuredAmountFor(ServiceLedgerEntry entry) {
+    if (!_canExposePaidAmounts(entry.state)) {
+      return null;
+    }
+    return entry.lastBilledAmount;
+  }
+
+  BillingCadence _structuredCadenceFor(ServiceLedgerEntry entry) {
+    if (!_canExposePaidAmounts(entry.state)) {
+      return BillingCadence.unknown;
+    }
+    return entry.billingCadence;
+  }
+
+  DateTime? _structuredNextRenewalFor(ServiceLedgerEntry entry) {
+    if (!_canExposePaidAmounts(entry.state)) {
+      return null;
+    }
+    return entry.nextRenewalDate;
+  }
+
+  bool _canExposePaidAmounts(ResolverState state) {
+    switch (state) {
+      case ResolverState.activePaid:
+      case ResolverState.cancelled:
+        return true;
+      case ResolverState.pendingConversion:
+      case ResolverState.verificationOnly:
+      case ResolverState.possibleSubscription:
+      case ResolverState.activeBundled:
+      case ResolverState.ignored:
+      case ResolverState.oneTimeOnly:
+        return false;
     }
   }
 
@@ -225,10 +270,10 @@ class DeterministicDashboardProjection implements DashboardProjection {
     var base = 0.0;
     switch (entry.state) {
       case ResolverState.verificationOnly:
-        base = 1.0;
+        base = 0.9;
         break;
       case ResolverState.pendingConversion:
-        base = 0.9;
+        base = 0.8;
         break;
       case ResolverState.possibleSubscription:
       case ResolverState.activePaid:
@@ -240,7 +285,10 @@ class DeterministicDashboardProjection implements DashboardProjection {
         break;
     }
 
-    final reviewPriority = _parseDoubleNote(entry.evidenceTrail.notes, 'v2:reviewPriority=');
+    final reviewPriority = _parseDoubleNote(
+      entry.evidenceTrail.notes,
+      'v2:reviewPriority=',
+    );
     return base + (reviewPriority * 0.45);
   }
 

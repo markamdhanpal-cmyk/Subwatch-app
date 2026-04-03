@@ -20,7 +20,8 @@ class ContextualExplanationPresentation {
         return const ContextualExplanationPresentation(
           actionLabel: 'Why it\'s here',
           title: 'Why this is here',
-          description: 'This has billed evidence strong enough to count as paid.',
+          description:
+              'This has billed evidence strong enough to count as confirmed paid.',
           bullets: <String>[
             'Setup or one-time payments do not count.',
             'Weaker signals stay in Possible or Included.',
@@ -31,9 +32,9 @@ class ContextualExplanationPresentation {
         return const ContextualExplanationPresentation(
           actionLabel: 'Why it\'s separate',
           title: 'Why this stays separate',
-          description: 'This looked recurring, but not proven enough yet.',
+          description: 'This looked recurring, but billing is not confirmed.',
           bullets: <String>[
-            'It stays visible without counting as paid.',
+            'Setup-only or weak signals stay separate from paid truth.',
             'Weak billing stays out of your paid list.',
             'A later scan or your choice can settle it.',
           ],
@@ -46,7 +47,7 @@ class ContextualExplanationPresentation {
           bullets: <String>[
             'Bundled access does not count as paid.',
             'Benefits stay visible without inflating your paid list.',
-            'Later billing can move it.',
+            'Later direct billing can move it to confirmed.',
           ],
         );
       case DashboardBucket.hidden:
@@ -80,8 +81,8 @@ class ContextualExplanationPresentation {
     final bullets = item.detailsBullets.isNotEmpty
         ? item.detailsBullets
         : <String>[
-            'It stays separate until you decide.',
-            'Bundles, mandates, and tiny charges stay cautious.',
+            'It stays separate until evidence becomes stronger.',
+            'Bundles, setup, and tiny charges stay cautious.',
             'Your choice stays on this phone and can be undone.',
           ];
 

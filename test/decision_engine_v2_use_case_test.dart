@@ -5,6 +5,7 @@ import 'package:sub_killer/domain/enums/service_evidence_source_kind.dart';
 import 'package:sub_killer/domain/value_objects/service_key.dart';
 import 'package:sub_killer/v2/decision/enums/decision_band.dart';
 import 'package:sub_killer/v2/decision/enums/decision_reason_code.dart';
+import 'package:sub_killer/domain/enums/service_decision_state.dart';
 import 'package:sub_killer/v2/decision/use_cases/decision_engine_v2_use_case.dart';
 import 'package:sub_killer/v2/scoring/contracts/subscription_scorer.dart';
 import 'package:sub_killer/v2/scoring/models/subscription_score.dart';
@@ -92,6 +93,11 @@ void main() {
       );
 
       expect(snapshot.band, DecisionBand.likelyPaid);
+      expect(snapshot.bridgeTotalBilled, 0);
+      expect(
+        snapshot.decisionState,
+        ServiceDecisionState.possibleButUnconfirmed,
+      );
     });
 
     test('low-score single billed signal is downgraded to likely paid', () {
@@ -109,6 +115,11 @@ void main() {
       );
 
       expect(snapshot.band, DecisionBand.likelyPaid);
+      expect(snapshot.bridgeTotalBilled, 0);
+      expect(
+        snapshot.decisionState,
+        ServiceDecisionState.possibleButUnconfirmed,
+      );
     });
 
     test('setup-only bucket stays setup only even with high ml score', () {
@@ -125,6 +136,7 @@ void main() {
       );
 
       expect(snapshot.band, DecisionBand.setupOnly);
+      expect(snapshot.decisionState, ServiceDecisionState.setupOnly);
     });
 
     test('micro bucket stays verification only', () {
@@ -136,6 +148,7 @@ void main() {
       );
 
       expect(snapshot.band, DecisionBand.verificationOnly);
+      expect(snapshot.decisionState, ServiceDecisionState.setupOnly);
     });
 
     test('bundle-only bucket stays included with plan', () {
@@ -249,4 +262,6 @@ class _StubSubscriptionScorer implements SubscriptionScorer {
     );
   }
 }
+
+
 

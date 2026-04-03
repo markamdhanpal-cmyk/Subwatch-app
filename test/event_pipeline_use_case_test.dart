@@ -84,6 +84,18 @@ void main() {
       );
     });
 
+    test('keeps setup-only events unresolved in compatibility pipeline', () {
+      final events = pipeline.execute(<MessageRecord>[
+        message('You have successfully created a mandate on Netflix.'),
+      ]);
+
+      expect(events, hasLength(1));
+      expect(events.single.type, SubscriptionEventType.mandateCreated);
+      expect(events.single.serviceKey.value, 'UNRESOLVED');
+      expect(events.single.merchantResolution!.resolvedServiceKey.value,
+          'UNRESOLVED');
+    });
+
     test('returns null for unmatched generic message', () {
       final result =
           pipeline.classify(message('Hello, your profile was updated.'));

@@ -47,7 +47,6 @@ class SyncDeviceSmsUseCase {
     LocalRenewalReminderStore? localRenewalReminderStore,
     LocalServicePresentationOverlayStore? localServicePresentationOverlayStore,
     ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
-    bool useEvidenceFirstV3 = true,
   }) {
     final binding = platformBinding ?? _defaultPlatformBinding();
 
@@ -65,7 +64,6 @@ class SyncDeviceSmsUseCase {
             localServicePresentationOverlayStore,
         serviceEvidenceBucketStore: serviceEvidenceBucketStore,
         loadMode: RuntimeLedgerLoadMode.refreshFromSource,
-        useEvidenceFirstV3: useEvidenceFirstV3,
       ).execute(),
     );
   }
@@ -78,7 +76,6 @@ class SyncDeviceSmsUseCase {
     LocalRenewalReminderStore? localRenewalReminderStore,
     LocalServicePresentationOverlayStore? localServicePresentationOverlayStore,
     ServiceEvidenceBucketStore? serviceEvidenceBucketStore,
-    bool useEvidenceFirstV3 = true,
   }) {
     return SyncDeviceSmsUseCase.android(
       platformBinding: platformBinding,
@@ -95,7 +92,6 @@ class SyncDeviceSmsUseCase {
               JsonFileLocalServicePresentationOverlayStore.applicationSupport(),
       serviceEvidenceBucketStore: serviceEvidenceBucketStore ??
           JsonFileServiceEvidenceBucketStore.applicationSupport(),
-      useEvidenceFirstV3: useEvidenceFirstV3,
     );
   }
 

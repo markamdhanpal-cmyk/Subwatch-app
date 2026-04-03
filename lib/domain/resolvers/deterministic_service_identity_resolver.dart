@@ -8,27 +8,34 @@ import '../enums/subscription_event_type.dart';
 import '../knowledge/merchant_knowledge_base.dart';
 import '../value_objects/service_key.dart';
 
+@Deprecated(
+  'Legacy compatibility resolver. Use ServiceKeyResolverV2 for live '
+  'evidence-first runtime resolution.',
+)
 class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
   const DeterministicServiceIdentityResolver();
 
   static const ServiceKey unresolvedServiceKey = ServiceKey('UNRESOLVED');
-
-  static final RegExp _providerPattern = RegExp(
-    r'\b(jio|airtel|vi)\b',
-    caseSensitive: false,
-  );
 
   @override
   MerchantResolution resolveMerchant({
     required MessageRecord message,
     required ParsedSignal signal,
   }) {
-    if (signal.eventType == SubscriptionEventType.ignore ||
-        signal.eventType == SubscriptionEventType.oneTimePayment) {
+    if (_isProtectedUnresolved(signal.eventType)) {
       return MerchantResolution(
         resolvedServiceKey: unresolvedServiceKey,
         confidence: MerchantResolutionConfidence.none,
         resolutionMethod: MerchantResolutionMethod.protectedUnresolved,
+        matchedTerms: <String>[signal.eventType.name],
+      );
+    }
+
+    if (_mustStayUnresolvedNoMatch(signal.eventType)) {
+      return MerchantResolution(
+        resolvedServiceKey: unresolvedServiceKey,
+        confidence: MerchantResolutionConfidence.none,
+        resolutionMethod: MerchantResolutionMethod.noMatch,
         matchedTerms: <String>[signal.eventType.name],
       );
     }
@@ -65,23 +72,43 @@ class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
       );
     }
 
-    if (signal.eventType == SubscriptionEventType.bundleActivated) {
-      final providerFallback = _providerFallback(message.body);
-      if (providerFallback != null) {
-        return MerchantResolution(
-          resolvedServiceKey: providerFallback,
-          confidence: MerchantResolutionConfidence.medium,
-          resolutionMethod: MerchantResolutionMethod.providerBundleFallback,
-          matchedTerms: <String>[providerFallback.displayName.toLowerCase()],
-        );
-      }
-    }
-
     return MerchantResolution(
       resolvedServiceKey: unresolvedServiceKey,
       confidence: MerchantResolutionConfidence.none,
       resolutionMethod: MerchantResolutionMethod.noMatch,
     );
+  }
+
+  bool _isProtectedUnresolved(SubscriptionEventType eventType) {
+    switch (eventType) {
+      case SubscriptionEventType.ignore:
+      case SubscriptionEventType.oneTimePayment:
+        return true;
+      case SubscriptionEventType.unknownReview:
+      case SubscriptionEventType.mandateCreated:
+      case SubscriptionEventType.autopaySetup:
+      case SubscriptionEventType.mandateExecutedMicro:
+      case SubscriptionEventType.subscriptionBilled:
+      case SubscriptionEventType.subscriptionCancelled:
+      case SubscriptionEventType.bundleActivated:
+        return false;
+    }
+  }
+
+  bool _mustStayUnresolvedNoMatch(SubscriptionEventType eventType) {
+    switch (eventType) {
+      case SubscriptionEventType.unknownReview:
+      case SubscriptionEventType.mandateCreated:
+      case SubscriptionEventType.autopaySetup:
+      case SubscriptionEventType.mandateExecutedMicro:
+        return true;
+      case SubscriptionEventType.ignore:
+      case SubscriptionEventType.oneTimePayment:
+      case SubscriptionEventType.subscriptionBilled:
+      case SubscriptionEventType.subscriptionCancelled:
+      case SubscriptionEventType.bundleActivated:
+        return false;
+    }
   }
 
   @override
@@ -162,20 +189,6 @@ class DeterministicServiceIdentityResolver implements ServiceIdentityResolver {
     }
 
     return null;
-  }
-
-  ServiceKey? _providerFallback(String body) {
-    final match = _providerPattern.firstMatch(body);
-    if (match == null) {
-      return null;
-    }
-
-    final provider = match.group(1);
-    if (provider == null || provider.isEmpty) {
-      return null;
-    }
-
-    return ServiceKey('${provider.toUpperCase()}_BUNDLE');
   }
 
   bool _matchesAliasTokens({

@@ -74,33 +74,46 @@ class PersistedServiceEvidenceBucket {
   factory PersistedServiceEvidenceBucket.fromJson(Map<String, Object?> json) {
     return PersistedServiceEvidenceBucket(
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? 1,
-      serviceKey: json['serviceKey'] as String,
-      firstSeenAt: json['firstSeenAt'] as String,
-      lastSeenAt: json['lastSeenAt'] as String,
+      serviceKey: (json['serviceKey'] as String?)?.trim().isNotEmpty == true
+          ? (json['serviceKey'] as String).trim()
+          : LegacyServiceKeyTrustGuard.unresolvedServiceKey,
+      firstSeenAt: (json['firstSeenAt'] as String?) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true).toIso8601String(),
+      lastSeenAt: (json['lastSeenAt'] as String?) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true).toIso8601String(),
       lastBilledAt: json['lastBilledAt'] as String?,
-      sourceKindsSeen: _readStringList(json['sourceKindsSeen']),
-      billedCount: (json['billedCount'] as num?)?.toInt() ?? 0,
-      renewalHintCount: (json['renewalHintCount'] as num?)?.toInt() ?? 0,
-      mandateCount: (json['mandateCount'] as num?)?.toInt() ?? 0,
-      autopaySetupCount: (json['autopaySetupCount'] as num?)?.toInt() ?? 0,
-      microChargeCount: (json['microChargeCount'] as num?)?.toInt() ?? 0,
-      bundleCount: (json['bundleCount'] as num?)?.toInt() ?? 0,
-      endedLifecycleCount: (json['endedLifecycleCount'] as num?)?.toInt() ?? 0,
-      promoCount: (json['promoCount'] as num?)?.toInt() ?? 0,
-      cancellationHintCount:
-          (json['cancellationHintCount'] as num?)?.toInt() ?? 0,
-      weakRecurringHintCount:
-          (json['weakRecurringHintCount'] as num?)?.toInt() ?? 0,
-      unknownReviewCount: (json['unknownReviewCount'] as num?)?.toInt() ?? 0,
-      otpNoiseCount: (json['otpNoiseCount'] as num?)?.toInt() ?? 0,
+      sourceKindsSeen: _readStringList(json['sourceKindsSeen']).toSet().toList(
+            growable: false,
+          ),
+      billedCount: _nonNegativeInt(json['billedCount']),
+      renewalHintCount: _nonNegativeInt(json['renewalHintCount']),
+      mandateCount: _nonNegativeInt(json['mandateCount']),
+      autopaySetupCount: _nonNegativeInt(json['autopaySetupCount']),
+      microChargeCount: _nonNegativeInt(json['microChargeCount']),
+      bundleCount: _nonNegativeInt(json['bundleCount']),
+      endedLifecycleCount: _nonNegativeInt(json['endedLifecycleCount']),
+      promoCount: _nonNegativeInt(json['promoCount']),
+      cancellationHintCount: _nonNegativeInt(json['cancellationHintCount']),
+      weakRecurringHintCount: _nonNegativeInt(json['weakRecurringHintCount']),
+      unknownReviewCount: _nonNegativeInt(json['unknownReviewCount']),
+      otpNoiseCount: _nonNegativeInt(json['otpNoiseCount']),
       telecomRechargeNoiseCount:
-          (json['telecomRechargeNoiseCount'] as num?)?.toInt() ?? 0,
+          _nonNegativeInt(json['telecomRechargeNoiseCount']),
       oneTimePaymentNoiseCount:
-          (json['oneTimePaymentNoiseCount'] as num?)?.toInt() ?? 0,
-      ignoreNoiseCount: (json['ignoreNoiseCount'] as num?)?.toInt() ?? 0,
-      amountSeries: _readDoubleList(json['amountSeries']),
-      intervalHintsInDays: _readIntList(json['intervalHintsInDays']),
-      contradictions: _readStringList(json['contradictions']),
+          _nonNegativeInt(json['oneTimePaymentNoiseCount']),
+      ignoreNoiseCount: _nonNegativeInt(json['ignoreNoiseCount']),
+      amountSeries: _readDoubleList(json['amountSeries'])
+          .where((amount) => amount.isFinite && amount > 0)
+          .toSet()
+          .toList(growable: false),
+      intervalHintsInDays: _readIntList(
+        json['intervalHintsInDays'],
+      ).where((days) => days > 0).toSet().toList(growable: false),
+      contradictions: _readStringList(
+        json['contradictions'],
+      ).where((value) => value.trim().isNotEmpty).toSet().toList(
+            growable: false,
+          ),
       evidenceTrail: PersistedBucketEvidenceTrail.fromJson(
         (json['evidenceTrail'] as Map?)
                 ?.map((key, value) => MapEntry(key.toString(), value)) ??
@@ -145,9 +158,9 @@ class PersistedServiceEvidenceBucket {
 
     return ServiceEvidenceBucket(
       serviceKey: ServiceKey(sanitizedServiceKey),
-      firstSeenAt: DateTime.parse(firstSeenAt),
-      lastSeenAt: DateTime.parse(lastSeenAt),
-      lastBilledAt: lastBilledAt == null ? null : DateTime.parse(lastBilledAt!),
+      firstSeenAt: _parseIso(firstSeenAt),
+      lastSeenAt: _parseIso(lastSeenAt),
+      lastBilledAt: lastBilledAt == null ? null : _tryParseIso(lastBilledAt!),
       sourceKindsSeen:
           sourceKindsSeen.map(_sourceKindFromName).toList(growable: false),
       billedCount: billedCount,
@@ -230,6 +243,19 @@ class PersistedServiceEvidenceBucket {
         .whereType<num>()
         .map((item) => item.toInt())
         .toList(growable: false);
+  }
+
+  static int _nonNegativeInt(Object? value) {
+    return (value as num?)?.toInt().clamp(0, 1 << 30) ?? 0;
+  }
+
+  static DateTime _parseIso(String value) {
+    return DateTime.tryParse(value) ??
+        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  }
+
+  static DateTime? _tryParseIso(String value) {
+    return DateTime.tryParse(value);
   }
 
   static ServiceEvidenceSourceKind _sourceKindFromName(String kindName) {

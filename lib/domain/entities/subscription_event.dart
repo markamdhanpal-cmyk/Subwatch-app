@@ -4,6 +4,12 @@ import '../enums/subscription_event_type.dart';
 import '../value_objects/service_key.dart';
 import 'evidence_trail.dart';
 
+/// Legacy compatibility event model.
+///
+/// v3 runtime truth should come from service-level evidence aggregation.
+@Deprecated(
+  'Compatibility-only event model. Prefer service-level v3 decision state.',
+)
 class SubscriptionEvent {
   SubscriptionEvent({
     required this.id,

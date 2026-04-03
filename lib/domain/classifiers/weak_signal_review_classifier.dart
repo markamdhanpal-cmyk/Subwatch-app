@@ -10,6 +10,9 @@ import 'recurring_billing_heuristics.dart';
 class WeakSignalReviewClassifier implements EventClassifier {
   const WeakSignalReviewClassifier();
 
+  // Legacy parsed-signal classifier kept for compatibility shadowing.
+  // This emits review-only evidence and must not promote paid truth.
+
   static const String classifierId = 'weak_signal_review';
 
   static final RegExp _renewalFailurePattern = RegExp(
@@ -56,16 +59,17 @@ class WeakSignalReviewClassifier implements EventClassifier {
         RecurringBillingHeuristics.hasAppStoreMerchant(body);
     final hasDirectRecurringMerchant =
         RecurringBillingHeuristics.hasDirectRecurringMerchant(body);
-    final hasKnownRecurringMerchant = MerchantKnowledgeBase.matchKnownMerchant(
+    final knownRecurringMerchant =
+        MerchantKnowledgeBase.matchKnownDirectRecurringMerchant(
+      body,
+      includeAppStore: true,
+    );
+    final hasKnownRecurringMerchant = knownRecurringMerchant != null;
+    final hasBundleContextForKnownMerchant = knownRecurringMerchant != null &&
+        MerchantKnowledgeBase.hasBundleContextForEntry(
           body,
-          requiredTypeLabels: const <String>[
-            'direct_recurring',
-            'app_store',
-          ],
-          allowWeakReview: false,
-          allowBundleSignals: false,
-        ) !=
-        null;
+          knownRecurringMerchant,
+        );
     final hasRenewalFailureLanguage = _renewalFailurePattern.hasMatch(body);
     final hasRetryLanguage = _retryPattern.hasMatch(body);
     final hasCancellationLanguage = _cancellationPattern.hasMatch(body);
@@ -97,6 +101,18 @@ class WeakSignalReviewClassifier implements EventClassifier {
         amount <= 2 &&
         !hasDirectRecurringMerchant &&
         !hasAppStoreMerchant) {
+      return null;
+    }
+
+    final hasStrongPaidContext = amount != null &&
+        amount > 2 &&
+        hasBillingContext &&
+        RecurringBillingHeuristics.hasSuccessContext(body) &&
+        (hasDirectRecurringMerchant ||
+            hasAppStoreMerchant ||
+            hasKnownRecurringMerchant) &&
+        !hasBundleContextForKnownMerchant;
+    if (hasStrongPaidContext) {
       return null;
     }
 
