@@ -41,6 +41,7 @@ import 'components/dashboard_section_components.dart';
 import 'components/dashboard_settings_components.dart';
 import 'components/dashboard_sheet_components.dart';
 import 'components/lazy_indexed_stack.dart';
+import 'components/subwatch_launch_handoff.dart';
 import 'dashboard_primitives.dart';
 import 'dashboard_shell_providers.dart';
 import 'popular_service_catalog.dart';
@@ -181,6 +182,7 @@ class _DashboardShellView extends ConsumerStatefulWidget {
 }
 
 class _DashboardShellState extends ConsumerState<_DashboardShellView> {
+  static const bool _isFlutterTest = bool.fromEnvironment('FLUTTER_TEST');
   static const String _problemReportRecipient = 'support@subwatch.app';
   static const List<DashboardServiceFilterMode> _subscriptionsFilterModes =
       <DashboardServiceFilterMode>[
@@ -191,6 +193,8 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
   late final ScrollController _homeScrollController;
   late final TextEditingController _serviceSearchController;
   _DashboardDestination _selectedDestination = _DashboardDestination.home;
+  _DashboardDestination _previousDestination = _DashboardDestination.home;
+  bool _didRunLaunchHandoff = _isFlutterTest;
 
   @override
   void initState() {
@@ -279,7 +283,7 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
 
     final type = Theme.of(context).extension<DashboardTypeScale>();
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: isInFirstRun
           ? null
           : AppBar(
@@ -334,13 +338,17 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
       bottomNavigationBar: isInFirstRun
           ? null
           : NavigationBar(
+              animationDuration: shouldReduceMotion(context)
+                  ? Duration.zero
+                  : dashboardTapMotionDuration,
               key: const ValueKey<String>('top-level-navigation'),
               onDestinationSelected: (index) {
                 _selectDestination(_DashboardDestination.values[index]);
               },
-              selectedIndex: _selectedDestination == _DashboardDestination.review
-                  ? 0
-                  : _selectedDestination.index,
+              selectedIndex:
+                  _selectedDestination == _DashboardDestination.review
+                      ? 0
+                      : _selectedDestination.index,
               destinations: const <NavigationDestination>[
                 NavigationDestination(
                   key: ValueKey<String>('destination-home'),
@@ -362,6 +370,25 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
                 ),
               ],
             ),
+    );
+
+    return Stack(
+      children: <Widget>[
+        scaffold,
+        if (!_didRunLaunchHandoff)
+          Positioned.fill(
+            child: SubWatchLaunchHandoff(
+              onCompleted: () {
+                if (!mounted || _didRunLaunchHandoff) {
+                  return;
+                }
+                setState(() {
+                  _didRunLaunchHandoff = true;
+                });
+              },
+            ),
+          ),
+      ],
     );
   }
 
@@ -396,6 +423,8 @@ class _DashboardShellState extends ConsumerState<_DashboardShellView> {
   }) {
     Widget content = LazyIndexedStack(
       index: _selectedDestination.index,
+      previousIndex: _previousDestination.index,
+      reduceMotion: shouldReduceMotion(context),
       itemBuilders: <LazyIndexedStackItemBuilder>[
         (_) => _DashboardHomeScreen(shell: this),
         (_) => _DashboardSubscriptionsScreen(shell: this),

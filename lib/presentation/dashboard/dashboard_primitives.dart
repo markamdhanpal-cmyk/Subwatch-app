@@ -2,10 +2,27 @@ import 'package:flutter/material.dart';
 
 import 'service_icon_registry.dart';
 
-const Duration dashboardMotionDuration = Duration(milliseconds: 160);
-const Duration dashboardEntranceDuration = Duration(milliseconds: 240);
-const Duration dashboardSheetMotionDuration = Duration(milliseconds: 280);
-const Duration dashboardSheetReverseDuration = Duration(milliseconds: 220);
+const Duration dashboardTapMotionDuration = Duration(milliseconds: 120);
+const Duration dashboardCardStateMotionDuration = Duration(milliseconds: 210);
+const Duration dashboardSectionRevealDuration = Duration(milliseconds: 260);
+const Duration dashboardPageTransitionDuration = Duration(milliseconds: 280);
+const Duration dashboardSheetTransitionDuration = Duration(milliseconds: 300);
+const Duration dashboardSheetTransitionReverseDuration =
+    Duration(milliseconds: 260);
+const Duration dashboardScanLoopDuration = Duration(milliseconds: 1320);
+
+const Curve dashboardTapMotionCurve = Curves.easeOutCubic;
+const Curve dashboardCardStateMotionCurve = Curves.easeOutCubic;
+const Curve dashboardSectionRevealCurve = Curves.easeOutCubic;
+const Curve dashboardPageTransitionCurve = Curves.easeOutCubic;
+const Curve dashboardSheetTransitionCurve = Curves.easeOutCubic;
+const Curve dashboardScanLoopCurve = Curves.easeInOutSine;
+
+const Duration dashboardMotionDuration = dashboardCardStateMotionDuration;
+const Duration dashboardEntranceDuration = dashboardSectionRevealDuration;
+const Duration dashboardSheetMotionDuration = dashboardSheetTransitionDuration;
+const Duration dashboardSheetReverseDuration =
+    dashboardSheetTransitionReverseDuration;
 
 class DashboardSpacing {
   static const double micro = 4;
@@ -39,35 +56,35 @@ class DashboardRadii {
 }
 
 class DashboardShellPalette {
-  static const Color canvas = Color(0xFFF7EEE3);
-  static const Color canvasRaised = Color(0xFFFFF8F1);
-  static const Color paper = Color(0xFFFFFCF8);
-  static const Color elevatedPaper = Color(0xFFFFF5EC);
-  static const Color nestedPaper = Color(0xFFF6E8DA);
-  static const Color registerPaper = Color(0xFFFBEFE2);
-  static const Color ink = Color(0xFF201813);
-  static const Color softInk = Color(0xFF493A2F);
-  static const Color mutedInk = Color(0xFF7A6657);
-  static const Color faintInk = Color(0xFFA48C79);
-  static const Color accent = Color(0xFFF09A49);
-  static const Color accentSoft = Color(0xFFFFE2C8);
-  static const Color accentGlow = Color(0xFFFFBD80);
-  static const Color accentInk = Color(0xFF2A180C);
-  static const Color statusBlue = Color(0xFF2A8CB5);
-  static const Color statusBlueSoft = Color(0xFFD9EEF6);
-  static const Color benefitGold = Color(0xFFC6A14D);
-  static const Color benefitGoldSoft = Color(0xFFF9EDCD);
-  static const Color success = Color(0xFF3C9D72);
-  static const Color successSoft = Color(0xFFDFF3E7);
-  static const Color caution = Color(0xFFD96F4C);
-  static const Color cautionSoft = Color(0xFFFBE4DB);
-  static const Color recovery = Color(0xFF6C86A9);
-  static const Color recoverySoft = Color(0xFFE4EDF8);
-  static const Color outline = Color(0xFFE3D2C2);
-  static const Color outlineStrong = Color(0xFFD3BBA8);
-  static const Color divider = Color(0xFFEFDFD2);
-  static const Color scrim = Color(0x99533B2A);
-  static const Color shadow = Color(0x1F724122);
+  static const Color canvas = Color(0xFFF6EEE4);
+  static const Color canvasRaised = Color(0xFFFEF8F0);
+  static const Color paper = Color(0xFFFFFAF4);
+  static const Color elevatedPaper = Color(0xFFFBF1E6);
+  static const Color nestedPaper = Color(0xFFF1E4D6);
+  static const Color registerPaper = Color(0xFFF8ECDD);
+  static const Color ink = Color(0xFF211A14);
+  static const Color softInk = Color(0xFF4A3D31);
+  static const Color mutedInk = Color(0xFF766756);
+  static const Color faintInk = Color(0xFFA08D79);
+  static const Color accent = Color(0xFFE8A14B);
+  static const Color accentSoft = Color(0xFFF8DFC3);
+  static const Color accentGlow = Color(0xFFF2BB7A);
+  static const Color accentInk = Color(0xFF2A1A0E);
+  static const Color statusBlue = Color(0xFF4F8D89);
+  static const Color statusBlueSoft = Color(0xFFDDEEEA);
+  static const Color benefitGold = Color(0xFFC29E4E);
+  static const Color benefitGoldSoft = Color(0xFFF4E8C8);
+  static const Color success = Color(0xFF4D9575);
+  static const Color successSoft = Color(0xFFE1F0E6);
+  static const Color caution = Color(0xFFD7744F);
+  static const Color cautionSoft = Color(0xFFF6E1D9);
+  static const Color recovery = Color(0xFF6A82A2);
+  static const Color recoverySoft = Color(0xFFE1EAF4);
+  static const Color outline = Color(0xFFDDCCB9);
+  static const Color outlineStrong = Color(0xFFCDB39F);
+  static const Color divider = Color(0xFFEADBCB);
+  static const Color scrim = Color(0x99513D2D);
+  static const Color shadow = Color(0x1F64452D);
 }
 
 @immutable
@@ -111,79 +128,79 @@ class DashboardColorTokens extends ThemeExtension<DashboardColorTokens> {
   });
 
   static const DashboardColorTokens light = DashboardColorTokens(
-    canvas: Color(0xFFF7EEE3),
-    canvasRaised: Color(0xFFFFF8F1),
-    paper: Color(0xFFFFFCF8),
-    elevatedPaper: Color(0xFFFFF5EC),
-    nestedPaper: Color(0xFFF6E8DA),
-    registerPaper: Color(0xFFFBEFE2),
-    ink: Color(0xFF201813),
-    softInk: Color(0xFF493A2F),
-    mutedInk: Color(0xFF7A6657),
-    faintInk: Color(0xFFA48C79),
-    accent: Color(0xFFF09A49),
-    accentSoft: Color(0xFFFFE2C8),
-    accentGlow: Color(0xFFFFBD80),
-    accentInk: Color(0xFF2A180C),
-    statusBlue: Color(0xFF2A8CB5),
-    statusBlueSoft: Color(0xFFD9EEF6),
-    benefitGold: Color(0xFFC6A14D),
-    benefitGoldSoft: Color(0xFFF9EDCD),
-    success: Color(0xFF3C9D72),
-    successSoft: Color(0xFFDFF3E7),
-    caution: Color(0xFFD96F4C),
-    cautionSoft: Color(0xFFFBE4DB),
-    recovery: Color(0xFF6C86A9),
-    recoverySoft: Color(0xFFE4EDF8),
-    outline: Color(0xFFE3D2C2),
-    outlineStrong: Color(0xFFD3BBA8),
-    divider: Color(0xFFEFDFD2),
-    scrim: Color(0x99533B2A),
-    shadow: Color(0x1F724122),
-    trustSurfaceStart: Color(0xFFEAF6FA),
-    backdropTop: Color(0xFFFFFBF5),
-    backdropBottom: Color(0xFFF1E0D1),
-    glowAccent: Color(0xFFFFB476),
-    glowInfo: Color(0xFF8CCFCA),
-    glowWarm: Color(0xFFFFD88A),
+    canvas: Color(0xFFF6EEE4),
+    canvasRaised: Color(0xFFFEF8F0),
+    paper: Color(0xFFFFFAF4),
+    elevatedPaper: Color(0xFFFBF1E6),
+    nestedPaper: Color(0xFFF1E4D6),
+    registerPaper: Color(0xFFF8ECDD),
+    ink: Color(0xFF211A14),
+    softInk: Color(0xFF4A3D31),
+    mutedInk: Color(0xFF766756),
+    faintInk: Color(0xFFA08D79),
+    accent: Color(0xFFE8A14B),
+    accentSoft: Color(0xFFF8DFC3),
+    accentGlow: Color(0xFFF2BB7A),
+    accentInk: Color(0xFF2A1A0E),
+    statusBlue: Color(0xFF4F8D89),
+    statusBlueSoft: Color(0xFFDDEEEA),
+    benefitGold: Color(0xFFC29E4E),
+    benefitGoldSoft: Color(0xFFF4E8C8),
+    success: Color(0xFF4D9575),
+    successSoft: Color(0xFFE1F0E6),
+    caution: Color(0xFFD7744F),
+    cautionSoft: Color(0xFFF6E1D9),
+    recovery: Color(0xFF6A82A2),
+    recoverySoft: Color(0xFFE1EAF4),
+    outline: Color(0xFFDDCCB9),
+    outlineStrong: Color(0xFFCDB39F),
+    divider: Color(0xFFEADBCB),
+    scrim: Color(0x99513D2D),
+    shadow: Color(0x1F64452D),
+    trustSurfaceStart: Color(0xFFE7F1ED),
+    backdropTop: Color(0xFFFFFBF6),
+    backdropBottom: Color(0xFFF0E4D6),
+    glowAccent: Color(0xFFF4B16D),
+    glowInfo: Color(0xFF7DAFA8),
+    glowWarm: Color(0xFFF3D089),
   );
 
   static const DashboardColorTokens dark = DashboardColorTokens(
-    canvas: Color(0xFF0B0F17),
-    canvasRaised: Color(0xFF101623),
-    paper: Color(0xFF151B28),
-    elevatedPaper: Color(0xFF1A2232),
-    nestedPaper: Color(0xFF212B3D),
-    registerPaper: Color(0xFF1B2536),
-    ink: Color(0xFFF7F8FC),
-    softInk: Color(0xFFDCE2F0),
-    mutedInk: Color(0xFFA5B0C5),
-    faintInk: Color(0xFF7D88A0),
-    accent: Color(0xFFFFA75A),
-    accentSoft: Color(0xFF3A2618),
-    accentGlow: Color(0xFFFFC47E),
-    accentInk: Color(0xFF1C120C),
-    statusBlue: Color(0xFF6BCBFF),
-    statusBlueSoft: Color(0xFF182D41),
-    benefitGold: Color(0xFFE5C46D),
-    benefitGoldSoft: Color(0xFF372B13),
-    success: Color(0xFF5CD39B),
-    successSoft: Color(0xFF183627),
-    caution: Color(0xFFFF8E6E),
-    cautionSoft: Color(0xFF3E211B),
-    recovery: Color(0xFFA6BEFF),
-    recoverySoft: Color(0xFF202A42),
-    outline: Color(0xFF313C52),
-    outlineStrong: Color(0xFF46516C),
-    divider: Color(0xFF232C3F),
+    canvas: Color(0xFF11141A),
+    canvasRaised: Color(0xFF171B22),
+    paper: Color(0xFF1D222B),
+    elevatedPaper: Color(0xFF222832),
+    nestedPaper: Color(0xFF29313C),
+    registerPaper: Color(0xFF232B36),
+    ink: Color(0xFFF2ECE3),
+    softInk: Color(0xFFD7CDBF),
+    mutedInk: Color(0xFFA99D8D),
+    faintInk: Color(0xFF7E7468),
+    accent: Color(0xFFE7A14C),
+    accentSoft: Color(0xFF3A291A),
+    accentGlow: Color(0xFFF2BB77),
+    accentInk: Color(0xFF22160B),
+    statusBlue: Color(0xFF72A79F),
+    statusBlueSoft: Color(0xFF1D3635),
+    benefitGold: Color(0xFFCCA95A),
+    benefitGoldSoft: Color(0xFF3A3018),
+    success: Color(0xFF62B28A),
+    successSoft: Color(0xFF1B3629),
+    caution: Color(0xFFF49571),
+    cautionSoft: Color(0xFF40231C),
+    recovery: Color(0xFF9CB2D8),
+    recoverySoft: Color(0xFF252E43),
+    outline: Color(0xFF3A404A),
+    outlineStrong: Color(0xFF505867),
+    divider: Color(0xFF2A313D),
     scrim: Color(0xC005070D),
     shadow: Color(0x8A000000),
-    trustSurfaceStart: Color(0xFF142A3D),
-    backdropTop: Color(0xFF0F1420),
-    backdropBottom: Color(0xFF090D15),
-    glowAccent: Color(0xFFFF8B38),
-    glowInfo: Color(0xFF2DB8FF),
-    glowWarm: Color(0xFFFFD56C),
+    trustSurfaceStart: Color(0xFF1B3233),
+    backdropTop: Color(0xFF10141B),
+    backdropBottom: Color(0xFF0A0D13),
+    glowAccent: Color(0xFFEC9641),
+    glowInfo: Color(0xFF5E9F97),
+    glowWarm: Color(0xFFE8C16B),
   );
 
   final Color canvas;
@@ -309,11 +326,14 @@ class DashboardColorTokens extends ThemeExtension<DashboardColorTokens> {
     }
     return DashboardColorTokens(
       canvas: Color.lerp(canvas, other.canvas, t) ?? canvas,
-      canvasRaised: Color.lerp(canvasRaised, other.canvasRaised, t) ?? canvasRaised,
+      canvasRaised:
+          Color.lerp(canvasRaised, other.canvasRaised, t) ?? canvasRaised,
       paper: Color.lerp(paper, other.paper, t) ?? paper,
-      elevatedPaper: Color.lerp(elevatedPaper, other.elevatedPaper, t) ?? elevatedPaper,
+      elevatedPaper:
+          Color.lerp(elevatedPaper, other.elevatedPaper, t) ?? elevatedPaper,
       nestedPaper: Color.lerp(nestedPaper, other.nestedPaper, t) ?? nestedPaper,
-      registerPaper: Color.lerp(registerPaper, other.registerPaper, t) ?? registerPaper,
+      registerPaper:
+          Color.lerp(registerPaper, other.registerPaper, t) ?? registerPaper,
       ink: Color.lerp(ink, other.ink, t) ?? ink,
       softInk: Color.lerp(softInk, other.softInk, t) ?? softInk,
       mutedInk: Color.lerp(mutedInk, other.mutedInk, t) ?? mutedInk,
@@ -323,23 +343,30 @@ class DashboardColorTokens extends ThemeExtension<DashboardColorTokens> {
       accentGlow: Color.lerp(accentGlow, other.accentGlow, t) ?? accentGlow,
       accentInk: Color.lerp(accentInk, other.accentInk, t) ?? accentInk,
       statusBlue: Color.lerp(statusBlue, other.statusBlue, t) ?? statusBlue,
-      statusBlueSoft: Color.lerp(statusBlueSoft, other.statusBlueSoft, t) ?? statusBlueSoft,
+      statusBlueSoft:
+          Color.lerp(statusBlueSoft, other.statusBlueSoft, t) ?? statusBlueSoft,
       benefitGold: Color.lerp(benefitGold, other.benefitGold, t) ?? benefitGold,
-      benefitGoldSoft: Color.lerp(benefitGoldSoft, other.benefitGoldSoft, t) ?? benefitGoldSoft,
+      benefitGoldSoft: Color.lerp(benefitGoldSoft, other.benefitGoldSoft, t) ??
+          benefitGoldSoft,
       success: Color.lerp(success, other.success, t) ?? success,
       successSoft: Color.lerp(successSoft, other.successSoft, t) ?? successSoft,
       caution: Color.lerp(caution, other.caution, t) ?? caution,
       cautionSoft: Color.lerp(cautionSoft, other.cautionSoft, t) ?? cautionSoft,
       recovery: Color.lerp(recovery, other.recovery, t) ?? recovery,
-      recoverySoft: Color.lerp(recoverySoft, other.recoverySoft, t) ?? recoverySoft,
+      recoverySoft:
+          Color.lerp(recoverySoft, other.recoverySoft, t) ?? recoverySoft,
       outline: Color.lerp(outline, other.outline, t) ?? outline,
-      outlineStrong: Color.lerp(outlineStrong, other.outlineStrong, t) ?? outlineStrong,
+      outlineStrong:
+          Color.lerp(outlineStrong, other.outlineStrong, t) ?? outlineStrong,
       divider: Color.lerp(divider, other.divider, t) ?? divider,
       scrim: Color.lerp(scrim, other.scrim, t) ?? scrim,
       shadow: Color.lerp(shadow, other.shadow, t) ?? shadow,
-      trustSurfaceStart: Color.lerp(trustSurfaceStart, other.trustSurfaceStart, t) ?? trustSurfaceStart,
+      trustSurfaceStart:
+          Color.lerp(trustSurfaceStart, other.trustSurfaceStart, t) ??
+              trustSurfaceStart,
       backdropTop: Color.lerp(backdropTop, other.backdropTop, t) ?? backdropTop,
-      backdropBottom: Color.lerp(backdropBottom, other.backdropBottom, t) ?? backdropBottom,
+      backdropBottom:
+          Color.lerp(backdropBottom, other.backdropBottom, t) ?? backdropBottom,
       glowAccent: Color.lerp(glowAccent, other.glowAccent, t) ?? glowAccent,
       glowInfo: Color.lerp(glowInfo, other.glowInfo, t) ?? glowInfo,
       glowWarm: Color.lerp(glowWarm, other.glowWarm, t) ?? glowWarm,
@@ -442,8 +469,7 @@ class DashboardListRowRhythm {
   static const double gap = 12;
   static const double leadingContentInset = leadingSize + gap;
   static const double dividerInset = 16;
-  static const EdgeInsets verticalPadding =
-      EdgeInsets.symmetric(vertical: 13);
+  static const EdgeInsets verticalPadding = EdgeInsets.symmetric(vertical: 13);
 }
 
 class DashboardActionRhythm {
@@ -628,17 +654,17 @@ class DashboardPanel extends StatelessWidget {
     final resolvedBackground = resolvedGradient == null
         ? backgroundColor ?? _backgroundForTone(tone, colors)
         : null;
-    final resolvedBorderColor = borderColor ?? _borderColorForTone(tone, colors);
+    final resolvedBorderColor =
+        borderColor ?? _borderColorForTone(tone, colors);
     return AnimatedContainer(
       duration: reduceMotion ? Duration.zero : dashboardMotionDuration,
-      curve: Curves.easeOutCubic,
+      curve: dashboardCardStateMotionCurve,
       decoration: BoxDecoration(
         color: resolvedBackground,
         gradient: resolvedGradient,
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(
-          color: resolvedBorderColor
-              .withValues(alpha: 0.94),
+          color: resolvedBorderColor.withValues(alpha: 0.94),
         ),
         boxShadow: _shadowForElevation(elevation, colors),
       ),
@@ -655,7 +681,8 @@ class DashboardPanel extends StatelessWidget {
   ) =>
       switch (tone) {
         DashboardPanelTone.base => null,
-        DashboardPanelTone.elevated => DashboardGradients.elevatedSurface(colors),
+        DashboardPanelTone.elevated =>
+          DashboardGradients.elevatedSurface(colors),
         DashboardPanelTone.inset => DashboardGradients.insetSurface(colors),
         DashboardPanelTone.accent => DashboardGradients.accentSurface(colors),
         DashboardPanelTone.trust => DashboardGradients.trustSurface(colors),
@@ -763,15 +790,14 @@ class DashboardBadge extends StatelessWidget {
         runSpacing: 2,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
-          if (icon != null)
-            Icon(icon, size: 12, color: resolvedForeground),
+          if (icon != null) Icon(icon, size: 12, color: resolvedForeground),
           Text(
             label,
             style: type.badge.copyWith(
-                  color: resolvedForeground,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.18,
-                ),
+              color: resolvedForeground,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.18,
+            ),
           ),
         ],
       ),
@@ -888,7 +914,8 @@ class DashboardIconSurface extends StatelessWidget {
   ) =>
       switch (tone) {
         DashboardIconSurfaceTone.neutral => colors.outline,
-        DashboardIconSurfaceTone.accent => colors.accent.withValues(alpha: 0.28),
+        DashboardIconSurfaceTone.accent =>
+          colors.accent.withValues(alpha: 0.28),
         DashboardIconSurfaceTone.info =>
           colors.statusBlue.withValues(alpha: 0.26),
         DashboardIconSurfaceTone.success =>
@@ -926,10 +953,8 @@ class DashboardServiceAvatar extends StatelessWidget {
     final brandEntry =
         serviceKey == null ? null : ServiceIconRegistry.lookup(serviceKey!);
 
-    final effectiveBackground =
-        brandEntry?.brandColor ?? backgroundColor;
-    final effectiveForeground =
-        brandEntry?.glyphColor ?? foregroundColor;
+    final effectiveBackground = brandEntry?.brandColor ?? backgroundColor;
+    final effectiveForeground = brandEntry?.glyphColor ?? foregroundColor;
     final effectiveMonogram = brandEntry?.glyph ?? monogram;
     final effectiveBorder = brandEntry != null
         ? Color.alphaBlend(
@@ -982,10 +1007,10 @@ class DashboardServiceAvatar extends StatelessWidget {
               child: Text(
                 effectiveMonogram,
                 style: type.sectionTitle.copyWith(
-                      color: effectiveForeground,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.35,
-                    ),
+                  color: effectiveForeground,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.35,
+                ),
               ),
             ),
           ],
@@ -1022,7 +1047,7 @@ class DashboardSectionFrame extends StatelessWidget {
         TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0.0, end: 1.0),
           duration: reduceMotion ? Duration.zero : dashboardEntranceDuration,
-          curve: Curves.easeOutCubic,
+          curve: dashboardSectionRevealCurve,
           builder: (context, value, child) {
             return Opacity(
               opacity: value,
@@ -1043,10 +1068,10 @@ class DashboardSectionFrame extends StatelessWidget {
                       Text(
                         eyebrow!,
                         style: type.meta.copyWith(
-                              letterSpacing: 0.42,
-                              color: colors.faintInk,
-                              fontWeight: FontWeight.w700,
-                            ),
+                          letterSpacing: 0.42,
+                          color: colors.faintInk,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 4),
                     ],
@@ -1055,9 +1080,9 @@ class DashboardSectionFrame extends StatelessWidget {
                       child: Text(
                         title,
                         style: type.sectionTitle.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: colors.ink,
-                            ),
+                          fontWeight: FontWeight.w800,
+                          color: colors.ink,
+                        ),
                       ),
                     ),
                     if (caption != null) ...<Widget>[
@@ -1065,9 +1090,9 @@ class DashboardSectionFrame extends StatelessWidget {
                       Text(
                         caption!,
                         style: type.supporting.copyWith(
-                              color: colors.mutedInk,
-                              height: 1.28,
-                            ),
+                          color: colors.mutedInk,
+                          height: 1.28,
+                        ),
                       ),
                     ],
                   ],
@@ -1077,11 +1102,10 @@ class DashboardSectionFrame extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 3),
                   child: AnimatedSwitcher(
-                    duration: reduceMotion
-                        ? Duration.zero
-                        : dashboardMotionDuration,
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeOutCubic,
+                    duration:
+                        reduceMotion ? Duration.zero : dashboardMotionDuration,
+                    switchInCurve: dashboardCardStateMotionCurve,
+                    switchOutCurve: dashboardCardStateMotionCurve,
                     transitionBuilder: (child, animation) => FadeTransition(
                       opacity: animation,
                       child: child,
@@ -1122,6 +1146,8 @@ class DashboardSectionFrame extends StatelessWidget {
 class DashboardButtonStyles {
   static ButtonStyle primaryCompact(BuildContext context) {
     final type = context.dashboardType;
+    final colors = context.dashboardColors;
+    final reduceMotion = shouldReduceMotion(context);
     return FilledButton.styleFrom(
       minimumSize: const Size(0, DashboardActionRhythm.compactHeight),
       padding: DashboardActionRhythm.compactPadding,
@@ -1129,12 +1155,16 @@ class DashboardButtonStyles {
         borderRadius: BorderRadius.circular(DashboardRadii.button),
       ),
       textStyle: type.button,
+      animationDuration:
+          reduceMotion ? Duration.zero : dashboardTapMotionDuration,
+      overlayColor: colors.accentInk.withValues(alpha: 0.08),
     );
   }
 
   static ButtonStyle secondaryCompact(BuildContext context) {
     final type = context.dashboardType;
     final colors = context.dashboardColors;
+    final reduceMotion = shouldReduceMotion(context);
     return OutlinedButton.styleFrom(
       minimumSize: const Size(0, DashboardActionRhythm.compactHeight),
       padding: DashboardActionRhythm.compactPadding,
@@ -1144,12 +1174,16 @@ class DashboardButtonStyles {
       textStyle: type.button.copyWith(
         color: colors.softInk,
       ),
+      animationDuration:
+          reduceMotion ? Duration.zero : dashboardTapMotionDuration,
+      overlayColor: colors.statusBlue.withValues(alpha: 0.07),
     );
   }
 
   static ButtonStyle quietCompact(BuildContext context) {
     final type = context.dashboardType;
     final colors = context.dashboardColors;
+    final reduceMotion = shouldReduceMotion(context);
     return TextButton.styleFrom(
       minimumSize: const Size(0, DashboardActionRhythm.quietHeight),
       padding: DashboardActionRhythm.quietPadding,
@@ -1160,6 +1194,96 @@ class DashboardButtonStyles {
       textStyle: type.button.copyWith(
         color: colors.softInk,
         fontSize: 13,
+      ),
+      animationDuration:
+          reduceMotion ? Duration.zero : dashboardTapMotionDuration,
+      overlayColor: colors.statusBlue.withValues(alpha: 0.07),
+    );
+  }
+}
+
+class DashboardPressableSurface extends StatefulWidget {
+  const DashboardPressableSurface({
+    super.key,
+    required this.child,
+    this.onTap,
+    required this.borderRadius,
+    this.splashColor,
+    this.highlightColor,
+    this.hoverColor,
+    this.backgroundColor,
+    this.pressedColor,
+    this.pressScale = 0.988,
+    this.pressedYOffset = 0.0035,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final BorderRadius borderRadius;
+  final Color? splashColor;
+  final Color? highlightColor;
+  final Color? hoverColor;
+  final Color? backgroundColor;
+  final Color? pressedColor;
+  final double pressScale;
+  final double pressedYOffset;
+
+  @override
+  State<DashboardPressableSurface> createState() =>
+      _DashboardPressableSurfaceState();
+}
+
+class _DashboardPressableSurfaceState extends State<DashboardPressableSurface> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) {
+      return;
+    }
+    setState(() {
+      _pressed = value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = shouldReduceMotion(context);
+    final disabled = widget.onTap == null;
+    final pressScale =
+        disabled || reduceMotion ? 1.0 : widget.pressScale.clamp(0.96, 1.0);
+    final slideOffset = disabled || reduceMotion
+        ? Offset.zero
+        : Offset(0, _pressed ? widget.pressedYOffset : 0);
+
+    return AnimatedScale(
+      duration: reduceMotion ? Duration.zero : dashboardTapMotionDuration,
+      curve: dashboardTapMotionCurve,
+      scale: _pressed ? pressScale : 1.0,
+      child: AnimatedSlide(
+        duration: reduceMotion ? Duration.zero : dashboardTapMotionDuration,
+        curve: dashboardTapMotionCurve,
+        offset: slideOffset,
+        child: InkWell(
+          onTap: widget.onTap,
+          onHighlightChanged: (isHighlighted) {
+            _setPressed(isHighlighted);
+          },
+          borderRadius: widget.borderRadius,
+          splashColor: widget.splashColor,
+          highlightColor: widget.highlightColor,
+          hoverColor: widget.hoverColor,
+          child: AnimatedContainer(
+            duration: reduceMotion ? Duration.zero : dashboardTapMotionDuration,
+            curve: dashboardTapMotionCurve,
+            decoration: BoxDecoration(
+              color: _pressed
+                  ? widget.pressedColor ?? widget.backgroundColor
+                  : widget.backgroundColor,
+              borderRadius: widget.borderRadius,
+            ),
+            child: widget.child,
+          ),
+        ),
       ),
     );
   }
@@ -1213,20 +1337,19 @@ class DashboardRegisterEntry extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: type.meta.copyWith(
-                          color: accent,
-                          letterSpacing: 0.38,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      color: accent,
+                      letterSpacing: 0.38,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             AnimatedSwitcher(
-              duration:
-                  reduceMotion ? Duration.zero : dashboardMotionDuration,
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeOutCubic,
+              duration: reduceMotion ? Duration.zero : dashboardMotionDuration,
+              switchInCurve: dashboardCardStateMotionCurve,
+              switchOutCurve: dashboardCardStateMotionCurve,
               transitionBuilder: (child, animation) {
                 final offsetAnimation = Tween<Offset>(
                   begin: const Offset(0, 0.18),
@@ -1244,19 +1367,19 @@ class DashboardRegisterEntry extends StatelessWidget {
                 value,
                 key: ValueKey<String>('register-value-$label-$value'),
                 style: type.screenTitle.copyWith(
-                      color: colors.ink,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 24,
-                    ),
+                  color: colors.ink,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 24,
+                ),
               ),
             ),
             const SizedBox(height: 4),
             Text(
               caption,
               style: type.supporting.copyWith(
-                    color: colors.mutedInk,
-                    height: 1.28,
-                  ),
+                color: colors.mutedInk,
+                height: 1.28,
+              ),
             ),
           ],
         ),
@@ -1291,7 +1414,7 @@ class DashboardEmptyState extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
       duration: reduceMotion ? Duration.zero : dashboardEntranceDuration,
-      curve: Curves.easeOutCubic,
+      curve: dashboardSectionRevealCurve,
       builder: (context, value, child) {
         return Opacity(
           opacity: value,
@@ -1422,6 +1545,8 @@ class SubWatchBrandMark extends StatelessWidget {
           nestedPaper: colors.nestedPaper,
           outlineStrong: colors.outlineStrong,
           accent: colors.accent,
+          accentSoft: colors.accentSoft,
+          statusBlue: colors.statusBlue,
           ink: colors.ink,
         ),
       ),
@@ -1436,6 +1561,8 @@ class _SubWatchBrandMarkPainter extends CustomPainter {
     required this.nestedPaper,
     required this.outlineStrong,
     required this.accent,
+    required this.accentSoft,
+    required this.statusBlue,
     required this.ink,
   });
 
@@ -1444,29 +1571,47 @@ class _SubWatchBrandMarkPainter extends CustomPainter {
   final Color nestedPaper;
   final Color outlineStrong;
   final Color accent;
+  final Color accentSoft;
+  final Color statusBlue;
   final Color ink;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final markRect = showBase
+        ? Rect.fromLTWH(
+            size.width * 0.08,
+            size.height * 0.08,
+            size.width * 0.84,
+            size.height * 0.84,
+          )
+        : Rect.fromLTWH(
+            size.width * 0.03,
+            size.height * 0.03,
+            size.width * 0.94,
+            size.height * 0.94,
+          );
+    final w = markRect.width;
+    final h = markRect.height;
+
     if (showBase) {
       final baseRect = RRect.fromRectAndRadius(
         Offset.zero & size,
-        Radius.circular(size.width * 0.21),
+        Radius.circular(size.width * 0.23),
       );
       final basePaint = Paint()
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: <Color>[
-            paper,
-            nestedPaper,
+            Color.alphaBlend(accentSoft.withValues(alpha: 0.18), paper),
+            Color.alphaBlend(ink.withValues(alpha: 0.06), nestedPaper),
           ],
         ).createShader(Offset.zero & size);
       canvas.drawRRect(baseRect, basePaint);
       final outline = Paint()
-        ..color = outlineStrong
+        ..color = Color.alphaBlend(ink.withValues(alpha: 0.12), outlineStrong)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = size.width * 0.035;
+        ..strokeWidth = size.width * 0.04;
       canvas.drawRRect(baseRect, outline);
     }
 
@@ -1474,82 +1619,106 @@ class _SubWatchBrandMarkPainter extends CustomPainter {
       ..color = accent
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = size.width * 0.105;
+      ..strokeWidth = w * 0.118;
     final pulseRect = Rect.fromLTWH(
-      size.width * 0.53,
-      size.height * 0.15,
-      size.width * 0.24,
-      size.height * 0.24,
+      markRect.left + (w * 0.47),
+      markRect.top + (h * 0.08),
+      w * 0.34,
+      h * 0.34,
     );
-    canvas.drawArc(pulseRect, -0.55, 4.95, false, accentPaint);
+    canvas.drawArc(pulseRect, -0.52, 5.02, false, accentPaint);
 
     final stemPaint = Paint()..color = accent;
     final stemRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(
-        size.width * 0.62,
-        size.height * 0.275,
-        size.width * 0.016,
-        size.height * 0.084,
+        markRect.left + (w * 0.58),
+        markRect.top + (h * 0.30),
+        w * 0.10,
+        h * 0.22,
       ),
-      Radius.circular(size.width * 0.012),
+      Radius.circular(w * 0.05),
     );
     canvas.drawRRect(stemRect, stemPaint);
     canvas.drawCircle(
-      Offset(size.width * 0.628, size.height * 0.272),
-      size.width * 0.016,
+      Offset(markRect.left + (w * 0.63), markRect.top + (h * 0.30)),
+      w * 0.056,
       stemPaint,
     );
 
     final cardRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(
-        size.width * 0.23,
-        size.height * 0.44,
-        size.width * 0.52,
-        size.height * 0.23,
+        markRect.left + (w * 0.16),
+        markRect.top + (h * 0.46),
+        w * 0.68,
+        h * 0.31,
       ),
-      Radius.circular(size.width * 0.08),
+      Radius.circular(w * 0.13),
     );
+    final slabTop = Color.alphaBlend(accentSoft.withValues(alpha: 0.23), paper);
+    final slabBottom =
+        Color.alphaBlend(ink.withValues(alpha: 0.10), nestedPaper);
     final cardPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: <Color>[
-          Color(0xFFF8E7D3),
-          Color(0xFFF1D3B6),
+          slabTop,
+          slabBottom,
         ],
       ).createShader(cardRect.outerRect);
     canvas.drawRRect(cardRect, cardPaint);
     final cardOutline = Paint()
-      ..color = const Color(0xFFD2B18D)
+      ..color = Color.alphaBlend(ink.withValues(alpha: 0.20), outlineStrong)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = size.width * 0.02;
+      ..strokeWidth = w * 0.03;
     canvas.drawRRect(cardRect, cardOutline);
 
-    final lightPaint = Paint()..color = ink;
+    final connectorFoot = Paint()
+      ..color = accent.withValues(alpha: 0.9)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(
+      Offset(markRect.left + (w * 0.63), markRect.top + (h * 0.51)),
+      w * 0.045,
+      connectorFoot,
+    );
+
+    final trustTag = Paint()..color = statusBlue;
+    final trustTagRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        markRect.left + (w * 0.24),
+        markRect.top + (h * 0.56),
+        w * 0.10,
+        h * 0.10,
+      ),
+      Radius.circular(w * 0.05),
+    );
+    canvas.drawRRect(trustTagRect, trustTag);
+
+    final lightPaint = Paint()..color = ink.withValues(alpha: 0.82);
     final lineOne = RRect.fromRectAndRadius(
       Rect.fromLTWH(
-        size.width * 0.37,
-        size.height * 0.50,
-        size.width * 0.22,
-        size.height * 0.032,
+        markRect.left + (w * 0.39),
+        markRect.top + (h * 0.56),
+        w * 0.28,
+        h * 0.05,
       ),
-      Radius.circular(size.width * 0.016),
+      Radius.circular(w * 0.024),
     );
     final lineTwo = RRect.fromRectAndRadius(
       Rect.fromLTWH(
-        size.width * 0.37,
-        size.height * 0.555,
-        size.width * 0.15,
-        size.height * 0.028,
+        markRect.left + (w * 0.39),
+        markRect.top + (h * 0.64),
+        w * 0.20,
+        h * 0.045,
       ),
-      Radius.circular(size.width * 0.014),
+      Radius.circular(w * 0.022),
     );
     canvas.drawRRect(lineOne, lightPaint);
     canvas.drawRRect(lineTwo, lightPaint);
     canvas.drawCircle(
-      Offset(size.width * 0.31, size.height * 0.515),
-      size.width * 0.010,
-      Paint()..color = accent,
+      Offset(markRect.left + (w * 0.21), markRect.top + (h * 0.61)),
+      w * 0.022,
+      Paint()..color = accent.withValues(alpha: 0.86),
     );
   }
 
@@ -1560,6 +1729,8 @@ class _SubWatchBrandMarkPainter extends CustomPainter {
         oldDelegate.nestedPaper != nestedPaper ||
         oldDelegate.outlineStrong != outlineStrong ||
         oldDelegate.accent != accent ||
+        oldDelegate.accentSoft != accentSoft ||
+        oldDelegate.statusBlue != statusBlue ||
         oldDelegate.ink != ink;
   }
 }
@@ -1592,4 +1763,3 @@ class _BackdropGlow extends StatelessWidget {
     );
   }
 }
-

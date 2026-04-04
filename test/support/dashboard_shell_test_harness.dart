@@ -498,6 +498,7 @@ Future<void> openDashboardDestination(
       find.byKey(const PageStorageKey<String>('destination-home-surface')),
     _ => find.byKey(ValueKey<String>("destination-$destination-surface")),
   };
+  bool isSurfaceVisible() => surfaceFinder.hitTestable().evaluate().isNotEmpty;
 
   final tapCandidates = <Finder>[
     keyFinder.hitTestable(),
@@ -511,8 +512,23 @@ Future<void> openDashboardDestination(
       continue;
     }
     await tapAndPumpDashboardShell(tester, candidate.first);
-    if (surfaceFinder.evaluate().isNotEmpty) {
+    if (isSurfaceVisible()) {
       return;
+    }
+  }
+
+  if (destination == 'review') {
+    final reviewActionFinder =
+        find.byKey(const ValueKey<String>('settings-open-review-action'));
+
+    await openDashboardDestination(tester, 'settings');
+    await scrollDashboardUntilVisible(tester, reviewActionFinder);
+
+    if (reviewActionFinder.evaluate().isNotEmpty) {
+      await tapAndPumpDashboardShell(tester, reviewActionFinder.first);
+      if (isSurfaceVisible()) {
+        return;
+      }
     }
   }
 
@@ -577,6 +593,7 @@ Future<void> scrollDashboardUntilVisible(
   }
   await settleDashboard(tester);
 }
+
 (LoadSmsOnboardingProgressUseCase, CompleteSmsOnboardingUseCase)
     buildMemorySmsOnboardingUseCases() {
   final store = InMemorySmsOnboardingProgressStore();
@@ -602,8 +619,3 @@ Future<void> debug_dump_app(WidgetTester tester) async {
   // ignore: avoid_print
   print('--- WIDGET DUMP END ---');
 }
-
-
-
-
-

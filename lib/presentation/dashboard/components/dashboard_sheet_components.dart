@@ -13,6 +13,7 @@ class DashboardSheetCloseButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.dashboardColors;
+    final reduceMotion = shouldReduceMotion(context);
     return SizedBox.square(
       dimension: 48,
       child: IconButton(
@@ -23,6 +24,8 @@ class DashboardSheetCloseButton extends StatelessWidget {
           backgroundColor: colors.nestedPaper,
           foregroundColor: colors.softInk,
           overlayColor: colors.accent.withValues(alpha: 0.1),
+          animationDuration:
+              reduceMotion ? Duration.zero : dashboardTapMotionDuration,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(DashboardRadii.button),
             side: BorderSide(color: colors.outlineStrong),
@@ -102,9 +105,9 @@ class DashboardTrustSection extends StatelessWidget {
                     child: Text(
                       item,
                       style: type.supporting.copyWith(
-                            color: colors.softInk,
-                            height: 1.28,
-                          ),
+                        color: colors.softInk,
+                        height: 1.28,
+                      ),
                     ),
                   ),
                 ],
@@ -135,59 +138,76 @@ class DashboardDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = context.dashboardType;
     final colors = context.dashboardColors;
+    final reduceMotion = shouldReduceMotion(context);
     return SafeArea(
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 18, 14, 12),
-        child: DashboardPanel(
-          key: sheetKey,
-          tone: DashboardPanelTone.elevated,
-          elevation: DashboardPanelElevation.prominent,
-          radius: DashboardRadii.sheet,
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const DashboardSheetHandle(),
-                const SizedBox(height: 10),
-                DashboardBadge(
-                  label: 'Trust details',
-                  icon: Icons.lock_outline_rounded,
-                  backgroundColor: colors.nestedPaper,
-                  foregroundColor: colors.softInk,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            title,
-                            style: type.screenTitle.copyWith(fontSize: 24),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            style: type.supporting.copyWith(
-                              color: colors.mutedInk,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: 1),
+          duration:
+              reduceMotion ? Duration.zero : dashboardSheetTransitionDuration,
+          curve: dashboardSheetTransitionCurve,
+          builder: (context, value, child) {
+            final dy = (1 - value) * 14;
+            return Opacity(
+              opacity: value.clamp(0, 1),
+              child: Transform.translate(
+                offset: Offset(0, dy),
+                child: child,
+              ),
+            );
+          },
+          child: DashboardPanel(
+            key: sheetKey,
+            tone: DashboardPanelTone.elevated,
+            elevation: DashboardPanelElevation.prominent,
+            radius: DashboardRadii.sheet,
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const DashboardSheetHandle(),
+                  const SizedBox(height: 10),
+                  DashboardBadge(
+                    label: 'Trust details',
+                    icon: Icons.lock_outline_rounded,
+                    backgroundColor: colors.nestedPaper,
+                    foregroundColor: colors.softInk,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              title,
+                              style: type.screenTitle.copyWith(fontSize: 24),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Text(
+                              subtitle,
+                              style: type.supporting.copyWith(
+                                color: colors.mutedInk,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    DashboardSheetCloseButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                ...children,
-              ],
+                      DashboardSheetCloseButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  ...children,
+                ],
+              ),
             ),
           ),
         ),

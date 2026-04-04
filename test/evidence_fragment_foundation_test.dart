@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sub_killer/application/use_cases/event_pipeline_use_case.dart';
+import 'package:sub_killer/application/use_cases/local_ingestion_flow_use_case.dart';
 import 'package:sub_killer/domain/classifiers/mandate_intent_classifier.dart';
 import 'package:sub_killer/domain/classifiers/subscription_billed_classifier.dart';
 import 'package:sub_killer/domain/classifiers/telecom_bundle_classifier.dart';
@@ -110,12 +110,11 @@ void main() {
       );
     });
 
-    test('event pipeline copies fragment trace notes into evidence trail', () {
-      final pipeline = EventPipelineUseCase();
-
-      final events = pipeline.execute(<MessageRecord>[
+    test('v3 ingestion copies fragment trace notes into evidence trail', () async {
+      final result = await LocalIngestionFlowUseCase().execute(<MessageRecord>[
         message('Your Netflix subscription has been renewed for Rs 499.'),
       ]);
+      final events = result.events;
 
       expect(events, hasLength(1));
       expect(
@@ -129,3 +128,4 @@ void main() {
     });
   });
 }
+

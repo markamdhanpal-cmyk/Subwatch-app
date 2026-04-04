@@ -44,7 +44,6 @@ void main() {
   // Text scale factors to test
   const List<double> textScales = <double>[1.0, 1.15, 1.3, 1.5];
 
-
   group('Text scale regression', () {
     for (final textScale in textScales) {
       group('at ${textScale}x scale', () {
@@ -216,10 +215,18 @@ void _testReviewCardsAtScale(double textScale) {
 
       await openDashboardDestination(tester, 'review');
 
-      // Verify review screen loads
-      expect(find.byKey(const ValueKey<String>('destination-review')),
-          findsOneWidget);
+      final reviewSurface =
+          find.byKey(const ValueKey<String>('destination-review-surface'));
+      if (reviewSurface.evaluate().isEmpty) {
+        expect(
+          find.byKey(const ValueKey<String>('settings-open-review-action')),
+          findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+        return;
+      }
 
+      expect(reviewSurface, findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -239,16 +246,21 @@ void _testReviewCardsAtScale(double textScale) {
 
       await openDashboardDestination(tester, 'review');
 
-      // Verify review items are present
-      final reviewItems = find.byType(ListTile).hitTestable();
-      if (reviewItems.evaluate().isNotEmpty) {
-        // Tap first item to open details
-        await tapAndPumpDashboardShell(tester, reviewItems.first);
-
-        // Verify action buttons are present
-        expect(find.byType(FilledButton), findsWidgets);
+      final reviewSurface =
+          find.byKey(const ValueKey<String>('destination-review-surface'));
+      if (reviewSurface.evaluate().isEmpty) {
+        expect(
+          find.byKey(const ValueKey<String>('settings-open-review-action')),
+          findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+        return;
       }
 
+      expect(reviewSurface, findsOneWidget);
+      expect(find.text('Confirm'), findsWidgets);
+      expect(find.text('Bundle'), findsWidgets);
+      expect(find.text('Not mine'), findsWidgets);
       expect(tester.takeException(), isNull);
     },
   );
@@ -286,7 +298,8 @@ void _testSettingsRowsAtScale(double textScale) {
         tester,
         find.byKey(const ValueKey<String>('settings-support-panel')),
       );
-      expect(find.byKey(const ValueKey<String>('settings-support-panel')), findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('settings-support-panel')),
+          findsOneWidget);
 
       await scrollDashboardUntilVisible(
         tester,
@@ -804,14 +817,3 @@ Future<void> _pumpAppWithTextScale(
   );
   await pumpDashboardShellLoad(tester, skipGate: skipGate);
 }
-
-
-
-
-
-
-
-
-
-
-

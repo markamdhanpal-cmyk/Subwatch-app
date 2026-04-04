@@ -14,6 +14,25 @@ void main() {
     );
 
     await openDashboardDestination(tester, 'settings');
+
+    await tapAndPumpDashboardShell(
+      tester,
+      find.byKey(const ValueKey<String>('settings-add-manual-action')),
+    );
+
+    expect(
+      find.byKey(const ValueKey<String>('popular-service-picker')),
+      findsOneWidget,
+    );
+
+    await tester.binding.handlePopRoute();
+    await pumpDashboardShellUi(tester);
+
+    expect(
+      find.byKey(const ValueKey<String>('popular-service-picker')),
+      findsNothing,
+    );
+
     await scrollDashboardUntilVisible(
       tester,
       find.byKey(const ValueKey<String>('settings-open-how-it-works')),
@@ -33,24 +52,6 @@ void main() {
 
     expect(
       find.byKey(const ValueKey<String>('how-subwatch-works-sheet')),
-      findsNothing,
-    );
-
-    await tapAndPumpDashboardShell(
-      tester,
-      find.byKey(const ValueKey<String>('settings-add-manual-action')),
-    );
-
-    expect(
-      find.byKey(const ValueKey<String>('popular-service-picker')),
-      findsOneWidget,
-    );
-
-    await tester.binding.handlePopRoute();
-    await pumpDashboardShellUi(tester);
-
-    expect(
-      find.byKey(const ValueKey<String>('popular-service-picker')),
       findsNothing,
     );
   });

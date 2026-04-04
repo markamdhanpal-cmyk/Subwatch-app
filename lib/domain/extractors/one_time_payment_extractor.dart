@@ -1,7 +1,6 @@
 import '../classifiers/upi_noise_veto_classifier.dart';
 import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
-import '../entities/parsed_signal.dart';
 import '../entities/subscription_evidence.dart';
 import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_evidence_kind.dart';
@@ -22,7 +21,14 @@ class OneTimePaymentExtractor implements EvidenceExtractor {
     }
 
     return signal.evidenceFragments
-        .map((fragment) => _toEvidence(message, fragment, signal))
+        .map(
+          (fragment) => _toEvidence(
+            message,
+            fragment,
+            fallbackSummary: signal.summary,
+            fallbackAmount: signal.amount,
+          ),
+        )
         .whereType<SubscriptionEvidence>()
         .toList(growable: false);
   }
@@ -30,7 +36,10 @@ class OneTimePaymentExtractor implements EvidenceExtractor {
   SubscriptionEvidence? _toEvidence(
     MessageRecord message,
     EvidenceFragment fragment,
-    ParsedSignal signal,
+    {
+    required String fallbackSummary,
+    required double? fallbackAmount,
+  }
   ) {
     SubscriptionEvidenceKind? kind;
     switch (fragment.type) {
@@ -50,9 +59,9 @@ class OneTimePaymentExtractor implements EvidenceExtractor {
       messageId: message.id,
       kind: kind,
       occurredAt: message.receivedAt,
-      amount: fragment.amount ?? signal.amount,
+      amount: fragment.amount ?? fallbackAmount,
       senderToken: message.sourceAddress,
-      explanation: fragment.note ?? signal.summary,
+      explanation: fragment.note ?? fallbackSummary,
       confidence: fragment.confidence ?? 0.9,
     );
   }

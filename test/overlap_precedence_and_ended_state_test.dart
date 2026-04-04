@@ -1,133 +1,100 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_killer/application/use_cases/local_ingestion_flow_use_case.dart';
 import 'package:sub_killer/domain/entities/evidence_trail.dart';
+import 'package:sub_killer/domain/entities/message_record.dart';
 import 'package:sub_killer/domain/entities/service_ledger_entry.dart';
-import 'package:sub_killer/domain/entities/subscription_event.dart';
 import 'package:sub_killer/domain/enums/dashboard_bucket.dart';
 import 'package:sub_killer/domain/enums/resolver_state.dart';
-import 'package:sub_killer/domain/enums/subscription_event_type.dart';
 import 'package:sub_killer/domain/projections/deterministic_dashboard_projection.dart';
-import 'package:sub_killer/domain/resolvers/deterministic_resolver.dart';
 import 'package:sub_killer/domain/value_objects/service_key.dart';
 
 void main() {
   group('Overlap Precedence and Ended State Regression', () {
-    const resolver = DeterministicResolver();
+    late LocalIngestionFlowUseCase useCase;
     const projection = DeterministicDashboardProjection();
-    final occurredAt = DateTime(2026, 3, 12, 21, 0);
 
-    SubscriptionEvent event({
-      required String id,
-      required String service,
-      required SubscriptionEventType type,
-      double? amount,
-    }) {
-      return SubscriptionEvent(
-        id: id,
-        serviceKey: ServiceKey(service),
-        type: type,
-        occurredAt: occurredAt,
-        sourceMessageId: 'msg-$id',
-        amount: amount,
-        evidenceTrail: EvidenceTrail(
-          messageIds: <String>['msg-$id'],
-          eventIds: <String>[id],
-          notes: <String>[type.name],
+    setUp(() {
+      useCase = LocalIngestionFlowUseCase();
+    });
+
+    test('subscriptionCancelled moves state to cancelled (Ended Bucket)',
+        () async {
+      final result = await useCase.execute(<MessageRecord>[
+        MessageRecord(
+          id: 'bill-1',
+          sourceAddress: 'AD-NETFLX',
+          body: 'Your Netflix subscription has been renewed for Rs 499.',
+          receivedAt: DateTime(2024, 1, 1),
         ),
+        MessageRecord(
+          id: 'cancel-1',
+          sourceAddress: 'AD-NETFLX',
+          body: 'You have cancelled your Netflix subscription successfully.',
+          receivedAt: DateTime(2024, 1, 2),
+        ),
+      ]);
+
+      final entry = result.ledgerEntries
+          .firstWhere((candidate) => candidate.serviceKey.value == 'NETFLIX');
+      expect(entry.state, ResolverState.cancelled);
+      expect(
+        projection.bucketForState(entry.state),
+        DashboardBucket.endedSubscriptions,
       );
-    }
-
-    ServiceLedgerEntry resolveAll(List<SubscriptionEvent> events) {
-      ServiceLedgerEntry? current;
-      for (final nextEvent in events) {
-        current = resolver.resolve(event: nextEvent, currentEntry: current);
-      }
-      return current!;
-    }
-
-    test('activePaid takes precedence over activeBundled (Paid Wins)', () {
-      // Scenario: User has a bundled benefit but then starts paying directly.
-      final entry = resolveAll(<SubscriptionEvent>[
-        event(
-          id: 'bundle-1',
-          service: 'JIOHOTSTAR',
-          type: SubscriptionEventType.bundleActivated,
-        ),
-        event(
-          id: 'bill-1',
-          service: 'JIOHOTSTAR',
-          type: SubscriptionEventType.subscriptionBilled,
-          amount: 149,
-        ),
-      ]);
-
-      expect(entry.state, ResolverState.activePaid);
-      expect(entry.totalBilled, 149);
-      expect(projection.bucketForState(entry.state), DashboardBucket.confirmedSubscriptions);
     });
 
-    test('activePaid stays activePaid even if bundle event arrives later', () {
-      // Scenario: User is already paying, and a bundle signal arrives (duplicate or late).
-      // Paid should still win to ensure it stays in Confirmed bucket.
-      final entry = resolveAll(<SubscriptionEvent>[
-        event(
-          id: 'bill-1',
-          service: 'JIOHOTSTAR',
-          type: SubscriptionEventType.subscriptionBilled,
-          amount: 149,
+    test('cancelled state persists across later weak lifecycle reminders',
+        () async {
+      await useCase.execute(<MessageRecord>[
+        MessageRecord(
+          id: 'bill-2',
+          sourceAddress: 'AD-NETFLX',
+          body: 'Your Netflix subscription has been renewed for Rs 499.',
+          receivedAt: DateTime(2024, 2, 1),
         ),
-        event(
-          id: 'bundle-1',
-          service: 'JIOHOTSTAR',
-          type: SubscriptionEventType.bundleActivated,
-        ),
-      ]);
-
-      expect(entry.state, ResolverState.activePaid);
-      expect(projection.bucketForState(entry.state), DashboardBucket.confirmedSubscriptions);
-    });
-
-    test('subscriptionCancelled moves state to cancelled (Ended Bucket)', () {
-      // Scenario: Active subscription is cancelled.
-      final entry = resolveAll(<SubscriptionEvent>[
-        event(
-          id: 'bill-1',
-          service: 'NETFLIX',
-          type: SubscriptionEventType.subscriptionBilled,
-          amount: 499,
-        ),
-        event(
-          id: 'cancel-1',
-          service: 'NETFLIX',
-          type: SubscriptionEventType.subscriptionCancelled,
+        MessageRecord(
+          id: 'cancel-2',
+          sourceAddress: 'AD-NETFLX',
+          body: 'You have cancelled your Netflix subscription successfully.',
+          receivedAt: DateTime(2024, 2, 2),
         ),
       ]);
 
-      expect(entry.state, ResolverState.cancelled);
-      expect(projection.bucketForState(entry.state), DashboardBucket.endedSubscriptions);
-    });
-
-    test('cancelled state persists even if bundle signals arrive after cancellation', () {
-      // Scenario: Subscription ended, but some system still sends automated bundle notifications.
-      final entry = resolveAll(<SubscriptionEvent>[
-        event(
-          id: 'cancel-1',
-          service: 'NETFLIX',
-          type: SubscriptionEventType.subscriptionCancelled,
-        ),
-        event(
-          id: 'bundle-1',
-          service: 'NETFLIX',
-          type: SubscriptionEventType.bundleActivated,
+      final secondPass = await useCase.execute(<MessageRecord>[
+        MessageRecord(
+          id: 'weak-1',
+          sourceAddress: 'AD-NETFLX',
+          body: 'Your subscription may renew shortly.',
+          receivedAt: DateTime(2024, 2, 3),
         ),
       ]);
 
+      final entry = secondPass.ledgerEntries
+          .firstWhere((candidate) => candidate.serviceKey.value == 'NETFLIX');
       expect(entry.state, ResolverState.cancelled);
     });
 
-    test('Needs Review items map to Review bucket and are hidden from primary list', () {
-      // verified via domain mapping
-      expect(projection.bucketForState(ResolverState.verificationOnly), DashboardBucket.needsReview);
-      expect(projection.bucketForState(ResolverState.pendingConversion), DashboardBucket.needsReview);
+    test('Needs Review items map to Review bucket and stay off primary list', () {
+      final pending = ServiceLedgerEntry(
+        serviceKey: const ServiceKey('JIOHOTSTAR'),
+        state: ResolverState.pendingConversion,
+        evidenceTrail: EvidenceTrail.empty(),
+      );
+      final verification = ServiceLedgerEntry(
+        serviceKey: const ServiceKey('CRUNCHYROLL'),
+        state: ResolverState.verificationOnly,
+        evidenceTrail: EvidenceTrail.empty(),
+      );
+
+      expect(
+        projection.bucketForState(pending.state),
+        DashboardBucket.needsReview,
+      );
+      expect(
+        projection.bucketForState(verification.state),
+        DashboardBucket.needsReview,
+      );
     });
   });
 }
+

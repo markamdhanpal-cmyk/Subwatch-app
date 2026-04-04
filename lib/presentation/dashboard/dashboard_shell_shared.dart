@@ -7,50 +7,109 @@ class _DashboardLoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reduceMotion = shouldReduceMotion(context);
+    final colors = context.dashboardColors;
+    final type = context.dashboardType;
     return Center(
-      child: DashboardPanel(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-        child: TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0.94, end: 1),
-          duration:
-              reduceMotion ? Duration.zero : const Duration(milliseconds: 360),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value.clamp(0, 1),
-              child: Transform.scale(
-                scale: value,
-                child: child,
-              ),
-            );
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const SubWatchBrandMark(size: 84),
-              const SizedBox(height: 16),
-              Text(
-                'SubWatch',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: DashboardPanel(
+          tone: DashboardPanelTone.elevated,
+          elevation: DashboardPanelElevation.raised,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.94, end: 1),
+            duration:
+                reduceMotion ? Duration.zero : dashboardSectionRevealDuration,
+            curve: dashboardSectionRevealCurve,
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value.clamp(0, 1),
+                child: Transform.scale(
+                  scale: value,
+                  child: child,
+                ),
+              );
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: 98,
+                  height: 98,
+                  decoration: BoxDecoration(
+                    color: colors.paper,
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: colors.outlineStrong),
+                    boxShadow: reduceMotion
+                        ? null
+                        : <BoxShadow>[
+                            BoxShadow(
+                              color: colors.accent.withValues(alpha: 0.1),
+                              blurRadius: 18,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                  ),
+                  alignment: Alignment.center,
+                  child: const SubWatchBrandMark(size: 58, showBase: true),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'SubWatch',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Preparing your view...',
+                  style: type.body.copyWith(
+                    color: colors.softInk,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Loading your saved subscriptions and possible items.',
+                  textAlign: TextAlign.center,
+                  style: type.supporting.copyWith(
+                    color: colors.mutedInk,
+                    height: 1.28,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    DashboardBadge(
+                      label: 'Paid',
+                      icon: Icons.receipt_long_outlined,
+                      tone: DashboardBadgeTone.accent,
                     ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Preparing your view...',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Loading your saved subscriptions and possible items.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: DashboardShellPalette.mutedInk,
+                    DashboardBadge(
+                      label: 'Review',
+                      icon: Icons.fact_check_outlined,
+                      tone: DashboardBadgeTone.caution,
                     ),
-              ),
-              const SizedBox(height: 16),
-              if (!reduceMotion) const CircularProgressIndicator(),
-            ],
+                    DashboardBadge(
+                      label: 'Included',
+                      icon: Icons.workspace_premium_outlined,
+                      tone: DashboardBadgeTone.benefit,
+                    ),
+                  ],
+                ),
+                if (!reduceMotion) ...<Widget>[
+                  const SizedBox(height: 14),
+                  LinearProgressIndicator(
+                    minHeight: 5,
+                    color: colors.accent,
+                    backgroundColor: colors.nestedPaper,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -213,6 +272,8 @@ class _TotalsSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final type = context.dashboardType;
     final colors = context.dashboardColors;
+    final compactLayout = MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.12;
     final heroBadge = _heroBadge(colors);
     final supportBadges = _heroSupportBadges();
 
@@ -221,7 +282,7 @@ class _TotalsSummaryCard extends StatelessWidget {
       tone: DashboardPanelTone.accent,
       elevation: DashboardPanelElevation.prominent,
       radius: DashboardRadii.prominentCard,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -251,17 +312,27 @@ class _TotalsSummaryCard extends StatelessWidget {
               ),
               if (!hasHeroData)
                 Container(
-                  width: 68,
-                  height: 68,
+                  width: compactLayout ? 62 : 68,
+                  height: compactLayout ? 62 : 68,
                   decoration: BoxDecoration(
-                    color: colors.paper.withValues(alpha: 0.86),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: <Color>[
+                        colors.paper.withValues(alpha: 0.92),
+                        colors.nestedPaper.withValues(alpha: 0.9),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: colors.outlineStrong,
                     ),
                   ),
                   alignment: Alignment.center,
-                  child: const SubWatchBrandMark(size: 40, showBase: true),
+                  child: SubWatchBrandMark(
+                    size: compactLayout ? 36 : 40,
+                    showBase: true,
+                  ),
                 ),
             ],
           ),
@@ -334,14 +405,20 @@ class _TotalsSummaryCard extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              ...supportBadges,
-            ],
+          const SizedBox(height: 14),
+          DashboardPanel(
+            tone: DashboardPanelTone.inset,
+            elevation: DashboardPanelElevation.flat,
+            radius: DashboardRadii.nested,
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                ...supportBadges,
+              ],
+            ),
           ),
         ],
       ),
@@ -350,36 +427,36 @@ class _TotalsSummaryCard extends StatelessWidget {
 
   (String, IconData, Color, Color) _heroBadge(DashboardColorTokens colors) {
     if (sourceStatus.tone == RuntimeLocalMessageSourceTone.demo) {
-        return (
-          'Sample preview',
-          Icons.visibility_outlined,
-          colors.statusBlueSoft,
-          colors.statusBlue,
-        );
+      return (
+        'Sample preview',
+        Icons.visibility_outlined,
+        colors.statusBlueSoft,
+        colors.statusBlue,
+      );
     }
     if (sourceStatus.tone == RuntimeLocalMessageSourceTone.caution) {
-        return (
-          'SMS access off',
-          Icons.lock_outline_rounded,
-          colors.cautionSoft,
-          colors.caution,
-        );
+      return (
+        'SMS access off',
+        Icons.lock_outline_rounded,
+        colors.cautionSoft,
+        colors.caution,
+      );
     }
     if (presentation.hasEstimatedSpend) {
-        return (
-          presentation.estimateBadgeLabel,
-          Icons.auto_graph_rounded,
-          colors.accentSoft,
-          colors.accent,
-        );
+      return (
+        presentation.estimateBadgeLabel,
+        Icons.auto_graph_rounded,
+        colors.accentSoft,
+        colors.accent,
+      );
     }
     if (presentation.activePaidCount > 0) {
-        return (
-          'Amounts pending',
-          Icons.receipt_long_outlined,
-          colors.nestedPaper,
-          colors.softInk,
-        );
+      return (
+        'Amounts pending',
+        Icons.receipt_long_outlined,
+        colors.nestedPaper,
+        colors.softInk,
+      );
     }
     return (
       'Subscription reality',
@@ -604,7 +681,7 @@ class _HomeActionStrip extends StatelessWidget {
       tone: _panelTone(),
       elevation: _panelElevation(),
       radius: DashboardRadii.card,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -647,7 +724,7 @@ class _HomeActionStrip extends StatelessWidget {
               height: 1.32,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: copy!.primaryActionKind == _HomeActionKind.sync
@@ -661,7 +738,7 @@ class _HomeActionStrip extends StatelessWidget {
           DashboardPanel(
             tone: DashboardPanelTone.base,
             elevation: DashboardPanelElevation.flat,
-            radius: 18,
+            radius: DashboardRadii.nested,
             padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
             child: stackedLayout
                 ? Column(
@@ -704,10 +781,15 @@ class _HomeActionStrip extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 10),
+          Container(
+            height: 1,
+            color: colors.outline.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 10),
           DashboardPanel(
             tone: _completionTone(),
             elevation: DashboardPanelElevation.flat,
-            radius: 18,
+            radius: DashboardRadii.nested,
             padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,6 +828,7 @@ class _HomeActionStrip extends StatelessWidget {
           Wrap(
             spacing: 10,
             runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               OutlinedButton.icon(
                 style: DashboardButtonStyles.secondaryCompact(context),
@@ -753,8 +836,8 @@ class _HomeActionStrip extends StatelessWidget {
                 icon: const Icon(Icons.subscriptions_rounded),
                 label: Text(
                   subscriptionCount <= 0
-                       ? 'Subscriptions'
-                       : 'Subscriptions ($subscriptionCount)',
+                      ? 'Subscriptions'
+                      : 'Subscriptions ($subscriptionCount)',
                 ),
               ),
               TextButton.icon(
@@ -828,7 +911,9 @@ class _HomeActionStrip extends StatelessWidget {
   String _currentHeadline() {
     switch (copy!.primaryActionKind) {
       case _HomeActionKind.renewals:
-        return dueSoonCount == 1 ? '1 renewal needs a quick look' : '$dueSoonCount renewals need a quick look';
+        return dueSoonCount == 1
+            ? '1 renewal needs a quick look'
+            : '$dueSoonCount renewals need a quick look';
       case _HomeActionKind.sync:
         return sourceStatus.tone == RuntimeLocalMessageSourceTone.restored
             ? 'Showing your saved local snapshot'
@@ -1084,9 +1169,9 @@ class _HomeRenewalsZoneCard extends StatelessWidget {
     return DashboardPanel(
       key: const ValueKey<String>('home-renewals-zone'),
       tone: DashboardPanelTone.elevated,
-      elevation: DashboardPanelElevation.flat,
+      elevation: DashboardPanelElevation.raised,
       radius: DashboardRadii.card,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -1115,12 +1200,18 @@ class _HomeRenewalsZoneCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            summaryLine,
-            style: type.supporting.copyWith(
-              color: colors.mutedInk,
-              height: 1.3,
+          const SizedBox(height: 8),
+          DashboardPanel(
+            tone: DashboardPanelTone.inset,
+            elevation: DashboardPanelElevation.flat,
+            radius: DashboardRadii.nested,
+            padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+            child: Text(
+              summaryLine,
+              style: type.supporting.copyWith(
+                color: colors.mutedInk,
+                height: 1.3,
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -1129,7 +1220,8 @@ class _HomeRenewalsZoneCard extends StatelessWidget {
               eyebrow: 'Clear week',
               tone: DashboardEmptyStateTone.success,
               title: 'No renewals this week',
-              message: 'Nothing with a clear renewal date needs attention right now.',
+              message:
+                  'Nothing with a clear renewal date needs attention right now.',
               icon: Icons.schedule_outlined,
             )
           else ...<Widget>[
@@ -1209,12 +1301,10 @@ class _HomeRenewalStripItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = context.dashboardType;
     final colors = context.dashboardColors;
-    final foreground = tone == DashboardBadgeTone.caution
-        ? colors.caution
-        : colors.softInk;
-    final background = tone == DashboardBadgeTone.caution
-        ? colors.cautionSoft
-        : colors.paper;
+    final foreground =
+        tone == DashboardBadgeTone.caution ? colors.caution : colors.softInk;
+    final background =
+        tone == DashboardBadgeTone.caution ? colors.cautionSoft : colors.paper;
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 150, maxWidth: 220),
@@ -1341,17 +1431,23 @@ class _HomeTrustRow extends StatelessWidget {
                     height: 1.28,
                   ),
                 ),
+                const SizedBox(height: 10),
+                Container(
+                  height: 1,
+                  color: colors.outline.withValues(alpha: 0.46),
+                ),
                 if (stackAction) ...<Widget>[
                   const SizedBox(height: 10),
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: TextButton(
+                    child: TextButton.icon(
                       key: const ValueKey<String>(
                         'product-guidance-open-trust-sheet',
                       ),
                       style: DashboardButtonStyles.quietCompact(context),
                       onPressed: onOpenTrustSheet,
-                      child: const Text('Why this view'),
+                      icon: const Icon(Icons.shield_outlined, size: 18),
+                      label: const Text('Why this view'),
                     ),
                   ),
                 ],
@@ -1360,11 +1456,12 @@ class _HomeTrustRow extends StatelessWidget {
           ),
           if (!stackAction) ...<Widget>[
             const SizedBox(width: 8),
-            TextButton(
+            TextButton.icon(
               key: const ValueKey<String>('product-guidance-open-trust-sheet'),
               style: DashboardButtonStyles.quietCompact(context),
               onPressed: onOpenTrustSheet,
-              child: const Text('Why this view'),
+              icon: const Icon(Icons.shield_outlined, size: 18),
+              label: const Text('Why this view'),
             ),
           ],
         ],
@@ -1481,7 +1578,8 @@ class _HomeTrustRowCopy {
         title: manualCount == 1
             ? '1 manual subscription is part of your local view.'
             : '$manualCount manual subscriptions are part of your local view.',
-        body: 'Manual entries stay local and do not rewrite what the scan detected.',
+        body:
+            'Manual entries stay local and do not rewrite what the scan detected.',
         badgeBackground: DashboardShellPalette.nestedPaper,
         badgeForeground: DashboardShellPalette.softInk,
         borderColor: DashboardShellPalette.outline,
@@ -1730,7 +1828,7 @@ class _SubscriptionInfoChip extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                    maxLines: 2,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DashboardShellPalette.ink,
@@ -1997,14 +2095,16 @@ class _SubscriptionListRow extends StatelessWidget {
               label: summary,
               hint: 'Opens service details',
               child: ExcludeSemantics(
-                child: InkWell(
+                child: DashboardPressableSurface(
                   onTap: onTap,
                   borderRadius: BorderRadius.circular(DashboardRadii.button),
+                  backgroundColor: style.background.withValues(alpha: 0.2),
                   splashColor: style.badgeForeground.withValues(alpha: 0.08),
                   highlightColor: style.badgeForeground.withValues(alpha: 0.04),
                   hoverColor: style.badgeForeground.withValues(alpha: 0.03),
+                  pressedColor: style.badgeForeground.withValues(alpha: 0.07),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 0, 12),
+                    padding: const EdgeInsets.fromLTRB(14, 13, 0, 13),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -2065,7 +2165,8 @@ class _SubscriptionListRow extends StatelessWidget {
                                     DashboardBucket.trialsAndBenefits,
                               ),
                               if (servicePresentationState.isPinned ||
-                                  servicePresentationState.hasLocalLabel) ...<Widget>[
+                                  servicePresentationState
+                                      .hasLocalLabel) ...<Widget>[
                                 const SizedBox(height: 8),
                                 Wrap(
                                   spacing: 8,
@@ -2098,7 +2199,7 @@ class _SubscriptionListRow extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 12, 8, 12),
+            padding: const EdgeInsets.fromLTRB(0, 10, 8, 10),
             child: trailing,
           ),
         ],
@@ -3801,18 +3902,37 @@ class _FirstRunGateState extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Container(
-                      width: 96,
-                      height: 96,
-                      decoration: BoxDecoration(
-                        color: colors.paper,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: colors.outlineStrong,
-                        ),
-                      ),
+                    Stack(
                       alignment: Alignment.center,
-                      child: const SubWatchBrandMark(size: 56, showBase: true),
+                      children: <Widget>[
+                        Container(
+                          width: 116,
+                          height: 116,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: <Color>[
+                                colors.accent.withValues(alpha: 0.18),
+                                colors.accent.withValues(alpha: 0),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: 96,
+                          height: 96,
+                          decoration: BoxDecoration(
+                            color: colors.paper,
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: colors.outlineStrong,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child:
+                              const SubWatchBrandMark(size: 56, showBase: true),
+                        ),
+                      ],
                     ),
                     SizedBox(height: compactLayout ? 16 : 20),
                     Wrap(
@@ -3855,7 +3975,9 @@ class _FirstRunGateState extends StatelessWidget {
                         height: 1.34,
                       ),
                     ),
-                    SizedBox(height: compactLayout ? 12 : 16),
+                    SizedBox(height: compactLayout ? 14 : 18),
+                    _OnboardingSortPreview(compact: compactLayout),
+                    SizedBox(height: compactLayout ? 10 : 12),
                     SizedBox(
                       width: double.infinity,
                       child: _OnboardingFeatureGroup(compact: compactLayout),
@@ -4065,7 +4187,8 @@ class _FirstRunPermanentlyDeniedState extends StatelessWidget {
                   button: true,
                   label: 'Open device settings to enable SMS access',
                   child: FilledButton.icon(
-                    key: const ValueKey<String>('first-run-open-settings-button'),
+                    key: const ValueKey<String>(
+                        'first-run-open-settings-button'),
                     onPressed: onOpenSettings,
                     icon: const Icon(Icons.open_in_new_rounded),
                     label: const Text('Open Settings'),
@@ -4099,14 +4222,14 @@ class _FirstRunScanningState extends StatefulWidget {
 
 class _FirstRunScanningStateState extends State<_FirstRunScanningState>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
+  late final AnimationController _scanController;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
+    _scanController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: dashboardScanLoopDuration,
     );
   }
 
@@ -4114,16 +4237,118 @@ class _FirstRunScanningStateState extends State<_FirstRunScanningState>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (shouldReduceMotion(context)) {
-      _pulseController.stop();
-    } else if (!_pulseController.isAnimating) {
-      _pulseController.repeat(reverse: true);
+      _scanController.stop();
+    } else if (!_scanController.isAnimating) {
+      _scanController.repeat();
     }
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _scanController.dispose();
     super.dispose();
+  }
+
+  Widget _buildSignalLane({
+    required String label,
+    required IconData icon,
+    required DashboardBadgeTone tone,
+    required Color color,
+    required double phase,
+    required bool reduceMotion,
+  }) {
+    final colors = context.dashboardColors;
+    final type = context.dashboardType;
+    final resolvedPhase = phase.clamp(0.0, 1.0);
+    final sweepAlignment = -1.0 + (resolvedPhase * 2.0);
+
+    return Row(
+      children: <Widget>[
+        SizedBox(
+          width: 76,
+          child: DashboardBadge(
+            label: label,
+            icon: icon,
+            tone: tone,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: colors.nestedPaper,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colors.outline.withValues(alpha: 0.92),
+              ),
+            ),
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: <Widget>[
+                if (!reduceMotion)
+                  Align(
+                    alignment: Alignment(sweepAlignment, 0),
+                    child: FractionallySizedBox(
+                      widthFactor: 0.34,
+                      child: Container(
+                        height: 10,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: <Color>[
+                              color.withValues(alpha: 0),
+                              color.withValues(alpha: 0.2),
+                              color.withValues(alpha: 0),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                  ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor:
+                        reduceMotion ? 0.42 : 0.2 + (resolvedPhase * 0.58),
+                    child: Container(
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.28),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment(
+                    reduceMotion ? -0.06 : sweepAlignment * 0.9,
+                    0,
+                  ),
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          reduceMotion ? 'Ready' : 'Reading',
+          style: type.meta.copyWith(
+            color: colors.mutedInk,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -4134,72 +4359,111 @@ class _FirstRunScanningStateState extends State<_FirstRunScanningState>
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                final glow = reduceMotion ? 0.0 : _pulseController.value;
-                return Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    color: colors.elevatedPaper,
-                    borderRadius: BorderRadius.circular(26),
-                    border: Border.all(
-                      color: Color.lerp(
-                        colors.outlineStrong,
-                        colors.accent,
-                        glow * 0.5,
-                      )!,
+        child: DashboardPanel(
+          tone: DashboardPanelTone.elevated,
+          elevation: DashboardPanelElevation.raised,
+          radius: DashboardRadii.prominentCard,
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          child: AnimatedBuilder(
+            animation: _scanController,
+            builder: (context, child) {
+              final progress = reduceMotion ? 0.45 : _scanController.value;
+              final paidPhase = progress;
+              final reviewPhase = (progress + 0.24) % 1.0;
+              final includedPhase = (progress + 0.48) % 1.0;
+              final glow = reduceMotion ? 0.15 : progress;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Container(
+                    width: 86,
+                    height: 86,
+                    decoration: BoxDecoration(
+                      color: colors.elevatedPaper,
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(
+                        color: Color.lerp(
+                          colors.outlineStrong,
+                          colors.accent,
+                          glow * 0.45,
+                        )!,
+                      ),
+                      boxShadow: reduceMotion
+                          ? null
+                          : <BoxShadow>[
+                              BoxShadow(
+                                color: colors.accent
+                                    .withValues(alpha: 0.12 * glow),
+                                blurRadius: 20 * glow,
+                                spreadRadius: 1.5 * glow,
+                              ),
+                            ],
                     ),
-                    boxShadow: reduceMotion
-                        ? null
-                        : <BoxShadow>[
-                            BoxShadow(
-                              color: colors.accent
-                                  .withValues(alpha: 0.12 * glow),
-                              blurRadius: 24 * glow,
-                              spreadRadius: 2 * glow,
-                            ),
-                          ],
+                    alignment: Alignment.center,
+                    child: const SubWatchBrandMark(size: 48, showBase: true),
                   ),
-                  alignment: Alignment.center,
-                  child: const SubWatchBrandMark(size: 48, showBase: true),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            const DashboardBadge(
-              label: 'On this phone only',
-              icon: Icons.smartphone_rounded,
-              tone: DashboardBadgeTone.info,
-            ),
-            const SizedBox(height: 10),
-            Semantics(
-              liveRegion: true,
-              child: Text(
-                'Checking messages\u2026',
-                key: const ValueKey<String>('first-run-scanning-headline'),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      height: 1.12,
+                  const SizedBox(height: 18),
+                  const DashboardBadge(
+                    label: 'On this phone only',
+                    icon: Icons.smartphone_rounded,
+                    tone: DashboardBadgeTone.info,
+                  ),
+                  const SizedBox(height: 10),
+                  Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      'Checking messages\u2026',
+                      key:
+                          const ValueKey<String>('first-run-scanning-headline'),
+                      textAlign: TextAlign.center,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                height: 1.12,
+                              ),
                     ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Looking for recurring billing, bundled access, and anything that should stay in Possible first.',
-              key: const ValueKey<String>('first-run-scanning-support'),
-              textAlign: TextAlign.center,
-              style: type.supporting.copyWith(
-                color: colors.mutedInk,
-                height: 1.3,
-              ),
-            ),
-          ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Looking for recurring billing, bundled access, and anything that should stay in Possible first.',
+                    key: const ValueKey<String>('first-run-scanning-support'),
+                    textAlign: TextAlign.center,
+                    style: type.supporting.copyWith(
+                      color: colors.mutedInk,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSignalLane(
+                    label: 'Paid',
+                    icon: Icons.receipt_long_outlined,
+                    tone: DashboardBadgeTone.accent,
+                    color: colors.accent,
+                    phase: paidPhase,
+                    reduceMotion: reduceMotion,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSignalLane(
+                    label: 'Review',
+                    icon: Icons.fact_check_outlined,
+                    tone: DashboardBadgeTone.caution,
+                    color: colors.caution,
+                    phase: reviewPhase,
+                    reduceMotion: reduceMotion,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSignalLane(
+                    label: 'Included',
+                    icon: Icons.workspace_premium_outlined,
+                    tone: DashboardBadgeTone.benefit,
+                    color: colors.benefitGold,
+                    phase: includedPhase,
+                    reduceMotion: reduceMotion,
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -4255,7 +4519,7 @@ class _FirstRunZeroResultState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               DashboardPanel(
-                tone: DashboardPanelTone.elevated,
+                tone: DashboardPanelTone.trust,
                 elevation: DashboardPanelElevation.raised,
                 radius: DashboardRadii.prominentCard,
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
@@ -4266,17 +4530,35 @@ class _FirstRunZeroResultState extends StatelessWidget {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: colors.successSoft,
+                        color: colors.paper,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
                           color: colors.outline,
                         ),
                       ),
                       alignment: Alignment.center,
-                      child: Icon(
-                        Icons.check_circle_outline_rounded,
-                        size: 36,
-                        color: colors.success,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: <Widget>[
+                          Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: <Color>[
+                                  colors.success.withValues(alpha: 0.18),
+                                  colors.success.withValues(alpha: 0),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.verified_user_outlined,
+                            size: 34,
+                            color: colors.success,
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -4326,12 +4608,51 @@ class _FirstRunZeroResultState extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       supportCopy,
-                      key: const ValueKey<String>('first-run-zero-result-support'),
+                      key: const ValueKey<String>(
+                          'first-run-zero-result-support'),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: colors.mutedInk,
                             height: 1.3,
                           ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.paper.withValues(alpha: 0.84),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: colors.outline.withValues(alpha: 0.92),
+                        ),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          Icon(
+                            Icons.shield_outlined,
+                            size: 18,
+                            color: colors.statusBlue,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Nothing leaves this phone during the scan.',
+                              textAlign: TextAlign.left,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: colors.softInk,
+                                    height: 1.28,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -4474,7 +4795,9 @@ class _SmsPermissionRationaleSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      for (var index = 0; index < content.points.length; index++)
+                      for (var index = 0;
+                          index < content.points.length;
+                          index++)
                         Padding(
                           padding: EdgeInsets.only(
                             bottom: index == content.points.length - 1 ? 0 : 10,
@@ -4589,8 +4912,7 @@ class _SmsPermissionRationaleContent {
       case RuntimeLocalMessageSourcePermissionRationaleVariant.retry:
         return const _SmsPermissionRationaleContent(
           title: 'SMS access is off',
-          description:
-              'Turn SMS access back on to refresh this phone view.',
+          description: 'Turn SMS access back on to refresh this phone view.',
           highlights: <_OnboardingBadgeCopy>[
             _OnboardingBadgeCopy(
               label: 'Still private here',
@@ -4672,19 +4994,176 @@ class _OnboardingFeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final isCompact =
-        screenWidth <= 440 || MediaQuery.textScalerOf(context).scale(1) > 1.05;
-    final resolvedWidth = isCompact
-        ? screenWidth - 48
-        : ((screenWidth - 96) / 2).clamp(132.0, 220.0).toDouble();
-    return SizedBox(
-      width: resolvedWidth,
-      child: DashboardEmptyState(
-        tone: tone,
-        title: title,
-        message: body,
-        icon: icon,
+    final colors = context.dashboardColors;
+    final type = context.dashboardType;
+    final Color accent = switch (tone) {
+      DashboardEmptyStateTone.neutral => colors.softInk,
+      DashboardEmptyStateTone.success => colors.success,
+      DashboardEmptyStateTone.trust => colors.statusBlue,
+      DashboardEmptyStateTone.accent => colors.accent,
+    };
+    final Color surface = switch (tone) {
+      DashboardEmptyStateTone.neutral => colors.paper,
+      DashboardEmptyStateTone.success => colors.successSoft,
+      DashboardEmptyStateTone.trust => colors.statusBlueSoft,
+      DashboardEmptyStateTone.accent => colors.accentSoft,
+    };
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 138, maxWidth: 216),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colors.outline.withValues(alpha: 0.94),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                icon,
+                size: 16,
+                color: accent,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: type.meta.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            body,
+            style: type.supporting.copyWith(
+              color: colors.softInk,
+              height: 1.26,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnboardingSortPreview extends StatelessWidget {
+  const _OnboardingSortPreview({
+    required this.compact,
+  });
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final lanes = <Widget>[
+      const _OnboardingSortLane(
+        label: 'Paid',
+        icon: Icons.receipt_long_outlined,
+        tone: DashboardBadgeTone.accent,
+      ),
+      const _OnboardingSortLane(
+        label: 'Review',
+        icon: Icons.fact_check_outlined,
+        tone: DashboardBadgeTone.caution,
+      ),
+      const _OnboardingSortLane(
+        label: 'Included',
+        icon: Icons.workspace_premium_outlined,
+        tone: DashboardBadgeTone.benefit,
+      ),
+    ];
+
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          ...lanes
+              .expand((widget) => <Widget>[widget, const SizedBox(height: 8)])
+              .toList()
+            ..removeLast(),
+        ],
+      );
+    }
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
+      children: lanes,
+    );
+  }
+}
+
+class _OnboardingSortLane extends StatelessWidget {
+  const _OnboardingSortLane({
+    required this.label,
+    required this.icon,
+    required this.tone,
+  });
+
+  final String label;
+  final IconData icon;
+  final DashboardBadgeTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dashboardColors;
+    final accent = switch (tone) {
+      DashboardBadgeTone.info => colors.statusBlue,
+      DashboardBadgeTone.neutral => colors.softInk,
+      DashboardBadgeTone.accent => colors.accentInk,
+      DashboardBadgeTone.success => colors.success,
+      DashboardBadgeTone.caution => colors.caution,
+      DashboardBadgeTone.recovery => colors.recovery,
+      DashboardBadgeTone.benefit => colors.benefitGold,
+    };
+    final surface = switch (tone) {
+      DashboardBadgeTone.info => colors.statusBlueSoft,
+      DashboardBadgeTone.neutral => colors.nestedPaper,
+      DashboardBadgeTone.accent => colors.accentSoft,
+      DashboardBadgeTone.success => colors.successSoft,
+      DashboardBadgeTone.caution => colors.cautionSoft,
+      DashboardBadgeTone.recovery => colors.recoverySoft,
+      DashboardBadgeTone.benefit => colors.benefitGoldSoft,
+    };
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 96),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colors.outline.withValues(alpha: 0.92),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            icon,
+            size: 16,
+            color: accent,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: context.dashboardType.meta.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -4711,10 +5190,15 @@ class _OnboardingFeatureGroup extends StatelessWidget {
           ),
           SizedBox(height: 10),
           _OnboardingInfoRow(
+            icon: Icons.workspace_premium_outlined,
+            title: 'Included stays separate',
+            body: 'Included access is kept separate from paid subscriptions.',
+          ),
+          SizedBox(height: 10),
+          _OnboardingInfoRow(
             icon: Icons.fact_check_outlined,
             title: 'Possible stays separate',
-            body:
-                'Weak signals stay separate until they become clearer.',
+            body: 'Weak signals stay separate until they become clearer.',
           ),
           SizedBox(height: 10),
           _OnboardingInfoRow(
@@ -4739,10 +5223,16 @@ class _OnboardingFeatureGroup extends StatelessWidget {
           tone: DashboardEmptyStateTone.accent,
         ),
         _OnboardingFeatureCard(
+          icon: Icons.workspace_premium_outlined,
+          title: 'Included stays separate',
+          body: 'Included access is kept separate from paid subscriptions.',
+          tone: DashboardEmptyStateTone.trust,
+        ),
+        _OnboardingFeatureCard(
           icon: Icons.fact_check_outlined,
           title: 'Possible stays separate',
           body: 'Weak signals stay separate until they become clearer.',
-          tone: DashboardEmptyStateTone.trust,
+          tone: DashboardEmptyStateTone.neutral,
         ),
         _OnboardingFeatureCard(
           icon: Icons.lock_outline_rounded,
@@ -4912,12 +5402,9 @@ class _ReviewDecisionDeskHeader extends StatelessWidget {
                 icon: isEmpty
                     ? Icons.verified_outlined
                     : Icons.shield_moon_outlined,
-                backgroundColor: isEmpty
-                    ? colors.successSoft
-                    : colors.nestedPaper,
-                foregroundColor: isEmpty
-                    ? colors.success
-                    : colors.softInk,
+                backgroundColor:
+                    isEmpty ? colors.successSoft : colors.nestedPaper,
+                foregroundColor: isEmpty ? colors.success : colors.softInk,
               ),
               DashboardBadge(
                 label: 'Careful by default',
@@ -5541,12 +6028,8 @@ class _ServiceViewControlSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = context.dashboardType;
     final colors = context.dashboardColors;
-    final foregroundColor = active
-        ? colors.accent
-        : colors.mutedInk;
-    final backgroundColor = active
-        ? colors.accentSoft
-        : colors.paper;
+    final foregroundColor = active ? colors.accent : colors.mutedInk;
+    final backgroundColor = active ? colors.accentSoft : colors.paper;
 
     return Semantics(
       button: true,
@@ -5635,12 +6118,11 @@ class _CollapsedSubscriptionSectionState
                 Container(
                   width: 32,
                   height: 32,
-                decoration: BoxDecoration(
+                  decoration: BoxDecoration(
                     color: colors.benefitGoldSoft,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: colors.benefitGold
-                          .withValues(alpha: 0.16),
+                      color: colors.benefitGold.withValues(alpha: 0.16),
                     ),
                   ),
                   alignment: Alignment.center,
@@ -5659,9 +6141,9 @@ class _CollapsedSubscriptionSectionState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Expanded(
-                        child: Text(
-                          widget.label,
-                          style: type.rowTitle.copyWith(
+                            child: Text(
+                              widget.label,
+                              style: type.rowTitle.copyWith(
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -5691,7 +6173,7 @@ class _CollapsedSubscriptionSectionState
                       const SizedBox(height: 4),
                       Text(
                         widget.caption,
-                      style: type.supporting.copyWith(
+                        style: type.supporting.copyWith(
                           color: colors.mutedInk,
                           height: 1.24,
                         ),
@@ -5704,9 +6186,7 @@ class _CollapsedSubscriptionSectionState
                   _isExpanded
                       ? Icons.keyboard_arrow_up_rounded
                       : Icons.keyboard_arrow_down_rounded,
-                  color: _isExpanded
-                      ? colors.benefitGold
-                      : colors.mutedInk,
+                  color: _isExpanded ? colors.benefitGold : colors.mutedInk,
                 ),
               ],
             ),
@@ -6325,17 +6805,21 @@ class _ManualSubscriptionRow extends StatelessWidget {
               label: summary,
               hint: 'Opens subscription details',
               child: ExcludeSemantics(
-                child: InkWell(
+                child: DashboardPressableSurface(
                   onTap: onTap,
                   borderRadius: BorderRadius.circular(DashboardRadii.button),
+                  backgroundColor: DashboardShellPalette.statusBlueSoft
+                      .withValues(alpha: 0.2),
                   splashColor:
                       DashboardShellPalette.statusBlue.withValues(alpha: 0.08),
                   highlightColor:
                       DashboardShellPalette.statusBlue.withValues(alpha: 0.04),
                   hoverColor:
                       DashboardShellPalette.statusBlue.withValues(alpha: 0.03),
+                  pressedColor:
+                      DashboardShellPalette.statusBlue.withValues(alpha: 0.07),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 0, 12),
+                    padding: const EdgeInsets.fromLTRB(14, 13, 0, 13),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -6365,7 +6849,8 @@ class _ManualSubscriptionRow extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    const _ManualLedgerNote(label: 'Added by you'),
+                                    const _ManualLedgerNote(
+                                        label: 'Added by you'),
                                   ],
                                 )
                               else
@@ -6383,10 +6868,10 @@ class _ManualSubscriptionRow extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    const _ManualLedgerNote(label: 'Added by you'),
+                                    const _ManualLedgerNote(
+                                        label: 'Added by you'),
                                   ],
                                 ),
-                              const SizedBox(height: 8),
                               const SizedBox(height: 8),
                               _SubscriptionMetaPanel(
                                 amountValueKey: ValueKey<String>(
@@ -6438,7 +6923,7 @@ class _ManualSubscriptionRow extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 12, 8, 12),
+            padding: const EdgeInsets.fromLTRB(0, 10, 8, 10),
             child: SizedBox.square(
               dimension: 48,
               child: PopupMenuButton<String>(
@@ -6469,7 +6954,7 @@ class _ManualSubscriptionRow extends StatelessWidget {
                     value: 'delete',
                     child: Text('Remove from list'),
                   ),
-              if (onOpenReminderControls != null)
+                  if (onOpenReminderControls != null)
                     const PopupMenuItem<String>(
                       value: 'reminder',
                       child: Text('Set reminder'),
@@ -8415,9 +8900,8 @@ class _ReviewDecisionPassportCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
     );
-    final stateLabel = descriptor.canConfirm
-        ? 'Needs your decision'
-        : 'Needs a manual check';
+    final stateLabel =
+        descriptor.canConfirm ? 'Needs your decision' : 'Needs a manual check';
     final actionTitle =
         descriptor.canConfirm ? 'Choose the safest match' : 'Finish this item';
     final actionHelper = descriptor.canConfirm
@@ -8586,7 +9070,8 @@ class _ReviewDecisionPassportCard extends StatelessWidget {
                       ),
                       style: outlinedActionStyle,
                       onPressed: isBusy ? null : onMarkAsBenefit,
-                      icon: const Icon(Icons.workspace_premium_outlined, size: 18),
+                      icon: const Icon(Icons.workspace_premium_outlined,
+                          size: 18),
                       label: Text(
                         isBusy ? 'Working...' : presentation.benefitLabel!,
                       ),
@@ -8617,7 +9102,8 @@ class _ReviewDecisionPassportCard extends StatelessWidget {
                     ),
                     style: quietActionStyle,
                     onPressed: isBusy ? null : onDismiss,
-                    icon: const Icon(Icons.remove_circle_outline_rounded, size: 18),
+                    icon: const Icon(Icons.remove_circle_outline_rounded,
+                        size: 18),
                     label: Text(
                       isBusy ? 'Working...' : presentation.dismissLabel,
                     ),
@@ -8805,8 +9291,7 @@ class _ReviewItemDetailsSheet extends StatelessWidget {
                             'review-details-confirm-${descriptor.targetKey}',
                           ),
                           onPressed: isBusy ? null : onConfirm,
-                          icon:
-                              const Icon(Icons.verified_outlined, size: 18),
+                          icon: const Icon(Icons.verified_outlined, size: 18),
                           label: Text(
                             isBusy ? 'Working...' : presentation.confirmLabel!,
                           ),
@@ -9619,7 +10104,6 @@ String _demoDueSoonFallback(
   return 'Example: ${previewCard.title} on $previewDate for $amountLabel once the next renewal date is clear.';
 }
 
-
 String _formatPreviewDate(DateTime value) {
   const months = <String>[
     'Jan',
@@ -9809,6 +10293,5 @@ String _monogramForTitle(String title) {
     }
     return word.toUpperCase();
   }
-  return ''
-      .toUpperCase();
+  return ''.toUpperCase();
 }

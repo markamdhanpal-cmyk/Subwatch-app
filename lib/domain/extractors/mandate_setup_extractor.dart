@@ -1,7 +1,6 @@
 import '../classifiers/mandate_intent_classifier.dart';
 import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
-import '../entities/parsed_signal.dart';
 import '../entities/subscription_evidence.dart';
 import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_evidence_kind.dart';
@@ -21,7 +20,12 @@ class MandateSetupExtractor implements EvidenceExtractor {
       return const <SubscriptionEvidence>[];
     }
 
-    return _fromSignal(message, signal)
+    return _fromSignal(
+      message,
+      evidenceFragments: signal.evidenceFragments,
+      fallbackSummary: signal.summary,
+      fallbackAmount: signal.amount,
+    )
         .where(
           (evidence) =>
               evidence.kind == SubscriptionEvidenceKind.mandateSetup ||
@@ -32,10 +36,21 @@ class MandateSetupExtractor implements EvidenceExtractor {
 
   List<SubscriptionEvidence> _fromSignal(
     MessageRecord message,
-    ParsedSignal signal,
+    {
+    required List<EvidenceFragment> evidenceFragments,
+    required String fallbackSummary,
+    required double? fallbackAmount,
+  }
   ) {
-    return signal.evidenceFragments
-        .map((fragment) => _toEvidence(message, fragment, signal))
+    return evidenceFragments
+        .map(
+          (fragment) => _toEvidence(
+            message,
+            fragment,
+            fallbackSummary: fallbackSummary,
+            fallbackAmount: fallbackAmount,
+          ),
+        )
         .whereType<SubscriptionEvidence>()
         .toList(growable: false);
   }
@@ -43,7 +58,10 @@ class MandateSetupExtractor implements EvidenceExtractor {
   SubscriptionEvidence? _toEvidence(
     MessageRecord message,
     EvidenceFragment fragment,
-    ParsedSignal signal,
+    {
+    required String fallbackSummary,
+    required double? fallbackAmount,
+  }
   ) {
     SubscriptionEvidenceKind? kind;
     switch (fragment.type) {
@@ -67,9 +85,9 @@ class MandateSetupExtractor implements EvidenceExtractor {
       messageId: message.id,
       kind: kind,
       occurredAt: message.receivedAt,
-      amount: fragment.amount ?? signal.amount,
+      amount: fragment.amount ?? fallbackAmount,
       senderToken: message.sourceAddress,
-      explanation: fragment.note ?? signal.summary,
+      explanation: fragment.note ?? fallbackSummary,
       confidence: fragment.confidence ?? 0.85,
     );
   }

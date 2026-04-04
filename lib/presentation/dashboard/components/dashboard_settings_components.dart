@@ -135,8 +135,7 @@ class DashboardSettingsNavRow extends StatelessWidget {
     final type = context.dashboardType;
     final colors = context.dashboardColors;
     final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
-    final stackTrailing =
-        trailing != null &&
+    final stackTrailing = trailing != null &&
         (MediaQuery.sizeOf(context).width < 380 ||
             MediaQuery.textScalerOf(context).scale(1) > 1.12);
     final iconTone = tone == DashboardSettingsRowTone.destructive
@@ -178,13 +177,14 @@ class DashboardSettingsNavRow extends StatelessWidget {
       child: ExcludeSemantics(
         child: Material(
           color: Colors.transparent,
-          child: InkWell(
+          child: DashboardPressableSurface(
             key: tileKey,
             onTap: onTap,
             borderRadius: BorderRadius.circular(DashboardRadii.button),
             splashColor: interactiveTint.withValues(alpha: 0.08),
             highlightColor: interactiveTint.withValues(alpha: 0.04),
             hoverColor: interactiveTint.withValues(alpha: 0.03),
+            pressedColor: interactiveTint.withValues(alpha: 0.04),
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 minHeight: DashboardListRowRhythm.minHeight,
@@ -251,9 +251,9 @@ class DashboardSettingsNavRow extends StatelessWidget {
                 ),
               ),
             ),
-            ),
           ),
         ),
+      ),
     );
   }
 }
@@ -451,7 +451,8 @@ class DashboardSettingsTrustPanel extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       title,
-                      style: type.rowTitle.copyWith(fontWeight: FontWeight.w800),
+                      style:
+                          type.rowTitle.copyWith(fontWeight: FontWeight.w800),
                     ),
                     if (subtitle != null && subtitle!.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 4),

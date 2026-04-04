@@ -2,14 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/domain/entities/dashboard_card.dart';
 import 'package:sub_killer/domain/entities/evidence_trail.dart';
 import 'package:sub_killer/domain/entities/service_ledger_entry.dart';
-import 'package:sub_killer/domain/entities/subscription_event.dart';
 import 'package:sub_killer/domain/entities/service_evidence_bucket.dart';
 import 'package:sub_killer/domain/enums/billing_cadence.dart';
 import 'package:sub_killer/domain/enums/dashboard_bucket.dart';
 import 'package:sub_killer/domain/enums/resolver_state.dart';
-import 'package:sub_killer/domain/enums/subscription_event_type.dart';
 import 'package:sub_killer/domain/projections/deterministic_dashboard_projection.dart';
-import 'package:sub_killer/domain/resolvers/deterministic_resolver.dart';
 import 'package:sub_killer/domain/value_objects/service_key.dart';
 import 'package:sub_killer/application/use_cases/build_dashboard_totals_summary_use_case.dart';
 import 'package:sub_killer/application/use_cases/build_dashboard_upcoming_renewals_use_case.dart';
@@ -106,123 +103,6 @@ void main() {
       });
     });
 
-    group('DeterministicResolver structured fact wiring', () {
-      const resolver = DeterministicResolver();
-
-      test('sets lastBilledAmount from billed event', () {
-        final event = SubscriptionEvent(
-          id: 'e1',
-          serviceKey: const ServiceKey('NETFLIX'),
-          type: SubscriptionEventType.subscriptionBilled,
-          occurredAt: DateTime(2024, 3, 15),
-          sourceMessageId: 'm1',
-          amount: 649,
-          evidenceTrail: EvidenceTrail.empty(),
-        );
-        final result = resolver.resolve(event: event);
-        expect(result.lastBilledAmount, 649);
-        expect(result.state, ResolverState.activePaid);
-      });
-
-      test('does not set lastBilledAmount for non-billed events', () {
-        final event = SubscriptionEvent(
-          id: 'e1',
-          serviceKey: const ServiceKey('SOMETHING'),
-          type: SubscriptionEventType.mandateCreated,
-          occurredAt: DateTime(2024, 3, 15),
-          sourceMessageId: 'm1',
-          amount: 500,
-          evidenceTrail: EvidenceTrail.empty(),
-        );
-        final result = resolver.resolve(event: event);
-        expect(result.lastBilledAmount, isNull);
-      });
-
-      test('infers monthly cadence from 30-day intervals', () {
-        final first = SubscriptionEvent(
-          id: 'e1',
-          serviceKey: const ServiceKey('NETFLIX'),
-          type: SubscriptionEventType.subscriptionBilled,
-          occurredAt: DateTime(2024, 1, 15),
-          sourceMessageId: 'm1',
-          amount: 649,
-          evidenceTrail: EvidenceTrail.empty(),
-        );
-        final firstEntry = resolver.resolve(event: first);
-
-        final second = SubscriptionEvent(
-          id: 'e2',
-          serviceKey: const ServiceKey('NETFLIX'),
-          type: SubscriptionEventType.subscriptionBilled,
-          occurredAt: DateTime(2024, 2, 14),
-          sourceMessageId: 'm2',
-          amount: 649,
-          evidenceTrail: EvidenceTrail.empty(),
-        );
-        final result = resolver.resolve(event: second, currentEntry: firstEntry);
-        expect(result.billingCadence, BillingCadence.monthly);
-        expect(result.lastBilledAmount, 649);
-      });
-
-      test('infers annual cadence from 365-day intervals', () {
-        final first = SubscriptionEvent(
-          id: 'e1',
-          serviceKey: const ServiceKey('HOTSTAR'),
-          type: SubscriptionEventType.subscriptionBilled,
-          occurredAt: DateTime(2023, 3, 15),
-          sourceMessageId: 'm1',
-          amount: 1499,
-          evidenceTrail: EvidenceTrail.empty(),
-        );
-        final firstEntry = resolver.resolve(event: first);
-
-        final second = SubscriptionEvent(
-          id: 'e2',
-          serviceKey: const ServiceKey('HOTSTAR'),
-          type: SubscriptionEventType.subscriptionBilled,
-          occurredAt: DateTime(2024, 3, 15),
-          sourceMessageId: 'm2',
-          amount: 1499,
-          evidenceTrail: EvidenceTrail.empty(),
-        );
-        final result = resolver.resolve(event: second, currentEntry: firstEntry);
-        expect(result.billingCadence, BillingCadence.annual);
-      });
-
-      test('infers cadence from evidence trail notes', () {
-        final event = SubscriptionEvent(
-          id: 'e1',
-          serviceKey: const ServiceKey('YOUTUBE'),
-          type: SubscriptionEventType.subscriptionBilled,
-          occurredAt: DateTime(2024, 3, 15),
-          sourceMessageId: 'm1',
-          amount: 1290,
-          evidenceTrail: EvidenceTrail(
-            messageIds: const ['m1'],
-            notes: const ['annual plan renewed'],
-          ),
-        );
-        final result = resolver.resolve(event: event);
-        expect(result.billingCadence, BillingCadence.annual);
-      });
-
-      test('calculates next renewal date from cadence', () {
-        final event = SubscriptionEvent(
-          id: 'e1',
-          serviceKey: const ServiceKey('NETFLIX'),
-          type: SubscriptionEventType.subscriptionBilled,
-          occurredAt: DateTime(2024, 3, 15),
-          sourceMessageId: 'm1',
-          amount: 649,
-          evidenceTrail: EvidenceTrail(
-            messageIds: const ['m1'],
-            notes: const ['monthly'],
-          ),
-        );
-        final result = resolver.resolve(event: event);
-        expect(result.nextRenewalDate, DateTime(2024, 4, 15));
-      });
-    });
 
     group('DeterministicDashboardProjection structured wiring', () {
       const projection = DeterministicDashboardProjection();

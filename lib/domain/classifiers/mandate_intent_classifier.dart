@@ -1,4 +1,3 @@
-import '../contracts/event_classifier.dart';
 import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
@@ -7,7 +6,7 @@ import '../enums/subscription_event_type.dart';
 import '../parsing/indian_amount_parser.dart';
 import 'recurring_billing_heuristics.dart';
 
-class MandateIntentClassifier implements EventClassifier {
+class MandateIntentClassifier {
   const MandateIntentClassifier();
 
   // Legacy parsed-signal classifier kept for compatibility shadowing.
@@ -45,7 +44,6 @@ class MandateIntentClassifier implements EventClassifier {
     caseSensitive: false,
   );
 
-  @override
   ParsedSignal? classify(MessageRecord message) {
     final body = message.body.trim();
     if (body.isEmpty) {

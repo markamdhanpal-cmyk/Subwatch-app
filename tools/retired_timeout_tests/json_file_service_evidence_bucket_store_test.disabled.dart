@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'support/test_temp_dir.dart';
+import '../../test/support/test_temp_dir.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/stores/json_file_service_evidence_bucket_store.dart';

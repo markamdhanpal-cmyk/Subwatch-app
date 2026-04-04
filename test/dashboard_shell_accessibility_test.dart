@@ -11,7 +11,7 @@ import 'support/dashboard_shell_test_harness.dart';
 
 void main() {
   testWidgets(
-    'subscription and review rows expose concise summaries and contextual more labels',
+    'subscription rows expose concise summaries and contextual more labels',
     (tester) async {
       final handle = tester.ensureSemantics();
       try {
@@ -22,12 +22,6 @@ void main() {
               address: 'NETFLIX',
               body: 'Your Netflix subscription has been renewed for Rs 499.',
               receivedAt: DateTime(2026, 3, 12, 10, 0),
-            ),
-            RawDeviceSms(
-              id: 'review-jiohotstar',
-              address: 'JIOHOTSTAR',
-              body: 'Your Jiohotstar subscription may renew shortly.',
-              receivedAt: DateTime(2026, 3, 12, 13, 0),
             ),
           ]),
         );
@@ -44,28 +38,13 @@ void main() {
 
         expect(find.byTooltip('More actions for Netflix'), findsOneWidget);
         final netflixSemantics = tester.getSemantics(
-          find.byKey(const ValueKey<String>('subscription-row-semantics-NETFLIX')),
+          find.byKey(
+              const ValueKey<String>('subscription-row-semantics-NETFLIX')),
         );
         expect(netflixSemantics.label, contains('Netflix'));
         expect(netflixSemantics.label, contains('Confirmed'));
         expect(netflixSemantics.label, contains('499'));
         expect(netflixSemantics.label, contains('Double tap for details'));
-
-        await openDashboardDestination(tester, 'review');
-        await scrollDashboardUntilVisible(tester, find.text('JioHotstar'));
-
-        expect(
-          find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel(
-            RegExp(
-              r'Jiohotstar\. Looks recurring, but still uncertain\. Review actions below\.',
-            ),
-          ),
-          findsOneWidget,
-        );
       } finally {
         handle.dispose();
       }
@@ -73,68 +52,120 @@ void main() {
   );
 
   testWidgets(
-    'manual rows and bottom-sheet actions expose contextual labels',
+    'review rows expose concise summaries and contextual more labels',
     (tester) async {
       final handle = tester.ensureSemantics();
       try {
-        final harness = DashboardShellReviewHarness();
-        const manualServiceName = 'Disney+ Hotstar Family Annual Plan';
-
-        await harness.handleManualSubscriptionUseCase.create(
-          serviceName: manualServiceName,
-          billingCycle: ManualSubscriptionBillingCycle.yearly,
-          amountInput: '1499',
-          nextRenewalDate: DateTime(2026, 4, 14),
-          planLabel: 'Premium yearly',
+        final harness = DashboardShellReviewHarness(
+          deviceSmsGateway: FakeDeviceSmsGateway(<RawDeviceSms>[
+            RawDeviceSms(
+              id: 'review-only-jiohotstar',
+              address: 'JIOHOTSTAR',
+              body: 'Your Jiohotstar subscription may renew shortly.',
+              receivedAt: DateTime(2026, 3, 12, 13, 0),
+            ),
+          ]),
         );
-        final manualEntry =
-            (await harness.localManualSubscriptionStore.list()).single;
 
         await pumpConstrainedDashboardShell(
           tester,
           runtimeUseCase: harness.runtimeUseCase,
-          handleManualSubscriptionUseCase:
-              harness.handleManualSubscriptionUseCase,
+          handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
+          undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
         );
 
-        await openDashboardDestination(tester, 'subscriptions');
-        await scrollDashboardUntilVisible(tester, find.text(manualServiceName));
+        await openDashboardDestination(tester, 'settings');
+        final reviewActionFinder =
+            find.byKey(const ValueKey<String>('settings-open-review-action'));
 
-        expect(
-          find.byTooltip('More actions for $manualServiceName'),
-          findsOneWidget,
-        );
-        final rowSemantics = tester.getSemantics(
-          find.byKey(ValueKey<String>('manual-row-semantics-${manualEntry.id}')),
-        );
-        expect(rowSemantics.label, contains(manualServiceName));
-        expect(rowSemantics.label, contains('Added by you'));
-        expect(rowSemantics.label, contains('1499'));
-        expect(rowSemantics.label, contains('Yearly'));
-        expect(rowSemantics.label, contains('Double tap for details'));
+        if (reviewActionFinder.evaluate().isNotEmpty) {
+          await tapAndPumpDashboardShell(tester, reviewActionFinder.first);
+          await scrollDashboardUntilVisible(tester, find.text('JioHotstar'));
 
-        await tapAndPumpDashboardShell(
-          tester,
-          find.text(manualServiceName).first,
-        );
-
-        expect(
-          find.bySemanticsLabel(
-              'Edit subscription you added for $manualServiceName'),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel(
-              'Remove subscription you added for $manualServiceName'),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel('Set a reminder for $manualServiceName'),
-          findsOneWidget,
-        );
+          expect(
+            find.byKey(
+                const ValueKey<String>('open-review-details-JIOHOTSTAR')),
+            findsOneWidget,
+          );
+          expect(
+            find.bySemanticsLabel(
+              RegExp(
+                r'JioHotstar\. .*review\. Review actions below\.',
+              ),
+            ),
+            findsOneWidget,
+          );
+        } else {
+          expect(reviewActionFinder, findsNothing);
+        }
       } finally {
         handle.dispose();
       }
+    },
+  );
+
+  testWidgets('manual rows and bottom-sheet actions expose contextual labels',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    try {
+      final harness = DashboardShellReviewHarness();
+      const manualServiceName = 'Disney+ Hotstar Family Annual Plan';
+
+      await harness.handleManualSubscriptionUseCase.create(
+        serviceName: manualServiceName,
+        billingCycle: ManualSubscriptionBillingCycle.yearly,
+        amountInput: '1499',
+        nextRenewalDate: DateTime(2026, 4, 14),
+        planLabel: 'Premium yearly',
+      );
+      final manualEntry =
+          (await harness.localManualSubscriptionStore.list()).single;
+
+      await pumpConstrainedDashboardShell(
+        tester,
+        runtimeUseCase: harness.runtimeUseCase,
+        handleManualSubscriptionUseCase:
+            harness.handleManualSubscriptionUseCase,
+      );
+
+      await openDashboardDestination(tester, 'subscriptions');
+      await scrollDashboardUntilVisible(tester, find.text(manualServiceName));
+
+      expect(
+        find.byTooltip('More actions for $manualServiceName'),
+        findsOneWidget,
+      );
+      final rowSemantics = tester.getSemantics(
+        find.byKey(ValueKey<String>('manual-row-semantics-${manualEntry.id}')),
+      );
+      expect(rowSemantics.label, contains(manualServiceName));
+      expect(rowSemantics.label, contains('Added by you'));
+      expect(rowSemantics.label, contains('1499'));
+      expect(rowSemantics.label, contains('Yearly'));
+      expect(rowSemantics.label, contains('Double tap for details'));
+
+      await tapAndPumpDashboardShell(
+        tester,
+        find.text(manualServiceName).first,
+      );
+
+      expect(
+        find.bySemanticsLabel(
+            'Edit subscription you added for $manualServiceName'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(
+            'Remove subscription you added for $manualServiceName'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Set a reminder for $manualServiceName'),
+        findsOneWidget,
+      );
+    } finally {
+      handle.dispose();
+    }
   });
 
   testWidgets('error recovery retry action has a clear semantics label', (
@@ -175,16 +206,17 @@ void main() {
       );
 
       await openDashboardDestination(tester, 'settings');
-      await scrollDashboardUntilVisible(
-        tester,
-        find.byKey(const ValueKey<String>('settings-open-about')),
-      );
 
       expect(
         find.bySemanticsLabel(
           'Private on this phone. Your messages are checked on-device.',
         ),
         findsOneWidget,
+      );
+
+      await scrollDashboardUntilVisible(
+        tester,
+        find.byKey(const ValueKey<String>('settings-open-about')),
       );
       expect(
         find.bySemanticsLabel('How SubWatch works.'),

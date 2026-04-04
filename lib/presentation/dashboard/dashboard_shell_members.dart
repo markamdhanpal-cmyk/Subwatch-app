@@ -56,6 +56,7 @@ extension _DashboardShellMembers on _DashboardShellState {
     }
 
     setState(() {
+      _previousDestination = _selectedDestination;
       _selectedDestination = destination;
     });
   }
@@ -1653,7 +1654,8 @@ extension _DashboardShellMembers on _DashboardShellState {
         _SettingsSubsection(
           key: const ValueKey<String>('section-hiddenFromReview'),
           title: 'Not subscriptions',
-          caption: 'Items you decided should stay out of subscription tracking.',
+          caption:
+              'Items you decided should stay out of subscription tracking.',
           children: _buildDismissedReviewRows(data.dismissedReviewItems),
         ),
       );

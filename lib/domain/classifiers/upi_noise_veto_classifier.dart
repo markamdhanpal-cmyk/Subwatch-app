@@ -1,4 +1,3 @@
-import '../contracts/event_classifier.dart';
 import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
@@ -6,7 +5,7 @@ import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_event_type.dart';
 import '../parsing/indian_amount_parser.dart';
 
-class UpiNoiseVetoClassifier implements EventClassifier {
+class UpiNoiseVetoClassifier {
   const UpiNoiseVetoClassifier();
 
   static const String classifierId = 'upi_noise_veto';
@@ -38,7 +37,6 @@ class UpiNoiseVetoClassifier implements EventClassifier {
     RegExp(r'\bspent\b', caseSensitive: false),
   ];
 
-  @override
   ParsedSignal? classify(MessageRecord message) {
     final body = message.body.trim();
     if (body.isEmpty) {

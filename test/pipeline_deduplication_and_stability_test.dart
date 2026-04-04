@@ -1,5 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
-import 'package:sub_killer/application/use_cases/event_pipeline_use_case.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/application/use_cases/local_ingestion_flow_use_case.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
 import 'package:sub_killer/domain/enums/resolver_state.dart';
@@ -116,7 +115,7 @@ void main() {
 
       final result = await LocalIngestionFlowUseCase().execute(messages);
 
-      // Two different message IDs → two events, but both resolve to NETFLIX
+      // Two different message IDs ? two events, but both resolve to NETFLIX
       expect(result.events, hasLength(2));
       expect(result.ledgerEntries, hasLength(1));
       expect(result.ledgerEntries.single.serviceKey.value, 'NETFLIX');
@@ -138,8 +137,8 @@ void main() {
         ),
       ];
 
-      final pipeline = EventPipelineUseCase();
-      final events = pipeline.execute(messages);
+      final result = await LocalIngestionFlowUseCase().execute(messages);
+      final events = result.events;
 
       expect(events, hasLength(2));
       expect(events[0].id, isNot(events[1].id));
@@ -149,7 +148,7 @@ void main() {
 
   group('Service key normalization convergence', () {
 
-    test('Netflix in varied casings resolves to the same service key', () {
+    test('Netflix in varied casings resolves to the same service key', () async {
       final variants = <String>[
         'Your Netflix subscription has been renewed for Rs 499.',
         'Your NETFLIX subscription has been renewed for Rs 499.',
@@ -157,12 +156,12 @@ void main() {
         'Your NeTfLiX subscription has been renewed for Rs 499.',
       ];
 
-      final pipeline = EventPipelineUseCase();
       final keys = <String>{};
 
       for (var i = 0; i < variants.length; i++) {
         final msg = message(id: 'case-$i', body: variants[i]);
-        final events = pipeline.execute(<MessageRecord>[msg]);
+        final result = await LocalIngestionFlowUseCase().execute(<MessageRecord>[msg]);
+        final events = result.events;
         expect(events, hasLength(1), reason: 'variant $i should produce event');
         keys.add(events.first.serviceKey.value);
       }
@@ -171,18 +170,18 @@ void main() {
       expect(keys.single, 'NETFLIX');
     });
 
-    test('YouTube Premium with and without space resolves to same key', () {
+    test('YouTube Premium with and without space resolves to same key', () async {
       final variants = <String>[
         'Your YouTube Premium monthly subscription payment of Rs 149 was successful.',
         'Your YouTubePremium monthly subscription payment of Rs 149 was successful.',
       ];
 
-      final pipeline = EventPipelineUseCase();
       final keys = <String>{};
 
       for (var i = 0; i < variants.length; i++) {
         final msg = message(id: 'yt-$i', body: variants[i]);
-        final events = pipeline.execute(<MessageRecord>[msg]);
+        final result = await LocalIngestionFlowUseCase().execute(<MessageRecord>[msg]);
+        final events = result.events;
         if (events.isNotEmpty) {
           keys.add(events.first.serviceKey.value);
         }
@@ -192,18 +191,18 @@ void main() {
       expect(keys.single, 'YOUTUBE_PREMIUM');
     });
 
-    test('Google Play with and without space resolves to same key', () {
+    test('Google Play with and without space resolves to same key', () async {
       final variants = <String>[
         'Recurring payment of Rs 159 processed at Google Play on your card XX9123.',
         'Recurring payment of Rs 159 processed at GooglePlay on your card XX9123.',
       ];
 
-      final pipeline = EventPipelineUseCase();
       final keys = <String>{};
 
       for (var i = 0; i < variants.length; i++) {
         final msg = message(id: 'gp-$i', body: variants[i]);
-        final events = pipeline.execute(<MessageRecord>[msg]);
+        final result = await LocalIngestionFlowUseCase().execute(<MessageRecord>[msg]);
+        final events = result.events;
         if (events.isNotEmpty) {
           keys.add(events.first.serviceKey.value);
         }
@@ -213,28 +212,28 @@ void main() {
       expect(keys.single, 'GOOGLE_PLAY');
     });
 
-    test('explicit hint services always win over candidate extraction', () {
+    test('explicit hint services always win over candidate extraction', () async {
       final msg = message(
         id: 'adobe-hint',
         body:
             'Automatic payment of Rs.20,000 for Adobe Systems setup successfully.',
       );
 
-      final pipeline = EventPipelineUseCase();
-      final events = pipeline.execute(<MessageRecord>[msg]);
+      final result = await LocalIngestionFlowUseCase().execute(<MessageRecord>[msg]);
+      final events = result.events;
 
       expect(events.first.serviceKey.value, 'ADOBE_SYSTEMS');
     });
 
-    test('candidate extraction normalizes to UPPER_UNDERSCORE', () {
+    test('candidate extraction normalizes to UPPER_UNDERSCORE', () async {
       final msg = message(
         id: 'crunchyroll-1',
         body:
             'Your mandate for Crunchyroll was successfully executed for Rs.1.00.',
       );
 
-      final pipeline = EventPipelineUseCase();
-      final events = pipeline.execute(<MessageRecord>[msg]);
+      final result = await LocalIngestionFlowUseCase().execute(<MessageRecord>[msg]);
+      final events = result.events;
       expect(events.first.serviceKey.value, 'CRUNCHYROLL');
     });
   });
@@ -481,4 +480,5 @@ void main() {
     });
   });
 }
+
 

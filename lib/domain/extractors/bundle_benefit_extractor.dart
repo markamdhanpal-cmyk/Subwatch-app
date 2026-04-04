@@ -1,7 +1,6 @@
 import '../classifiers/telecom_bundle_classifier.dart';
 import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
-import '../entities/parsed_signal.dart';
 import '../entities/subscription_evidence.dart';
 import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_evidence_kind.dart';
@@ -21,17 +20,30 @@ class BundleBenefitExtractor implements EvidenceExtractor {
       return const <SubscriptionEvidence>[];
     }
 
-    return _fromSignal(message, signal)
+    return _fromSignal(
+      message,
+      evidenceFragments: signal.evidenceFragments,
+      fallbackSummary: signal.summary,
+    )
         .where((evidence) => evidence.kind == SubscriptionEvidenceKind.bundleBenefit)
         .toList(growable: false);
   }
 
   List<SubscriptionEvidence> _fromSignal(
     MessageRecord message,
-    ParsedSignal signal,
+    {
+    required List<EvidenceFragment> evidenceFragments,
+    required String fallbackSummary,
+  }
   ) {
-    return signal.evidenceFragments
-        .map((fragment) => _toEvidence(message, fragment, signal))
+    return evidenceFragments
+        .map(
+          (fragment) => _toEvidence(
+            message,
+            fragment,
+            fallbackSummary: fallbackSummary,
+          ),
+        )
         .whereType<SubscriptionEvidence>()
         .toList(growable: false);
   }
@@ -39,7 +51,9 @@ class BundleBenefitExtractor implements EvidenceExtractor {
   SubscriptionEvidence? _toEvidence(
     MessageRecord message,
     EvidenceFragment fragment,
-    ParsedSignal signal,
+    {
+    required String fallbackSummary,
+  }
   ) {
     if (fragment.type != EvidenceFragmentType.bundledBenefit) {
       return null;
@@ -50,7 +64,7 @@ class BundleBenefitExtractor implements EvidenceExtractor {
       kind: SubscriptionEvidenceKind.bundleBenefit,
       occurredAt: message.receivedAt,
       senderToken: message.sourceAddress,
-      explanation: fragment.note ?? signal.summary,
+      explanation: fragment.note ?? fallbackSummary,
       confidence: fragment.confidence ?? 0.9,
     );
   }

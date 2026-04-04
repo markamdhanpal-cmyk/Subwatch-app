@@ -2,7 +2,6 @@ import '../classifiers/lifecycle_event_classifier.dart';
 import '../classifiers/weak_signal_review_classifier.dart';
 import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
-import '../entities/parsed_signal.dart';
 import '../entities/subscription_evidence.dart';
 import '../enums/evidence_fragment_type.dart';
 import '../enums/subscription_evidence_kind.dart';
@@ -22,22 +21,33 @@ class LifecycleExtractor implements EvidenceExtractor {
 
   @override
   List<SubscriptionEvidence> extract(MessageRecord message) {
-    final signals = <ParsedSignal>[
-      if (_lifecycleClassifier.classify(message) case final lifecycle?)
-        lifecycle,
-      if (_weakSignalClassifier.classify(message) case final weak?)
-        weak,
-    ];
-
-    if (signals.isEmpty) {
-      return const <SubscriptionEvidence>[];
+    final evidences = <SubscriptionEvidence>[];
+    final lifecycleSignal = _lifecycleClassifier.classify(message);
+    if (lifecycleSignal != null) {
+      evidences.addAll(
+        lifecycleSignal.evidenceFragments
+            .map(
+              (fragment) => _toEvidence(
+                message,
+                fragment,
+                fallbackSummary: lifecycleSignal.summary,
+              ),
+            )
+            .whereType<SubscriptionEvidence>(),
+      );
     }
 
-    final evidences = <SubscriptionEvidence>[];
-    for (final signal in signals) {
+    final weakSignal = _weakSignalClassifier.classify(message);
+    if (weakSignal != null) {
       evidences.addAll(
-        signal.evidenceFragments
-            .map((fragment) => _toEvidence(message, fragment, signal))
+        weakSignal.evidenceFragments
+            .map(
+              (fragment) => _toEvidence(
+                message,
+                fragment,
+                fallbackSummary: weakSignal.summary,
+              ),
+            )
             .whereType<SubscriptionEvidence>(),
       );
     }
@@ -48,7 +58,9 @@ class LifecycleExtractor implements EvidenceExtractor {
   SubscriptionEvidence? _toEvidence(
     MessageRecord message,
     EvidenceFragment fragment,
-    ParsedSignal signal,
+    {
+    required String fallbackSummary,
+  }
   ) {
     SubscriptionEvidenceKind? kind;
     switch (fragment.type) {
@@ -75,7 +87,7 @@ class LifecycleExtractor implements EvidenceExtractor {
       senderToken: message.sourceAddress,
       explanation: fragment.type == EvidenceFragmentType.endedLifecycle
           ? 'ended_lifecycle'
-          : (fragment.note ?? signal.summary),
+          : (fragment.note ?? fallbackSummary),
       confidence: fragment.confidence ?? 0.75,
     );
   }

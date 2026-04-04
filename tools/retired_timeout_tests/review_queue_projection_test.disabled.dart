@@ -3,19 +3,13 @@ import 'package:sub_killer/application/repositories/in_memory_ledger_repository.
 import 'package:sub_killer/application/use_cases/project_review_queue_use_case.dart';
 import 'package:sub_killer/domain/entities/evidence_trail.dart';
 import 'package:sub_killer/domain/entities/service_ledger_entry.dart';
-import 'package:sub_killer/domain/entities/subscription_event.dart';
 import 'package:sub_killer/domain/enums/resolver_state.dart';
-import 'package:sub_killer/domain/enums/subscription_event_type.dart';
 import 'package:sub_killer/domain/projections/deterministic_dashboard_projection.dart';
-import 'package:sub_killer/domain/resolvers/deterministic_resolver.dart';
 import 'package:sub_killer/domain/value_objects/service_key.dart';
 
 void main() {
   group('Review Queue Projection', () {
     const projection = DeterministicDashboardProjection();
-    const resolver = DeterministicResolver();
-    final occurredAt = DateTime(2026, 3, 12, 22, 30);
-
     ServiceLedgerEntry entry({
       required String key,
       required ResolverState state,
@@ -26,39 +20,12 @@ void main() {
         state: state,
         evidenceTrail: evidenceTrail ?? EvidenceTrail.empty(),
       );
-    }
-
-    SubscriptionEvent event({
-      required String id,
-      required String service,
-      required SubscriptionEventType type,
-    }) {
-      return SubscriptionEvent(
-        id: id,
-        serviceKey: ServiceKey(service),
-        type: type,
-        occurredAt: occurredAt,
-        sourceMessageId: 'msg-$id',
-        evidenceTrail: EvidenceTrail(
-          messageIds: <String>['msg-$id'],
-          eventIds: <String>[id],
-          notes: <String>[type.name],
-        ),
-      );
-    }
-
-    test(
+    }    test(
         'unknownReview stays hidden from review until stronger evidence exists',
-        () {
-      final ledgerEntry = resolver.resolve(
-        event: event(
-          id: 'review-1',
-          service: 'MYSTERY_SUB',
-          type: SubscriptionEventType.unknownReview,
-        ),
+        () {      final ledgerEntry = entry(
+        key: 'MYSTERY_SUB',
+        state: ResolverState.possibleSubscription,
       );
-
-      expect(ledgerEntry.state, ResolverState.possibleSubscription);
 
       final reviewItems =
           projection.buildReviewQueue(<ServiceLedgerEntry>[ledgerEntry]);
@@ -231,3 +198,4 @@ void main() {
     });
   });
 }
+

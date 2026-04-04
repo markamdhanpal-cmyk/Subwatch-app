@@ -1,4 +1,3 @@
-import '../contracts/event_classifier.dart';
 import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
@@ -7,7 +6,7 @@ import '../enums/subscription_event_type.dart';
 import '../knowledge/merchant_knowledge_base.dart';
 import 'recurring_billing_heuristics.dart';
 
-class TelecomBundleClassifier implements EventClassifier {
+class TelecomBundleClassifier {
   const TelecomBundleClassifier();
 
   // Legacy parsed-signal classifier kept for compatibility shadowing.
@@ -43,7 +42,6 @@ class TelecomBundleClassifier implements EventClassifier {
     RegExp(r'\bunlocked\b', caseSensitive: false),
   ];
 
-  @override
   ParsedSignal? classify(MessageRecord message) {
     final body = message.body.trim();
     if (body.isEmpty) {

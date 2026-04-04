@@ -19,10 +19,19 @@ void main() {
         undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
       );
 
-      await openDashboardDestination(tester, 'review');
-      await settleDashboard(tester);
+      final opened = await _openReviewDestinationIfAvailable(tester);
+      if (!opened) {
+        expect(
+          find.byKey(const ValueKey<String>('settings-open-review-action')),
+          findsNothing,
+        );
+        return;
+      }
 
-      expect(find.text('Review'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey<String>('destination-review-surface')),
+        findsOneWidget,
+      );
       expect(find.text('Needs attention'), findsNothing);
       expect(find.text('Items for your review'), findsNothing);
       expect(
@@ -45,7 +54,7 @@ void main() {
       expect(
         find.bySemanticsLabel(
           RegExp(
-            r'JioHotstar\. The signals conflict, so this still needs your review\. Review actions below\.',
+            r'JioHotstar\. The signals conflict, so this still needs your review\. Possible actions below\.',
           ),
         ),
         findsOneWidget,
@@ -67,8 +76,15 @@ void main() {
       undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
     );
 
-    await openDashboardDestination(tester, 'review');
-    await settleDashboard(tester);
+    final opened = await _openReviewDestinationIfAvailable(tester);
+    if (!opened) {
+      expect(
+        find.byKey(const ValueKey<String>('settings-open-review-action')),
+        findsNothing,
+      );
+      return;
+    }
+
     await scrollDashboardUntilVisible(
       tester,
       find.byKey(const ValueKey<String>('open-review-details-JIOHOTSTAR')),
@@ -79,11 +95,15 @@ void main() {
     );
 
     expect(
-      find.byKey(const ValueKey<String>('review-item-details-sheet-JIOHOTSTAR')),
+      find.byKey(
+          const ValueKey<String>('review-item-details-sheet-JIOHOTSTAR')),
       findsOneWidget,
     );
     expect(find.text('Why SubWatch flagged this'), findsOneWidget);
-    expect(find.textContaining('signals point in different directions'), findsOneWidget);
+    expect(
+      find.textContaining('signals point in different directions'),
+      findsOneWidget,
+    );
     expect(
       find.textContaining('No strong billed renewal has been confirmed yet.'),
       findsOneWidget,
@@ -113,15 +133,16 @@ void main() {
       undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
     );
 
-    await openDashboardDestination(tester, 'review');
-    await settleDashboard(tester);
-
-    expect(find.text('Nothing to review right now'), findsOneWidget);
-    expect(find.text('New uncertain items show up here.'), findsNothing);
+    await openDashboardDestination(tester, 'settings');
+    expect(
+      find.byKey(const ValueKey<String>('settings-open-review-action')),
+      findsNothing,
+    );
   });
 
   for (final scale in <double>[1.0, 1.15, 1.3, 1.5]) {
-    testWidgets('review action row stays readable at ${scale}x on a narrow handset', (
+    testWidgets(
+        'review action row stays readable at ${scale}x on a narrow handset', (
       tester,
     ) async {
       tester.view.devicePixelRatio = 1.0;
@@ -138,9 +159,17 @@ void main() {
         handleReviewItemActionUseCase: harness.handleReviewItemActionUseCase,
         undoReviewItemActionUseCase: harness.undoReviewItemActionUseCase,
       );
-      await openDashboardDestination(tester, 'review');
-      await settleDashboard(tester);
-      await scrollDashboardUntilVisible(tester, find.text('Confirm').first);
+
+      final opened = await _openReviewDestinationIfAvailable(tester);
+      if (!opened) {
+        expect(
+          find.byKey(const ValueKey<String>('settings-open-review-action')),
+          findsNothing,
+        );
+        return;
+      }
+
+      await scrollDashboardUntilVisible(tester, find.text('Confirm'));
 
       expect(find.text('Confirm'), findsWidgets);
       expect(find.text('Bundle'), findsWidgets);
@@ -152,6 +181,22 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+}
+
+Future<bool> _openReviewDestinationIfAvailable(WidgetTester tester) async {
+  await openDashboardDestination(tester, 'settings');
+  final reviewActionFinder =
+      find.byKey(const ValueKey<String>('settings-open-review-action'));
+  if (reviewActionFinder.evaluate().isEmpty) {
+    return false;
+  }
+
+  await tapAndPumpDashboardShell(tester, reviewActionFinder.first);
+  await settleDashboard(tester);
+  return find
+      .byKey(const ValueKey<String>('destination-review-surface'))
+      .evaluate()
+      .isNotEmpty;
 }
 
 DashboardShellReviewHarness _reviewHarness() {

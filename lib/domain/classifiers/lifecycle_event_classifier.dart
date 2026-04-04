@@ -1,4 +1,3 @@
-import '../contracts/event_classifier.dart';
 import '../entities/evidence_fragment.dart';
 import '../entities/message_record.dart';
 import '../entities/parsed_signal.dart';
@@ -7,7 +6,7 @@ import '../enums/subscription_event_type.dart';
 import '../knowledge/merchant_knowledge_base.dart';
 import 'recurring_billing_heuristics.dart';
 
-class LifecycleEventClassifier implements EventClassifier {
+class LifecycleEventClassifier {
   const LifecycleEventClassifier();
 
   // Legacy parsed-signal classifier kept for compatibility shadowing.
@@ -15,7 +14,6 @@ class LifecycleEventClassifier implements EventClassifier {
 
   static const String classifierId = 'lifecycle_event';
 
-  @override
   ParsedSignal? classify(MessageRecord message) {
     final body = message.body.trim();
     if (body.isEmpty) {

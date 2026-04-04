@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_killer/domain/entities/message_record.dart';
 import 'package:sub_killer/domain/entities/subscription_evidence.dart';
+import 'package:sub_killer/domain/enums/merchant_resolution_confidence.dart';
+import 'package:sub_killer/domain/enums/merchant_resolution_method.dart';
 import 'package:sub_killer/domain/enums/subscription_evidence_kind.dart';
 import 'package:sub_killer/domain/services/service_key_resolver_v2.dart';
 
@@ -26,6 +28,22 @@ void main() {
       );
     }
 
+    test('keeps unknown paid-plan merchant text unresolved', () {
+      final resolution = resolver.resolve(
+        message: message(
+          sender: 'VK-HDFCBK-S',
+          body: 'Your Music Plus plan renewed successfully. Rs 149 charged.',
+        ),
+        evidence: evidence(SubscriptionEvidenceKind.paidCharge),
+      );
+
+      expect(
+        resolution.resolvedServiceKey.value,
+        ServiceKeyResolverV2.unresolvedServiceKey.value,
+      );
+      expect(resolution.resolutionMethod, MerchantResolutionMethod.noMatch);
+    });
+
     test('keeps unknown mandate merchant text unresolved (MODI FINANCE case)', () {
       final resolution = resolver.resolve(
         message: message(
@@ -40,6 +58,39 @@ void main() {
         resolution.resolvedServiceKey.value,
         ServiceKeyResolverV2.unresolvedServiceKey.value,
       );
+    });
+
+    test('resolves sender-prefix aliases even when body is weak', () {
+      final resolution = resolver.resolve(
+        message: message(
+          sender: 'AD-JIOHTT-S',
+          body: 'Your subscription was renewed.',
+        ),
+        evidence: evidence(SubscriptionEvidenceKind.paidCharge),
+      );
+
+      expect(resolution.resolvedServiceKey.value, 'JIOHOTSTAR');
+      expect(
+        resolution.resolutionMethod,
+        MerchantResolutionMethod.senderIdPrefix,
+      );
+      expect(resolution.confidence, MerchantResolutionConfidence.high);
+    });
+
+    test('unrelated sender prefix does not falsely resolve', () {
+      final resolution = resolver.resolve(
+        message: message(
+          sender: 'JY-JIOINF-S',
+          body: 'Your subscription was renewed.',
+        ),
+        evidence: evidence(SubscriptionEvidenceKind.paidCharge),
+      );
+
+      expect(
+        resolution.resolvedServiceKey.value,
+        ServiceKeyResolverV2.unresolvedServiceKey.value,
+      );
+      expect(resolution.resolutionMethod, MerchantResolutionMethod.noMatch);
     });
 
     test(
@@ -70,6 +121,8 @@ void main() {
       );
 
       expect(resolution.resolvedServiceKey.value, 'NETFLIX');
+      expect(resolution.resolutionMethod, MerchantResolutionMethod.exactAlias);
     });
   });
 }
+
